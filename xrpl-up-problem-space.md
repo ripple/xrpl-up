@@ -47,23 +47,37 @@ Docker with deterministic ledger control and local faucet funding. **Remote mode
 (`--network testnet | devnet`) connects to public XRPL endpoints over WebSocket
 without starting local infrastructure.
 
+### Two Command Sets
+
+`xrpl-up` has two intentional command sets:
+
+- **Sandbox operation commands:** lifecycle, state, and environment control for local and remote developer workflows.
+- **rippled API wrapper commands:** convenience wrappers for common transactions and demos (`amm`, `nft`, `channel`, `mpt`).
+
+Wrapper commands are intentionally non-exhaustive. They are optimized for demonstration,
+onboarding, and quick experimentation. For complex or production-grade flows, developers
+should use `xrpl.js` directly or call `rippled` RPC endpoints.
+
 ### Command × Network Scope
 
-| Command | Purpose | local | remote (testnet/devnet) |
-|---------|---------|:-----:|:-----------------------:|
-| `node` | Start/connect to a sandbox session and provision baseline accounts | ✅ | ✅ |
-| `run` | Execute scripts against the selected network with injected connection env vars | ✅ | ✅ |
-| `accounts` | Show funded accounts and live balances from the account store | ✅ | ✅ |
-| `status` | Show network health (ledger index, rippled version, faucet availability) | ✅ | ✅ |
-| `faucet` | Fund a new or existing account and persist it to the account store | ✅ | ✅ |
-| `logs` | Stream local Docker service logs (`rippled`/`faucet`) | ✅ | ❌ |
-| `stop` | Stop the local Docker sandbox stack | ✅ | ❌ |
-| `reset` | Wipe local containers, ledger volume, and account store | ✅ | ❌ |
-| `snapshot` | Save/restore/list local ledger + account checkpoints | ✅ | ❌ |
-| `config` | Validate/manage local rippled configuration | ✅ | ❌ |
-| `amm create` | Create an AMM pool with issuer/trust-line setup automation | ✅ | ✅ |
-| `amm info` | Inspect AMM pool state and key trading parameters | ✅ | ✅ |
-| `init` | Scaffold a starter project with scripts/tests/templates | n/a | n/a |
+| Command Set | Command | Purpose | local | remote (testnet/devnet) |
+|-------------|---------|---------|:-----:|:-----------------------:|
+| Sandbox operation | `node` | Start/connect to a sandbox session and provision baseline accounts | ✅ | ✅ |
+| Sandbox operation | `run` | Execute scripts against the selected network with injected connection env vars | ✅ | ✅ |
+| Sandbox operation | `accounts` | Show funded accounts and live balances from the account store | ✅ | ✅ |
+| Sandbox operation | `status` | Show network health (ledger index, rippled version, faucet availability) | ✅ | ✅ |
+| Sandbox operation | `faucet` | Fund a new or existing account and persist it to the account store | ✅ | ✅ |
+| Sandbox operation | `logs` | Stream local Docker service logs (`rippled`/`faucet`) | ✅ | ❌ |
+| Sandbox operation | `stop` | Stop the local Docker sandbox stack | ✅ | ❌ |
+| Sandbox operation | `reset` | Wipe local containers, ledger volume, and account store | ✅ | ❌ |
+| Sandbox operation | `snapshot` | Save/restore/list local ledger + account checkpoints | ✅ | ❌ |
+| Sandbox operation | `config` | Validate/manage local rippled configuration | ✅ | ❌ |
+| Sandbox operation | `init` | Scaffold a starter project with scripts/tests/templates | n/a | n/a |
+| rippled API wrapper | `amm create` | Create an AMM pool with issuer/trust-line setup automation | ✅ | ✅ |
+| rippled API wrapper | `amm info` | Inspect AMM pool state and key trading parameters | ✅ | ✅ |
+| rippled API wrapper | `nft` | Convenience NFT lifecycle flows (mint/list/offers/sell/accept/burn) | ✅ | ✅ |
+| rippled API wrapper | `channel` | Convenience payment-channel flows (create/fund/sign/verify/claim/list) | ✅ | ✅ |
+| rippled API wrapper | `mpt` | Convenience MPT issuance flows (create/info/authorize/set/destroy) | ✅ | ✅ |
 
 ### Example Workflow
 
@@ -186,6 +200,48 @@ xrpl-up amm info XRP USD.rIssuer --local  # query pool reserves, LP tokens, fee
 
 - `CURRENCY.rIssuerAddress` notation for IOU assets (e.g. `USD.rHb9...`)
 - Auto-generates issuer + LP wallets, sets DefaultRipple, creates trust lines, issues tokens, calls AMMCreate
+
+#### NFT Wrapper Support
+
+`xrpl-up nft` wraps common XLS-20 lifecycle actions for fast experimentation:
+mint, list, offers, sell, accept, and burn.
+
+```bash
+xrpl-up nft mint --local --uri https://example.com/meta.json --transferable
+xrpl-up nft sell <nft_id> 10.5.USD.rIssuer --local --seed <seed>
+```
+
+- Designed for demonstration and interactive testing, not full NFT protocol coverage
+- Local mode can auto-fund wallets for quick trials; remote mode expects explicit wallet control
+- For advanced marketplace logic and custom flows, use `xrpl.js` or direct RPC
+
+#### Payment Channel Wrapper Support
+
+`xrpl-up channel` provides convenience flows for channels: create, list, fund, sign,
+verify, and claim.
+
+```bash
+xrpl-up channel create <destination> 10 --local
+xrpl-up channel sign <channel_id> 3 --seed <seed>
+```
+
+- Optimized for showing off-chain claim flow end-to-end in a dev sandbox
+- Exposes common claim inputs, but does not replace full channel orchestration tooling
+- Complex production flows should be implemented with `xrpl.js`/RPC and app-level controls
+
+#### MPT Wrapper Support
+
+`xrpl-up mpt` provides high-utility XLS-33 commands: create, info, authorize, set,
+and destroy.
+
+```bash
+xrpl-up mpt create --local --max-amount 1000000 --asset-scale 6 --transferable
+xrpl-up mpt info <issuance_id> --local
+```
+
+- Intended for quick issuance experiments and feature demonstrations
+- Covers common flag/config paths, not the full MPT lifecycle surface
+- Advanced issuance policy and integration logic should use `xrpl.js` or direct RPC
 
 #### Ledger Snapshots
 
