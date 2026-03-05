@@ -9,15 +9,26 @@ CLI for XRPL local development and scripting. Spin up a local sandbox with pre-f
 
 ## Installation
 
+**From npm (global):**
+
 ```bash
 npm install -g xrpl-up
 ```
 
-Or use locally inside a project:
+**From source (development):**
+
+```bash
+git clone https://github.com/ripple/xrpl-up.git
+cd xrpl-up
+npm install
+npm run build
+npm link
+```
+
+**Local project dependency:**
 
 ```bash
 npm install xrpl-up
-npx xrpl-up --help
 ```
 
 ## Quick Start
