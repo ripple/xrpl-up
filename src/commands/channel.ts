@@ -276,6 +276,19 @@ export async function channelClaimCommand(options: ChannelClaimOptions): Promise
     process.exit(1);
   }
 
+  // Validate co-required options for off-chain claims
+  if (options.signature && !options.amount) {
+    logger.error('--amount <xrp> is required when --signature is provided');
+    process.exit(1);
+  }
+  if (options.signature && !options.publicKey) {
+    logger.error(
+      '--public-key <hex> is required when --signature is provided\n' +
+      '  (use the public key printed by: xrpl-up channel sign)'
+    );
+    process.exit(1);
+  }
+
   const { networkName, networkConfig } = resolveNetworkInfo(options);
   const manager = new NetworkManager(networkName, networkConfig);
   const wallet  = Wallet.fromSeed(options.seed);
@@ -302,8 +315,8 @@ export async function channelClaimCommand(options: ChannelClaimOptions): Promise
     if (options.signature) {
       tx['Signature'] = options.signature;
       // PublicKey must be the key that produced the off-chain signature (the source/signer
-      // wallet), NOT the claimant's key. Pass it via --public-key (printed by channel sign).
-      tx['PublicKey'] = options.publicKey ?? wallet.publicKey;
+      // wallet), NOT the claimant's key. Enforced above: options.publicKey is always set here.
+      tx['PublicKey'] = options.publicKey!;
     }
 
     const prepared = await manager.client.autofill(tx as any);

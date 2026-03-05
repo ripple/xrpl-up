@@ -306,14 +306,14 @@ NFT lifecycle operations (XLS-20). Supports mint, list, buy/sell offers, and bur
 
 #### `xrpl-up nft mint`
 
-Mints a new NFT. On `--local` a fresh wallet is auto-funded; on remote networks `--seed` is required.
+Mints a new NFT. When `--seed` is omitted a wallet is auto-funded — via the local genesis faucet on `--local`, or the public testnet/devnet faucet on remote networks.
 
 ```bash
 # Mint a transferable NFT with a metadata URI (local, auto-funds wallet)
 xrpl-up nft mint --local --uri https://example.com/nft-meta.json --transferable
 
-# Mint with transfer fee and taxon on testnet
-xrpl-up nft mint --seed sn3nxiW7... --uri https://example.com/meta.json \
+# Mint on testnet — omit --seed to auto-fund via the public testnet faucet
+xrpl-up nft mint --uri https://example.com/meta.json \
   --transferable --transfer-fee 5 --taxon 42
 ```
 
@@ -324,7 +324,7 @@ xrpl-up nft mint --seed sn3nxiW7... --uri https://example.com/meta.json \
 | `--burnable` | off | Allow the issuer to burn it (`tfBurnable`) |
 | `--taxon <n>` | `0` | NFToken taxon |
 | `--transfer-fee <pct>` | `0` | Royalty fee percentage, 0–50 |
-| `-s, --seed <seed>` | — | Minter wallet seed (omit to auto-fund on `--local`) |
+| `-s, --seed <seed>` | — | Minter wallet seed (omit to auto-fund via faucet) |
 
 #### `xrpl-up nft list`
 

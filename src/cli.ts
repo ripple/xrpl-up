@@ -331,10 +331,10 @@ const nft = program
 
 nft
   .command('mint')
-  .description('Mint a new NFT (auto-funds a wallet on local)')
+  .description('Mint a new NFT (auto-funds a wallet via faucet if no --seed given)')
   .option('--local', 'Use the local Docker sandbox')
   .option('-n, --network <network>', 'Network', 'testnet')
-  .option('-s, --seed <seed>', 'Wallet seed to mint from (omit to auto-fund on local)')
+  .option('-s, --seed <seed>', 'Wallet seed to mint from (omit to auto-fund via faucet)')
   .option('--uri <uri>', 'Metadata URI (will be hex-encoded)')
   .option('--transferable', 'Allow the NFT to be transferred (tfTransferable)')
   .option('--burnable', 'Allow the issuer to burn the NFT (tfBurnable)')
