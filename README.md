@@ -64,6 +64,13 @@ xrpl-up channel create rDestination... 10 --local
 
 ## Commands
 
+`xrpl-up` has two command sets:
+
+- **Sandbox operation commands**: environment lifecycle and state control (`node`, `stop`, `reset`, `snapshot`, `status`, `accounts`, `logs`, `config`, `run`, `init`, `faucet`).
+- **rippled API wrapper commands**: convenience workflows for demos and quick experimentation (`amm`, `nft`, `channel`, `mpt`).
+
+Wrapper commands are intentionally non-exhaustive. For complex or production-grade flows, use `xrpl.js` directly or call `rippled` RPC endpoints.
+
 ### `xrpl-up node`
 
 Starts a sandbox environment and funds accounts. Supports a fully local rippled node (via Docker) or a connection to XRPL Testnet/Devnet.
