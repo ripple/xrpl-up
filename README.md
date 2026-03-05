@@ -1,6 +1,6 @@
 # xrpl-up
 
-A Hardhat-inspired CLI for the XRP Ledger. Spin up a local XRPL sandbox with pre-funded accounts, run scripts against any network, and interact with testnet/devnet — all from one command.
+CLI for XRPL local development and scripting. Spin up a local sandbox with pre-funded accounts, run scripts, manage snapshots, and interact with remote testnet/devnet endpoints from one tool.
 
 ## Prerequisites
 
@@ -10,13 +10,13 @@ A Hardhat-inspired CLI for the XRP Ledger. Spin up a local XRPL sandbox with pre
 ## Installation
 
 ```bash
-npm install -g hardhat-xrpl
+npm install -g xrpl-up
 ```
 
 Or use locally inside a project:
 
 ```bash
-npm install hardhat-xrpl
+npm install xrpl-up
 npx xrpl-up --help
 ```
 
@@ -156,7 +156,7 @@ xrpl-up faucet --network testnet
 ```
 
 > `--local` is accepted as a backward-compatible alias for `--network local`.
-> Faucet is not available on Mainnet.
+> Faucet targets supported by this command: `local`, `testnet`, `devnet`.
 
 ---
 
@@ -285,7 +285,7 @@ Asset format: `XRP` for native currency, `CURRENCY.rIssuerAddress` for IOUs (e.g
 
 ### `xrpl-up init [directory]`
 
-Scaffolds a new project with config, TypeScript setup, and example scripts. Prompts for a default network — choose `local` to get local-sandbox-ready scripts out of the box.
+Scaffolds a new project with config, TypeScript setup, and example scripts. Prompts for a default network; choose `local` for local-sandbox-ready scripts out of the box.
 
 ```bash
 xrpl-up init
@@ -296,7 +296,7 @@ xrpl-up init my-project
 
 ```
 my-project/
-├── xrpl-up.config.js          # Network configuration (all 4 networks pre-configured)
+├── xrpl-up.config.js          # Network configuration defaults + custom network support
 ├── package.json
 ├── tsconfig.json
 ├── .gitignore
@@ -441,7 +441,7 @@ Docker is available on all GitHub-hosted runners (`ubuntu-latest`, `macos-latest
 
 ## Configuration
 
-`xrpl-up.config.js` in your project root defines named networks used by all commands:
+`xrpl-up.config.js` in your project root defines named networks used by `run`, `accounts`, `status`, and remote `node`/`faucet` flows:
 
 ```js
 module.exports = {
@@ -457,10 +457,6 @@ module.exports = {
     devnet: {
       url: 'wss://s.devnet.rippletest.net:51233',
       name: 'XRPL Devnet',
-    },
-    mainnet: {
-      url: 'wss://xrplcluster.com',
-      name: 'XRPL Mainnet',
     },
   },
   defaultNetwork: 'local',
@@ -478,7 +474,6 @@ Add any custom WebSocket endpoint as a named network and use it with `--network 
 | `local` | `ws://localhost:6006` | Yes (genesis wallet, no limits) |
 | `testnet` | `wss://s.altnet.rippletest.net:51233` | Yes (rate limited) |
 | `devnet` | `wss://s.devnet.rippletest.net:51233` | Yes (rate limited) |
-| `mainnet` | `wss://xrplcluster.com` | No |
 
 > **Local vs Testnet:** The local sandbox is designed to cover most development workflows without needing testnet. Local mode has no transaction throttling, no faucet rate limits, instant ledger closes, and full reset control. Use testnet for final validation against real network state.
 
@@ -509,4 +504,3 @@ Account seeds, generated configs, and snapshots are stored at:
 ## License
 
 MIT
-# xrpl-up
