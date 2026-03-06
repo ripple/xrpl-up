@@ -25,12 +25,6 @@ npm run build
 npm link
 ```
 
-**Local project dependency:**
-
-```bash
-npm install xrpl-up
-```
-
 ## Quick Start
 
 ```bash
