@@ -9,11 +9,11 @@ CLI for XRPL local development and scripting. Spin up a local sandbox with pre-f
 
 ## Installation
 
-**From npm (global):**
+~~**From npm (global):**~~
 
-```bash
-npm install -g xrpl-up
-```
+~~`npm install -g xrpl-up`~~
+
+_Not available yet: package has not been published to npm._
 
 **From source (development):**
 
