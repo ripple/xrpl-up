@@ -10,12 +10,13 @@ import { logger } from '../utils/logger';
 // ── Named flag map ────────────────────────────────────────────────────────────
 
 const FLAG_MAP: Record<string, number> = {
-  requiredest:   AccountSetAsfFlags.asfRequireDest,   // 1
-  requireauth:   AccountSetAsfFlags.asfRequireAuth,   // 2
-  disallowxrp:   AccountSetAsfFlags.asfDisallowXRP,   // 3
-  disablemaster: AccountSetAsfFlags.asfDisableMaster, // 4
-  defaultripple: AccountSetAsfFlags.asfDefaultRipple, // 8
-  depositauth:   AccountSetAsfFlags.asfDepositAuth,   // 9
+  requiredest:    AccountSetAsfFlags.asfRequireDest,            // 1
+  requireauth:    AccountSetAsfFlags.asfRequireAuth,            // 2
+  disallowxrp:    AccountSetAsfFlags.asfDisallowXRP,            // 3
+  disablemaster:  AccountSetAsfFlags.asfDisableMaster,          // 4
+  defaultripple:  AccountSetAsfFlags.asfDefaultRipple,          // 8
+  depositauth:    AccountSetAsfFlags.asfDepositAuth,            // 9
+  allowclawback:  AccountSetAsfFlags.asfAllowTrustLineClawback, // 16
 };
 
 const VALID_FLAGS = Object.keys(FLAG_MAP).join(', ');

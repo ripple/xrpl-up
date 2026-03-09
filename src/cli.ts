@@ -43,6 +43,13 @@ import {
   accountSetFlagCommand, accountClearFlagCommand,
   accountSignerListCommand, accountInfoCommand,
 } from './commands/accountset';
+import { txListCommand } from './commands/tx';
+import {
+  depositPreauthAuthorizeCommand, depositPreauthUnauthorizeCommand,
+  depositPreauthListCommand,
+} from './commands/depositpreauth';
+import { ticketCreateCommand, ticketListCommand } from './commands/ticket';
+import { clawbackIouCommand, clawbackMptCommand } from './commands/clawback';
 
 import { logger } from './utils/logger';
 
@@ -835,7 +842,7 @@ const accountset = program
 
 accountset
   .command('set <flag>')
-  .description('Enable an account flag. Valid: requireDest, requireAuth, disallowXRP, disableMaster, defaultRipple, depositAuth')
+  .description('Enable an account flag. Valid: requireDest, requireAuth, disallowXRP, disableMaster, defaultRipple, depositAuth, allowClawback')
   .option('--local', 'Use the local Docker sandbox')
   .option('-n, --network <network>', 'Network', 'testnet')
   .requiredOption('-s, --seed <seed>', 'Wallet seed')
@@ -846,7 +853,7 @@ accountset
 
 accountset
   .command('clear <flag>')
-  .description('Disable an account flag. Valid: requireDest, requireAuth, disallowXRP, disableMaster, defaultRipple, depositAuth')
+  .description('Disable an account flag. Valid: requireDest, requireAuth, disallowXRP, disableMaster, defaultRipple, depositAuth, allowClawback')
   .option('--local', 'Use the local Docker sandbox')
   .option('-n, --network <network>', 'Network', 'testnet')
   .requiredOption('-s, --seed <seed>', 'Wallet seed')
@@ -875,6 +882,122 @@ accountset
   .option('--account <address>', 'Account to query (defaults to first local account)')
   .action((opts: { local?: boolean; network: string; account?: string }) => {
     accountInfoCommand({ local: opts.local, network: opts.network, account: opts.account })
+      .catch(handleError);
+  });
+
+// ── tx ────────────────────────────────────────────────────────────────────────
+const tx = program
+  .command('tx')
+  .description('Transaction history for an account');
+
+tx
+  .command('list [account]')
+  .description('List recent transactions for an account (defaults to first local account)')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network', 'testnet')
+  .option('--limit <n>', 'Number of transactions to fetch (default: 20)')
+  .action((account: string | undefined, opts: { local?: boolean; network: string; limit?: string }) => {
+    txListCommand({
+      account,
+      local: opts.local,
+      network: opts.network,
+      limit: opts.limit !== undefined ? parseInt(opts.limit, 10) : undefined,
+    }).catch(handleError);
+  });
+
+// ── depositpreauth ────────────────────────────────────────────────────────────
+const depositpreauth = program
+  .command('depositpreauth')
+  .description('Manage DepositPreauth entries (pre-authorize senders for DepositAuth accounts)');
+
+depositpreauth
+  .command('authorize <address>')
+  .description('Pre-authorize an address to send payments to this account')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network', 'testnet')
+  .requiredOption('-s, --seed <seed>', 'Wallet seed of the receiving account')
+  .action((address: string, opts: { local?: boolean; network: string; seed: string }) => {
+    depositPreauthAuthorizeCommand({ address, local: opts.local, network: opts.network, seed: opts.seed })
+      .catch(handleError);
+  });
+
+depositpreauth
+  .command('unauthorize <address>')
+  .description('Remove a pre-authorization for an address')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network', 'testnet')
+  .requiredOption('-s, --seed <seed>', 'Wallet seed of the receiving account')
+  .action((address: string, opts: { local?: boolean; network: string; seed: string }) => {
+    depositPreauthUnauthorizeCommand({ address, local: opts.local, network: opts.network, seed: opts.seed })
+      .catch(handleError);
+  });
+
+depositpreauth
+  .command('list [account]')
+  .description('List DepositPreauth entries for an account (defaults to first local account)')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network', 'testnet')
+  .action((account: string | undefined, opts: { local?: boolean; network: string }) => {
+    depositPreauthListCommand({ account, local: opts.local, network: opts.network })
+      .catch(handleError);
+  });
+
+// ── ticket ────────────────────────────────────────────────────────────────────
+const ticket = program
+  .command('ticket')
+  .description('Ticket (sequence reservation) operations');
+
+ticket
+  .command('create <count>')
+  .description('Reserve N sequence numbers as tickets (1–250)')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network', 'testnet')
+  .option('-s, --seed <seed>', 'Wallet seed (omit with --auto-fund on local)')
+  .option('--auto-fund', 'Auto-fund a new wallet (local only, use without --seed)')
+  .action((count: string, opts: { local?: boolean; network: string; seed?: string; autoFund?: boolean }) => {
+    ticketCreateCommand({
+      count: parseInt(count, 10),
+      local: opts.local,
+      network: opts.network,
+      seed: opts.seed,
+      autoFund: opts.autoFund,
+    }).catch(handleError);
+  });
+
+ticket
+  .command('list [account]')
+  .description('List tickets (reserved sequence numbers) for an account')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network', 'testnet')
+  .action((account: string | undefined, opts: { local?: boolean; network: string }) => {
+    ticketListCommand({ account, local: opts.local, network: opts.network })
+      .catch(handleError);
+  });
+
+// ── clawback ──────────────────────────────────────────────────────────────────
+const clawback = program
+  .command('clawback')
+  .description('Issuer token clawback (IOU trust lines and MPT)');
+
+clawback
+  .command('iou <amount> <currency> <holder>')
+  .description('Clawback IOU tokens from a holder trust line (issuer must have AllowTrustLineClawback set)')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network', 'testnet')
+  .requiredOption('-s, --seed <seed>', 'Issuer wallet seed')
+  .action((amount: string, currency: string, holder: string, opts: { local?: boolean; network: string; seed: string }) => {
+    clawbackIouCommand({ amount, currency, holder, local: opts.local, network: opts.network, seed: opts.seed })
+      .catch(handleError);
+  });
+
+clawback
+  .command('mpt <issuanceId> <holder> <amount>')
+  .description('Clawback MPT tokens from a holder (issuance must have been created with --can-clawback)')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network', 'testnet')
+  .requiredOption('-s, --seed <seed>', 'Issuer wallet seed')
+  .action((issuanceId: string, holder: string, amount: string, opts: { local?: boolean; network: string; seed: string }) => {
+    clawbackMptCommand({ issuanceId, holder, amount, local: opts.local, network: opts.network, seed: opts.seed })
       .catch(handleError);
   });
 

@@ -747,6 +747,7 @@ Enables or disables a named account flag. Each command prints a ready-to-use und
 | `disableMaster` | Disable the master key (use only after setting a signer list) |
 | `defaultRipple` | Enable rippling on all new trust lines (issuers) |
 | `depositAuth` | Only accept payments from pre-authorized senders |
+| `allowClawback` | Allow the issuer to clawback IOU tokens from trust line holders (irreversible) |
 
 ```bash
 xrpl-up accountset set requireDest --local --seed sn3nxiW7...
@@ -772,6 +773,108 @@ Shows the account's current flags, balance, sequence, and signer list if one is 
 ```bash
 xrpl-up accountset info --local
 xrpl-up accountset info --local --account rSomeAddress...
+```
+
+---
+
+### `xrpl-up tx`
+
+Transaction history for an account.
+
+#### `xrpl-up tx list [account]`
+
+Lists recent transactions for an account. If no account is provided, defaults to the first local account. Use `--limit` to control how many transactions are fetched (default: 20).
+
+```bash
+xrpl-up tx list --local
+xrpl-up tx list rSomeAddress... --local --limit 50
+xrpl-up tx list rSomeAddress... --network testnet
+```
+
+---
+
+### `xrpl-up depositpreauth`
+
+Manage DepositPreauth entries. When an account has the `depositAuth` flag set (via `xrpl-up accountset set depositAuth`), only pre-authorized senders can send payments to it.
+
+#### `xrpl-up depositpreauth authorize <address>`
+
+Pre-authorizes a specific address to send payments to this account.
+
+#### `xrpl-up depositpreauth unauthorize <address>`
+
+Revokes an existing pre-authorization.
+
+#### `xrpl-up depositpreauth list [account]`
+
+Lists all pre-authorized addresses for an account.
+
+```bash
+# Enable deposit authorization on your account first
+xrpl-up accountset set depositAuth --local --seed sn3nxiW7...
+
+# Pre-authorize a specific sender
+xrpl-up depositpreauth authorize rSender... --local --seed sn3nxiW7...
+
+# List all pre-authorizations
+xrpl-up depositpreauth list --local
+
+# Revoke a pre-authorization
+xrpl-up depositpreauth unauthorize rSender... --local --seed sn3nxiW7...
+```
+
+---
+
+### `xrpl-up ticket`
+
+Ticket operations. Tickets reserve sequence numbers, allowing transactions to be submitted out-of-order or in parallel — useful for multi-sig workflows.
+
+#### `xrpl-up ticket create <count>`
+
+Reserves 1–250 sequence numbers as tickets. Returns the allocated TicketSequence numbers.
+
+#### `xrpl-up ticket list [account]`
+
+Lists existing tickets (reserved sequence numbers) for an account.
+
+```bash
+# Reserve 5 ticket sequences
+xrpl-up ticket create 5 --local --seed sn3nxiW7...
+
+# Auto-fund a new wallet and reserve tickets (local only)
+xrpl-up ticket create 3 --local --auto-fund
+
+# List existing tickets
+xrpl-up ticket list --local
+xrpl-up ticket list rSomeAddress... --local
+```
+
+> **Usage:** To use a ticket in a transaction, set `Sequence = 0` and `TicketSequence = <n>`.
+
+---
+
+### `xrpl-up clawback`
+
+Issuer clawback operations. The issuer account must have clawback enabled before use.
+
+> **Prerequisites:**
+> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up accountset set allowClawback --seed <issuer-seed>`
+> - **MPT clawback:** The issuance must have been created with `xrpl-up mpt create --can-clawback`
+
+#### `xrpl-up clawback iou <amount> <currency> <holder>`
+
+Reclaims IOU tokens from a trust line holder. The signing wallet must be the token issuer.
+
+#### `xrpl-up clawback mpt <issuanceId> <holder> <amount>`
+
+Reclaims MPT tokens from a holder. The signing wallet must be the MPT issuer.
+
+```bash
+# Clawback 10 USD from a holder trust line
+xrpl-up clawback iou 10 USD rHolder... --local --seed sIssuerSeed...
+
+# Clawback 500 units of an MPT
+xrpl-up clawback mpt 00000001AABBCCDD... rHolder... 500 --local --seed sIssuerSeed...
 ```
 
 ---
