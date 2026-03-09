@@ -904,7 +904,7 @@ xrpl-up clawback mpt 00000001AABBCCDD... rHolder... 500 --local --seed sIssuerSe
 
 Scaffolds a new project with config, TypeScript setup, and example scripts. Prompts for a default network; choose `local` for local-sandbox-ready scripts out of the box.
 
-> **Prerequisite:** `xrpl-up` must be installed globally (`npm install -g xrpl-up`). The generated `package.json` scripts (`npm run node`, `npm run accounts`) call `xrpl-up` from PATH and do not re-install it locally.
+> **Prerequisite:** `xrpl-up` must be available on PATH. Until the package is published to npm, install from source with `npm link` (see [Installation](#installation)). The generated `package.json` scripts (`npm run node`, `npm run accounts`) call `xrpl-up` from PATH and do not re-install it locally.
 
 ```bash
 xrpl-up init
