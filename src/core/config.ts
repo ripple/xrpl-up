@@ -18,6 +18,10 @@ export interface XrplUpConfig {
 
 export const DEFAULT_CONFIG: XrplUpConfig = {
   networks: {
+    local: {
+      url: 'ws://localhost:6006',
+      name: 'Local Sandbox',
+    },
     testnet: {
       url: 'wss://s.altnet.rippletest.net:51233',
       name: 'XRPL Testnet',

@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 export interface RunOptions {
   network?: string;
   script: string;
+  scriptArgs?: string[];
 }
 
 export async function runCommand(options: RunOptions): Promise<void> {
@@ -44,18 +45,18 @@ export async function runCommand(options: RunOptions): Promise<void> {
     // Also try globally installed tsx/ts-node
     if (fs.existsSync(tsxBin)) {
       command = tsxBin;
-      args = [scriptPath];
+      args = [scriptPath, ...(options.scriptArgs ?? [])];
     } else if (fs.existsSync(tsNodeBin)) {
       command = tsNodeBin;
-      args = [scriptPath];
+      args = [scriptPath, ...(options.scriptArgs ?? [])];
     } else {
       // Fall back to npx tsx
       command = 'npx';
-      args = ['tsx', scriptPath];
+      args = ['tsx', scriptPath, ...(options.scriptArgs ?? [])];
     }
   } else {
     command = process.execPath;
-    args = [scriptPath];
+    args = [scriptPath, ...(options.scriptArgs ?? [])];
   }
 
   return new Promise((resolve, reject) => {

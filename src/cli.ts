@@ -50,6 +50,10 @@ import {
 } from './commands/depositpreauth';
 import { ticketCreateCommand, ticketListCommand } from './commands/ticket';
 import { clawbackIouCommand, clawbackMptCommand } from './commands/clawback';
+import {
+  amendmentListCommand, amendmentInfoCommand,
+  amendmentEnableCommand, amendmentDisableCommand, amendmentSyncCommand,
+} from './commands/amendment';
 
 import { logger } from './utils/logger';
 
@@ -196,11 +200,13 @@ program
 
 // ── run ───────────────────────────────────────────────────────────────────────
 program
-  .command('run <script>')
+  .command('run <script> [scriptArgs...]')
   .description('Run a TypeScript/JavaScript script against an XRPL network')
-  .option('-n, --network <network>', 'Network', 'testnet')
-  .action((script: string, opts: { network: string }) => {
-    runCommand({ script, network: opts.network }).catch(handleError);
+  .option('-n, --network <network>', 'Network: local | testnet | devnet | mainnet', 'testnet')
+  .option('--local', 'Alias for --network local')
+  .action((script: string, scriptArgs: string[], opts: { network: string; local?: boolean }) => {
+    const network = opts.local ? 'local' : opts.network;
+    runCommand({ script, network, scriptArgs }).catch(handleError);
   });
 
 // ── init ──────────────────────────────────────────────────────────────────────
@@ -1024,6 +1030,62 @@ clawback
   .requiredOption('-s, --seed <seed>', 'Issuer wallet seed')
   .action((issuanceId: string, holder: string, amount: string, opts: { local?: boolean; network: string; seed: string }) => {
     clawbackMptCommand({ issuanceId, holder, amount, local: opts.local, network: opts.network, seed: opts.seed })
+      .catch(handleError);
+  });
+
+// ── amendment ─────────────────────────────────────────────────────────────────
+const amendment = program
+  .command('amendment')
+  .description('Inspect and manage XRPL amendments (list, enable, disable, sync)');
+
+amendment
+  .command('list')
+  .description('List all amendments and their status')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network to query', 'testnet')
+  .option('--diff <network>', 'Compare against another network (e.g. --diff mainnet)')
+  .option('--disabled', 'Show only disabled amendments')
+  .action((opts: { local?: boolean; network: string; diff?: string; disabled?: boolean }) => {
+    amendmentListCommand({ local: opts.local, network: opts.network, diff: opts.diff, disabled: opts.disabled })
+      .catch(handleError);
+  });
+
+amendment
+  .command('info <nameOrHash>')
+  .description('Show details for a single amendment (look up by name or hash prefix)')
+  .option('--local', 'Use the local Docker sandbox')
+  .option('-n, --network <network>', 'Network to query', 'testnet')
+  .action((nameOrHash: string, opts: { local?: boolean; network: string }) => {
+    amendmentInfoCommand(nameOrHash, { local: opts.local, network: opts.network })
+      .catch(handleError);
+  });
+
+amendment
+  .command('enable <nameOrHash>')
+  .description('Force-enable an amendment in the local sandbox (admin RPC, local only)')
+  .option('--local', 'Use the local Docker sandbox')
+  .action((nameOrHash: string, opts: { local?: boolean }) => {
+    amendmentEnableCommand(nameOrHash, { local: opts.local })
+      .catch(handleError);
+  });
+
+amendment
+  .command('disable <nameOrHash>')
+  .description('Veto an amendment in the local sandbox (admin RPC, local only)')
+  .option('--local', 'Use the local Docker sandbox')
+  .action((nameOrHash: string, opts: { local?: boolean }) => {
+    amendmentDisableCommand(nameOrHash, { local: opts.local })
+      .catch(handleError);
+  });
+
+amendment
+  .command('sync')
+  .description('Enable all amendments from a source network that are missing locally (local only)')
+  .requiredOption('--from <network>', 'Source network to sync from (mainnet | testnet | devnet)')
+  .option('--local', 'Apply to the local Docker sandbox')
+  .option('--dry-run', 'Show what would change without applying')
+  .action((opts: { from: string; local?: boolean; dryRun?: boolean }) => {
+    amendmentSyncCommand({ from: opts.from, local: opts.local, dryRun: opts.dryRun })
       .catch(handleError);
   });
 
