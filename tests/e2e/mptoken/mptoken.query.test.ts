@@ -26,7 +26,7 @@ beforeAll(async () => {
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
-}, 120_000);
+}, 300_000);
 
 afterAll(async () => {
   await client.disconnect();
