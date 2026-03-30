@@ -57,13 +57,29 @@ import {
 
 import { logger } from './utils/logger';
 
+// ── xrpl-cli commands (merged from xrpl-cli) ──────────────────────────────────
+import { walletCommand } from './cli/commands/wallet/index';
+import { accountCommand } from './cli/commands/account/index';
+import { paymentCommand } from './cli/commands/payment';
+import { credentialCommand } from './cli/commands/credential';
+import { didCommand } from './cli/commands/did';
+import { multisigCommand } from './cli/commands/multisig';
+import { oracleCommand } from './cli/commands/oracle';
+import { permissionedDomainCommand } from './cli/commands/permissioned-domain';
+import { vaultCommand } from './cli/commands/vault';
+
 const pkg = require('../package.json') as { version: string };
 const program = new Command();
 
 program
   .name('xrpl-up')
   .description('XRPL sandbox for local development')
-  .version(pkg.version, '-v, --version');
+  .version(pkg.version, '-v, --version')
+  .option(
+    '--node <url>',
+    'XRPL node URL or network name (mainnet|testnet|devnet) — used by wallet/account/payment commands',
+    process.env.XRPL_NODE ?? 'testnet'
+  );
 
 // ── node ─────────────────────────────────────────────────────────────────────
 program
@@ -1094,6 +1110,17 @@ amendment
     amendmentSyncCommand({ from: opts.from, local: opts.local, dryRun: opts.dryRun })
       .catch(handleError);
   });
+
+// ── xrpl-cli merged commands ──────────────────────────────────────────────────
+program.addCommand(walletCommand);
+program.addCommand(accountCommand);
+program.addCommand(paymentCommand);
+program.addCommand(credentialCommand);
+program.addCommand(didCommand);
+program.addCommand(multisigCommand);
+program.addCommand(oracleCommand);
+program.addCommand(permissionedDomainCommand);
+program.addCommand(vaultCommand);
 
 /* ── Error handling ─────────────────────────────────────────────────────────── */
 function handleError(err: unknown): void {
