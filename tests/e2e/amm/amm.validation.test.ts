@@ -141,6 +141,7 @@ describe("amm validation (no network)", () => {
   it("--trading-fee 0 is valid (passes validation, fails on network only)", () => {
     // 0 is a valid trading fee — validation should not reject it
     // (will fail at network level with missing funded account, but that's OK for validation tests)
+    // Use an unreachable local node so the test fails fast (ECONNREFUSED) instead of timing out
     const result = runCLI([
       "amm", "create",
       "--asset", "XRP",
@@ -149,12 +150,14 @@ describe("amm validation (no network)", () => {
       "--amount2", "100",
       "--trading-fee", "0",
       "--seed", DUMMY_SEED,
-    ]);
+      "--node", "ws://127.0.0.1:1",
+    ], {}, 10_000);
     // Should NOT exit 1 due to trading-fee validation (may exit non-zero due to network)
     expect(result.stderr).not.toContain("--trading-fee must be");
   });
 
   it("--trading-fee 1000 is valid (passes validation, fails on network only)", () => {
+    // Use an unreachable local node so the test fails fast (ECONNREFUSED) instead of timing out
     const result = runCLI([
       "amm", "create",
       "--asset", "XRP",
@@ -163,7 +166,8 @@ describe("amm validation (no network)", () => {
       "--amount2", "100",
       "--trading-fee", "1000",
       "--seed", DUMMY_SEED,
-    ]);
+      "--node", "ws://127.0.0.1:1",
+    ], {}, 10_000);
     expect(result.stderr).not.toContain("--trading-fee must be");
   });
 });

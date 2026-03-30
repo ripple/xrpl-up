@@ -5,6 +5,7 @@
  *   - loadConfig / resolveNetwork
  *   - NetworkManager
  *   - WalletStore
+ *   - withClient (ledger wrapper from xrpl-cli)
  *
  * Environment variables injected by the `run` command:
  *   XRPL_NETWORK        – network key (e.g. "testnet")
@@ -25,6 +26,17 @@ export type { ServerInfo } from './core/network';
 
 export { WalletStore } from './core/wallet-store';
 export type { StoredAccount } from './core/wallet-store';
+
+// ── Ledger wrapper (merged from xrpl-cli) ────────────────────────────────────
+export {
+  withClient,
+  resolveNodeUrl,
+  TESTNET_URL,
+  TESTNET_FALLBACK_URL,
+  MAINNET_URL,
+  DEVNET_URL,
+} from './cli/utils/client';
+export type { Network } from './cli/utils/client';
 
 /**
  * Convenience helper for use inside `xrpl-up run` scripts.
