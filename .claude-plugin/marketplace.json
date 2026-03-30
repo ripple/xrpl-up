@@ -1,0 +1,36 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "xrpl-up",
+  "description": "Spin up local XRPL nodes, manage sandboxes, and interact with the XRP Ledger in a local development environment",
+  "owner": {
+    "name": "ripple"
+  },
+  "plugins": [
+    {
+      "name": "xrpl-up",
+      "description": "Spin up local XRPL nodes, manage sandboxes, and interact with the XRP Ledger in a local development environment",
+      "version": "0.1.0",
+      "author": {
+        "name": "ripple"
+      },
+      "source": "./",
+      "category": "development",
+      "homepage": "https://github.com/ripple/xrpl-up",
+      "repository": "https://github.com/ripple/xrpl-up",
+      "license": "MIT",
+      "keywords": [
+        "xrpl",
+        "xrp",
+        "blockchain",
+        "development",
+        "sandbox",
+        "local"
+      ],
+      "tags": [
+        "xrpl",
+        "blockchain",
+        "local-dev"
+      ]
+    }
+  ]
+}
