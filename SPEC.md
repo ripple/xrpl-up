@@ -43,7 +43,7 @@
 3. **Developer trust, not production security** — keys and seeds are printed to stdout by design. Production workflows should use their own key management.
 4. **Composable** — `xrpl-up` is both a CLI and a library (`src/index.ts`). Scripts run via `xrpl-up run` import from `xrpl-up` directly.
 5. **Mainnet guardrails** — destructive / irreversible commands check `isMainnet()` and refuse or warn accordingly.
-6. **Wrapping, not replacing** — wrapper commands (`amm`, `nft`, `mpt`, etc.) are convenience tooling for demos and quick experiments, not a full RPC client. Complex flows should use `xrpl.js` directly.
+6. **Wrapping, not replacing** — XRPL interaction commands (`wallet`, `account`, `payment`, `mptoken`, `trust`, etc.) are convenience tooling for demos and quick experiments, not a full RPC client. Complex flows should use `xrpl.js` directly.
 
 ### 1.4 What It Is NOT
 
@@ -68,12 +68,16 @@ xrpl-up CLI (src/cli.ts)
     │       network.ts       — NetworkManager (xrpl.js Client wrapper)
     │       wallet-store.ts  — WalletStore (JSON file persistence)
     │
-    ├─ Commands (src/commands/)
+    ├─ Sandbox commands (src/commands/)
     │       node.ts, stop.ts, reset.ts, snapshot.ts, config.ts,
     │       accounts.ts, faucet.ts, run.ts, init.ts, logs.ts, status.ts,
-    │       amm.ts, nft.ts, channel.ts, mpt.ts, offer.ts, trustline.ts,
-    │       escrow.ts, check.ts, accountset.ts, tx.ts, depositpreauth.ts,
-    │       ticket.ts, clawback.ts, amendment.ts
+    │       amendment.ts
+    │
+    ├─ XRPL interaction commands (src/cli/commands/)
+    │       wallet/, account/, payment.ts, trust.ts, offer.ts, amm.ts,
+    │       nft.ts, mptoken.ts, escrow.ts, check.ts, channel.ts,
+    │       ticket.ts, clawback.ts, credential.ts, did.ts, multisig.ts,
+    │       oracle.ts, deposit-preauth.ts, permissioned-domain.ts, vault.ts
     │
     └─ Faucet server (src/faucet-server/)
             server.ts   — HTTP server that funds accounts from the genesis wallet
@@ -217,7 +221,7 @@ const store = new WalletStore(networkKey);
 
 ### 4.1 Taxonomy
 
-`xrpl-up` has **25 top-level commands**:
+`xrpl-up` has **34 top-level commands**:
 
 | Category | Commands |
 |---|---|
@@ -225,10 +229,13 @@ const store = new WalletStore(networkKey);
 | State inspection | `accounts`, `status`, `logs` |
 | Scripting & scaffolding | `run`, `init` |
 | State management | `snapshot`, `config`, `faucet` |
-| Token standards | `amm`, `nft`, `mpt` |
-| Exchange & payments | `offer`, `trustline`, `escrow`, `check`, `channel` |
-| Account management | `accountset`, `clawback`, `depositpreauth`, `ticket` |
-| History & amendments | `tx`, `amendment` |
+| Amendments | `amendment` |
+| Wallets & accounts | `wallet`, `account` |
+| Payments | `payment` |
+| Token standards | `amm`, `nft`, `mptoken` |
+| Exchange | `offer`, `trust`, `escrow`, `check`, `channel` |
+| Account management | `clawback`, `ticket`, `deposit-preauth`, `multisig` |
+| Identity & compliance | `credential`, `did`, `oracle`, `permissioned-domain`, `vault` |
 
 ### 4.2 Global Flags
 
@@ -236,6 +243,7 @@ const store = new WalletStore(networkKey);
 |---|---|
 | `-v, --version` | Print version and exit |
 | `--help` | Print help for any command or subcommand |
+| `--node <url\|name>` | XRPL node for interaction commands: `mainnet`, `testnet` (default), `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NODE` env var. Ignored by sandbox lifecycle commands. |
 
 ### 4.3 Command Inventory
 
@@ -393,19 +401,22 @@ Subcommands: `create <destination> <amount>`, `list`, `fund <channelId> <amount>
 
 `sign` and `verify` have no `--local`/`--network` flag — they operate locally on the channel ID and amount.
 
-#### `xrpl-up mpt`
+#### `xrpl-up mptoken`
 
-Subcommands: `create`, `destroy <issuanceId>`, `authorize <issuanceId>`, `set <issuanceId>`, `info <issuanceId>`, `pay <issuanceId> <amount> <destination>`, `list [account]`.
+Renamed from `mpt`. Two subcommand groups: `issuance` and `authorize`.
 
-| Subcommand | Required | Key Flags |
-|---|---|---|
-| `create` | — | `--max-amount`, `--asset-scale`, `--transfer-fee`, `--metadata`, `--transferable`, `--require-auth`, `--can-lock`, `--can-clawback`, `-s` |
-| `destroy` | `issuanceId`, `-s` | — |
-| `authorize` | `issuanceId`, `-s` | `--holder`, `--unauthorize` |
-| `set` | `issuanceId`, `-s` | `--lock`, `--unlock`, `--holder` |
-| `info` | `issuanceId` | — |
-| `pay` | `issuanceId`, `amount`, `destination`, `-s` | — |
-| `list [account]` | — | `--holdings` |
+**`mptoken issuance` subcommands:** `create`, `destroy <id>`, `set <id>`, `get <id>`, `list <address>`.
+
+| Subcommand | Key Flags |
+|---|---|
+| `issuance create` | `--max-amount`, `--asset-scale`, `--transfer-fee`, `--metadata`, `--seed/--mnemonic/--account` |
+| `issuance destroy <id>` | `--seed` |
+| `issuance set <id>` | `--lock`, `--unlock`, `--holder` |
+| `issuance get <id>` | — |
+| `issuance list <address>` | — |
+| `authorize <id>` | `--holder`, `--unauthorize`, `--seed` |
+
+For sending MPT tokens use `payment --amount "<amount>/<issuanceId>"`. For querying held MPT balances use `account mptokens`.
 
 #### `xrpl-up offer`
 
@@ -419,18 +430,15 @@ Subcommands: `create <pays> <gets>`, `cancel <sequence>`, `list`.
 
 Asset format: `"5"` = 5 XRP, `"10.USD.rIssuer"` = IOU (same format as AMM).
 
-#### `xrpl-up trustline`
+#### `xrpl-up trust`
 
-Subcommands: `set <currencyIssuer> <limit>`, `freeze <currencyIssuer>`, `list`, `issuer-defaults`.
+Renamed from `trustline`. Single subcommand `set` with explicit flag options.
 
-Format: `USD.rIssuerAddress`.
-
-| Subcommand | Required | Key Flags |
+| Subcommand | Required flags | Key optional flags |
 |---|---|---|
-| `set` | `currencyIssuer`, `limit`, `-s` | `--no-ripple`, `--auth` |
-| `freeze` | `currencyIssuer`, `-s` | `--unfreeze` |
-| `list` | — | `--account` |
-| `issuer-defaults` | `-s` | `--no-ripple` (clears DefaultRipple) |
+| `set` | `--currency`, `--issuer`, `--limit`, key material | `--no-ripple`, `--clear-no-ripple`, `--freeze`, `--unfreeze`, `--auth` |
+
+`trustline freeze` → `trust set --freeze`. `trustline issuer-defaults` → `account set defaultRipple`. Query: `account trust-lines <address>` (replaces `trustline list`).
 
 #### `xrpl-up escrow`
 
@@ -456,34 +464,33 @@ Subcommands: `create <destination> <sendMax>`, `cash <checkId> [amount]`, `cance
 | `cancel` | `checkId`, `-s` | — |
 | `list` | — | `--account` |
 
-#### `xrpl-up accountset`
+#### `xrpl-up account set`
 
-Subcommands: `set <flag>`, `clear <flag>`, `signer-list <quorum> <signers>`, `info`.
+Replaces `accountset set/clear`. Flag names unchanged: `requireDest`, `requireAuth`, `disallowXRP`, `disableMaster`, `defaultRipple`, `depositAuth`, `allowClawback`.
 
-Valid flags: `requireDest`, `requireAuth`, `disallowXRP`, `disableMaster`, `defaultRipple`, `depositAuth`, `allowClawback`.
+```bash
+xrpl-up account set requireDest --node ws://localhost:6006 --seed s...
+xrpl-up account set requireDest --clear --node ws://localhost:6006 --seed s...
+```
 
-| Subcommand | Required | Key Flags |
-|---|---|---|
-| `set <flag>` | `flag`, `-s` | — |
-| `clear <flag>` | `flag`, `-s` | — |
-| `signer-list <quorum> <signers>` | `quorum`, `signers`, `-s` | Signers format: `rAddr:weight,...` |
-| `info` | — | `--account` |
+`accountset signer-list` → `multisig` command. `accountset info` → `account info`.
 
-#### `xrpl-up tx`
+#### Transaction history
 
-Subcommand: `list [account]`.
+`tx` has been removed. Use `account transactions`:
 
-| Flag | Default | Description |
-|---|---|---|
-| `--limit <n>` | `20` | Number of transactions to fetch |
-| `--account <address>` | first local account | Account to query |
-| `--local` / `-n` | — | Network |
+```bash
+xrpl-up account transactions <address> --node ws://localhost:6006
+```
 
-#### `xrpl-up depositpreauth`
+#### `xrpl-up deposit-preauth`
 
-Subcommands: `authorize <address>`, `unauthorize <address>`, `list [account]`.
+Renamed from `depositpreauth`. Subcommands: `set`, `list <address>`.
 
-All subcommands share `--local` / `-n, --network` and `-s, --seed` (required except on `list`).
+| Subcommand | Key Flags |
+|---|---|
+| `set` | `--authorize <addr>` or `--unauthorize <addr>` (mutually exclusive), `--seed` |
+| `list <address>` | — |
 
 #### `xrpl-up ticket`
 
@@ -503,7 +510,51 @@ Subcommands: `iou <amount> <currency> <holder>`, `mpt <issuanceId> <holder> <amo
 | `iou` | `amount`, `currency`, `holder`, `-s` |
 | `mpt` | `issuanceId`, `holder`, `amount`, `-s` |
 
-Prerequisites: for IOU clawback, issuer must have `asfAllowTrustLineClawback` set. For MPT clawback, issuance must have been created with `--can-clawback`.
+Prerequisites: for IOU clawback, issuer must have `asfAllowTrustLineClawback` set (via `account set allowClawback`). For MPT clawback, issuance must have been created with `--can-clawback`.
+
+#### `xrpl-up wallet`
+
+Manages local key pairs in `~/.xrpl/keystore/`. Subcommands: `new`, `new-mnemonic`, `address`, `private-key`, `public-key`, `import`, `list`, `remove`, `decrypt-keystore`, `change-password`, `sign`, `verify`, `alias`, `fund`.
+
+Key material flags on signing subcommands: `--seed`, `--mnemonic`, `--account <alias-or-address>`, `--password`, `--keystore <dir>`.
+
+#### `xrpl-up account` (query subcommands)
+
+Query subcommands: `info`, `balance`, `transactions`, `offers`, `trust-lines`, `channels`, `nfts`, `mptokens`. All accept an address positional arg and `--node`.
+
+Mutation subcommands: `set` (replaces `accountset set/clear`), `set-regular-key`, `delete`.
+
+#### `xrpl-up payment`
+
+Alias `send`. Sends a Payment transaction supporting XRP, IOU, and MPT amounts.
+
+Amount formats: `"10"` = 10 XRP, `"10/USD/rIssuer"` = IOU, `"500/<48-hex-issuanceId>"` = MPT.
+
+Required: `--to <dest>`, `--amount <amount>`. Key material: `--seed / --mnemonic / --account`.
+
+#### `xrpl-up multisig`
+
+Manages signer lists (replaces `accountset signer-list`).
+
+#### `xrpl-up credential`
+
+Manages on-ledger credentials.
+
+#### `xrpl-up did`
+
+Manages Decentralized Identifiers.
+
+#### `xrpl-up oracle`
+
+Manages price oracle objects.
+
+#### `xrpl-up permissioned-domain`
+
+Manages Permissioned Domain objects (XLS-80d).
+
+#### `xrpl-up vault`
+
+Manages vault objects.
 
 #### `xrpl-up amendment`
 
@@ -679,8 +730,8 @@ The `MPTokensV1` amendment is pre-enabled (`950AE2EA4654E47F04AA8739C0B214E24209
 Supported operations: create issuance, destroy, authorize holder, set lock/unlock, query info, pay tokens, list issuances or holdings.
 
 **Authorization flow** (when `--require-auth` is set):
-1. Issuer side: `mpt authorize <id> --holder <addr>` — grants permission
-2. Holder side: `mpt authorize <id>` (no `--holder`) — opts in
+1. Issuer side: `mptoken authorize <id> --holder <addr>` — grants permission
+2. Holder side: `mptoken authorize <id>` (no `--holder`) — opts in
 
 ### 5.11 DEX Offers
 
@@ -692,7 +743,7 @@ Supported operations: create issuance, destroy, authorize holder, set lock/unloc
 
 ### 5.12 Trust Lines
 
-`trustline set` submits `TrustSet`. `trustline freeze` sets or clears `lsfFreeze` via `TrustSet`. `trustline issuer-defaults` sets or clears `asfDefaultRipple` via `AccountSet`. `trustline list` queries `account_lines`.
+`trust set` submits `TrustSet`. `trust set --freeze/--unfreeze` sets or clears `lsfFreeze` via `TrustSet`. `account set defaultRipple` sets or clears `asfDefaultRipple` via `AccountSet`. `account trust-lines` queries `account_lines`.
 
 ### 5.13 Escrow
 
@@ -714,23 +765,23 @@ Default `settle-delay`: 86400 seconds (1 day).
 
 ### 5.17 DepositPreauth
 
-Manages `DepositPreauth` ledger objects. Required when the target account has the `depositAuth` flag set (`accountset set depositAuth`). `authorize` submits `DepositPreauth` with `Authorize` field; `unauthorize` uses `Unauthorize` field. `list` queries account objects filtered to `DepositPreauth` type.
+Manages `DepositPreauth` ledger objects. Required when the target account has the `depositAuth` flag set (`account set depositAuth`). `deposit-preauth set --authorize` submits `DepositPreauth` with `Authorize` field; `--unauthorize` uses `Unauthorize` field. `deposit-preauth list` queries account objects filtered to `DepositPreauth` type.
 
 ### 5.18 AccountSet / Signer Lists
 
-`accountset set/clear` maps human-readable flag names to `SetFlag`/`ClearFlag` values in `AccountSet`. `accountset signer-list` submits `SignerListSet`. `accountset info` queries `account_info` and `account_objects` to show flags and signer list.
+`account set` maps human-readable flag names to `SetFlag`/`ClearFlag` values in `AccountSet`. `multisig` submits `SignerListSet`. `account info` queries `account_info` and `account_objects` to show flags and signer list.
 
 **Important ordering constraint**: Set a signer list *before* disabling the master key (`disableMaster`). Reversing the order permanently locks the account.
 
 ### 5.19 Clawback
 
-`clawback iou` submits `Clawback` with an `Amount` of type IOU. The issuer must have `asfAllowTrustLineClawback` set (via `accountset set allowClawback`). This flag is irreversible.
+`clawback iou` submits `Clawback` with an `Amount` of type IOU. The issuer must have `asfAllowTrustLineClawback` set (via `account set allowClawback`). This flag is irreversible.
 
 `clawback mpt` submits `Clawback` with an `MPTAmount`. The issuance must have been created with `--can-clawback` (sets `tfMPTCanClawback`).
 
 ### 5.20 Transaction History
 
-`tx list [account]` queries `account_tx` RPC. Displays transaction type, result code, date, and ledger index. Default account: first account in the local wallet store. Default limit: 20.
+`account transactions [address]` queries `account_tx` RPC. Displays transaction type, result code, date, and ledger index. Default account: first account in the local wallet store. Default limit: 20.
 
 ---
 
