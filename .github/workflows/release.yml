@@ -218,6 +218,9 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Install cyclonedx-npm
         run: npm install -g @cyclonedx/cyclonedx-npm@4.0.2
 
