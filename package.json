@@ -1,6 +1,6 @@
 {
   "name": "@shichengsh001/xrpl-up",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "XRPL sandbox for local development",
   "author": "shichengsh001",
   "license": "MIT",
