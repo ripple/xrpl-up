@@ -9,6 +9,7 @@ When `DepositAuth` is enabled on an account, it blocks all incoming payments unl
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -40,11 +41,11 @@ SENDER_B=rSenderBXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## 2. Enable DepositAuth on the receiver
 
 ```bash
-xrpl-up accountset set depositAuth --local --seed $RECEIVER_SEED
+xrpl-up account set --set-flag depositAuth --seed $RECEIVER_SEED
 # ✔ Flag set: DepositAuth
 
 # Verify
-xrpl-up accountset info --local --account $RECEIVER
+xrpl-up account info $RECEIVER
 # DepositAuth  ✔
 ```
 
@@ -55,7 +56,7 @@ Once enabled, any payment not from a pre-authorized account will fail with `tecN
 ## 3. Pre-authorize a specific sender
 
 ```bash
-xrpl-up depositpreauth authorize $SENDER_A --local --seed $RECEIVER_SEED
+xrpl-up deposit-preauth set --authorize $SENDER_A --seed $RECEIVER_SEED
 # ✔ Pre-authorized: rSenderAXXX...  →  rReceiverXXX...
 ```
 
@@ -64,12 +65,12 @@ xrpl-up depositpreauth authorize $SENDER_A --local --seed $RECEIVER_SEED
 ## 4. List pre-authorizations
 
 ```bash
-xrpl-up depositpreauth list --local
+xrpl-up deposit-preauth list $RECEIVER
 # Pre-authorized senders for rReceiverXXX...:
 #   rSenderAXXX...
 
 # Or specify an account explicitly
-xrpl-up depositpreauth list $RECEIVER --local
+xrpl-up deposit-preauth list $RECEIVER
 ```
 
 ---
@@ -82,10 +83,10 @@ With Checks as a workaround (the receiver cashes the check — no deposit restri
 
 ```bash
 # Sender B creates a check (anyone can create a check to an account with depositAuth)
-xrpl-up check create $RECEIVER 5 --local --seed $SENDER_B_SEED
+xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_B_SEED
 
 # Receiver cashes the check (receiver initiates — not a direct payment, so depositAuth does not block it)
-xrpl-up check cash $CHECK_ID 5 --local --seed $RECEIVER_SEED
+xrpl-up check cash $CHECK_ID --amount 5 --seed $RECEIVER_SEED
 ```
 
 > **Note:** DepositAuth blocks *incoming payments*, not *cashing checks* (which are receiver-initiated). Escrow finishes and channel claims are similarly receiver-initiated and bypass DepositAuth.
@@ -95,11 +96,11 @@ xrpl-up check cash $CHECK_ID 5 --local --seed $RECEIVER_SEED
 ## 6. Revoke a pre-authorization
 
 ```bash
-xrpl-up depositpreauth unauthorize $SENDER_A --local --seed $RECEIVER_SEED
+xrpl-up deposit-preauth set --unauthorize $SENDER_A --seed $RECEIVER_SEED
 # ✔ Pre-authorization revoked: rSenderAXXX...
 
 # Confirm the list is now empty
-xrpl-up depositpreauth list --local
+xrpl-up deposit-preauth list $RECEIVER
 # (no pre-authorized senders)
 ```
 
@@ -108,7 +109,7 @@ xrpl-up depositpreauth list --local
 ## 7. Disable DepositAuth
 
 ```bash
-xrpl-up accountset clear depositAuth --local --seed $RECEIVER_SEED
+xrpl-up account set --clear-flag depositAuth --seed $RECEIVER_SEED
 # ✔ Flag cleared: DepositAuth
 ```
 

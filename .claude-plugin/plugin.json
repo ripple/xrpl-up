@@ -1,0 +1,20 @@
+{
+  "name": "xrpl-up",
+  "version": "0.1.0",
+  "description": "Spin up local XRPL nodes, manage sandboxes, and interact with the XRP Ledger in a local development environment",
+  "author": {
+    "name": "ripple"
+  },
+  "repository": "https://github.com/ripple/xrpl-up",
+  "homepage": "https://github.com/ripple/xrpl-up",
+  "license": "MIT",
+  "skills": "./skills/",
+  "keywords": [
+    "xrpl",
+    "xrp",
+    "blockchain",
+    "development",
+    "sandbox",
+    "local"
+  ]
+}

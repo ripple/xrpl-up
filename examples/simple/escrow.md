@@ -13,6 +13,7 @@ Two escrow types:
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -41,9 +42,9 @@ DEST_SEED=sEdDestSeedXXXXXXXXXXXXXXXXXXXXX
 Create a 10 XRP escrow that can finish in 30 seconds and auto-cancels after 1 day:
 
 ```bash
-xrpl-up escrow create $DEST 10 --local --seed $SENDER_SEED \
-  --finish-after +30s \
-  --cancel-after +1d
+xrpl-up escrow create --to $DEST --amount 10 --seed $SENDER_SEED \
+  --finish-after 2024-01-01T00:00:30Z \
+  --cancel-after 2024-01-02T00:00:00Z
 # ✔ Escrow created
 #   sequence    42
 #   amount      10 XRP → rDestXXX...
@@ -57,11 +58,11 @@ Time expressions:
 
 | Format | Meaning |
 |--------|---------|
-| `+30s` | 30 seconds from now |
-| `+30m` | 30 minutes from now |
-| `+1h` | 1 hour from now |
-| `+1d` | 1 day from now |
-| `+7d` | 7 days from now |
+| `2024-01-01T00:00:30Z` | 30 seconds from epoch |
+| `2024-01-01T00:30:00Z` | 30 minutes from epoch |
+| `2024-01-01T01:00:00Z` | 1 hour from epoch |
+| `2024-01-02T00:00:00Z` | 1 day from epoch |
+| `2024-01-08T00:00:00Z` | 7 days from epoch |
 | `1700000000` | Absolute Unix timestamp |
 
 ---
@@ -69,9 +70,8 @@ Time expressions:
 ### 2. List escrows
 
 ```bash
-xrpl-up escrow list --local
-xrpl-up escrow list --local --account $SENDER
-# sequence  42  amount 10 XRP → rDestXXX...  finishAfter: 30s  cancelAfter: 1d
+xrpl-up escrow list $SENDER
+# sequence  42  amount 10 XRP → rDestXXX...  finishAfter: 2024-01-01T00:00:30Z  cancelAfter: 2024-01-02T00:00:00Z
 ```
 
 ---
@@ -81,7 +81,7 @@ xrpl-up escrow list --local --account $SENDER
 After the `--finish-after` time passes, the destination (or any account) can release the funds:
 
 ```bash
-xrpl-up escrow finish $SENDER $ESCROW_SEQ --local --seed $DEST_SEED
+xrpl-up escrow finish --owner $SENDER --sequence $ESCROW_SEQ --seed $DEST_SEED
 # ✔ Escrow finished  10 XRP released to rDestXXX...
 ```
 
@@ -94,7 +94,7 @@ The destination receives the XRP minus a small transaction fee.
 If the escrow's `CancelAfter` time has passed and it hasn't been finished, anyone can cancel it to return the XRP to the sender:
 
 ```bash
-xrpl-up escrow cancel $SENDER $ESCROW_SEQ --local --seed $SENDER_SEED
+xrpl-up escrow cancel --owner $SENDER --sequence $ESCROW_SEQ --seed $SENDER_SEED
 # ✔ Escrow cancelled  10 XRP returned to rSenderXXX...
 ```
 
@@ -132,9 +132,9 @@ CONDITION=A0258020XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The sender publishes the **condition** (not the fulfillment) on-chain:
 
 ```bash
-xrpl-up escrow create $DEST 25 --local --seed $SENDER_SEED \
+xrpl-up escrow create --to $DEST --amount 25 --seed $SENDER_SEED \
   --condition $CONDITION \
-  --cancel-after +7d
+  --cancel-after 2024-01-08T00:00:00Z
 # ✔ Escrow created  sequence 43
 ```
 
@@ -145,7 +145,7 @@ xrpl-up escrow create $DEST 25 --local --seed $SENDER_SEED \
 When ready, the destination submits both the condition and the fulfillment:
 
 ```bash
-xrpl-up escrow finish $SENDER 43 --local --seed $DEST_SEED \
+xrpl-up escrow finish --owner $SENDER --sequence 43 --seed $DEST_SEED \
   --condition $CONDITION \
   --fulfillment $FULFILLMENT
 # ✔ Escrow finished  25 XRP released
@@ -161,12 +161,12 @@ Model a 1-year vesting cliff with quarterly unlocks:
 
 ```bash
 # Q1: 25 XRP unlocks after 90 days
-xrpl-up escrow create $EMPLOYEE 25 --local --seed $COMPANY_SEED \
-  --finish-after +90d --cancel-after +365d
+xrpl-up escrow create --to $EMPLOYEE --amount 25 --seed $COMPANY_SEED \
+  --finish-after 2024-04-01T00:00:00Z --cancel-after 2025-01-01T00:00:00Z
 
 # Q2: 25 XRP unlocks after 180 days
-xrpl-up escrow create $EMPLOYEE 25 --local --seed $COMPANY_SEED \
-  --finish-after +180d --cancel-after +365d
+xrpl-up escrow create --to $EMPLOYEE --amount 25 --seed $COMPANY_SEED \
+  --finish-after 2024-07-01T00:00:00Z --cancel-after 2025-01-01T00:00:00Z
 
 # Q3, Q4: similar...
 ```

@@ -11,6 +11,7 @@ XRPL's built-in AMM (XLS-30) lets you provide liquidity to a constant-product po
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -21,14 +22,14 @@ xrpl-up status   # wait until "healthy"
 
 ```bash
 # XRP / USD pool — 100 XRP and 100 USD, 0.5% trading fee
-xrpl-up amm create XRP USD --local
+xrpl-up amm create XRP USD
 # ✔ AMM pool created
 #   asset1   100 XRP
 #   asset2   100 USD  (issuer: rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX)
 #   fee      0.5%
 #   LP token rAMMXXXXX / LPToken
 #
-#   Hint: xrpl-up amm info XRP USD.rIssuerXXXXX --local
+#   Hint: xrpl-up amm info XRP USD.rIssuerXXXXX
 ```
 
 Save the issuer address printed in the output:
@@ -42,7 +43,7 @@ ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## 2. Inspect the pool
 
 ```bash
-xrpl-up amm info XRP USD.$ISSUER --local
+xrpl-up amm info XRP USD.$ISSUER
 # pool account   rAMMXXXXX...
 # XRP reserve    100 XRP
 # USD reserve    100 USD
@@ -56,7 +57,7 @@ xrpl-up amm info XRP USD.$ISSUER --local
 
 ```bash
 # 500 XRP / 1000 USD pool with a 0.3% fee
-xrpl-up amm create XRP USD --amount1 500 --amount2 1000 --fee 0.3 --local
+xrpl-up amm create XRP USD --amount1 500 --amount2 1000 --fee 0.3
 ```
 
 ---
@@ -65,7 +66,7 @@ xrpl-up amm create XRP USD --amount1 500 --amount2 1000 --fee 0.3 --local
 
 ```bash
 # USD / EUR pool (xrpl-up creates two separate issuers automatically)
-xrpl-up amm create USD EUR --amount1 100 --amount2 120 --local
+xrpl-up amm create USD EUR --amount1 100 --amount2 120
 # → USD issuer: rUsdIssuerXXXX
 # → EUR issuer: rEurIssuerXXXX
 ```
@@ -85,10 +86,10 @@ TRADER_SEED=sEdTraderSeedXXX
 TRADER=rTraderXXX
 
 # Trader sets a trust line for USD
-xrpl-up trustline set USD.$ISSUER 10000 --local --seed $TRADER_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $TRADER_SEED
 
 # Trader sells 5 XRP into the pool (gets USD back)
-xrpl-up offer create "5" "4.USD.$ISSUER" --local --seed $TRADER_SEED \
+xrpl-up offer create --taker-pays 5 --taker-gets 4/USD/$ISSUER --seed $TRADER_SEED \
   --immediate-or-cancel
 # The AMM fills the offer at the current pool price
 ```
@@ -100,7 +101,7 @@ xrpl-up offer create "5" "4.USD.$ISSUER" --local --seed $TRADER_SEED \
 After swaps the pool ratio shifts (and the price moves):
 
 ```bash
-xrpl-up amm info XRP USD.$ISSUER --local
+xrpl-up amm info XRP USD.$ISSUER
 # XRP reserve    105 XRP   ← increased
 # USD reserve    95.238...  ← decreased
 ```
@@ -110,7 +111,7 @@ xrpl-up amm info XRP USD.$ISSUER --local
 ## 7. Look up a pool by AMM account address
 
 ```bash
-xrpl-up amm info --account rAMMXXXXXXXXXXXXXXXXXXXXXXXXXXXX --local
+xrpl-up amm info --account rAMMXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 ---

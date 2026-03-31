@@ -9,6 +9,7 @@ XRPL has a fully on-chain order book built into the protocol. No smart contracts
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -39,26 +40,26 @@ TRADER_B=rTraderBXXX
 Enable DefaultRipple so tokens can flow between accounts:
 
 ```bash
-xrpl-up trustline issuer-defaults --local --seed $ISSUER_SEED
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
 ```
 
 Both traders set trust lines for USD:
 
 ```bash
-xrpl-up trustline set USD.$ISSUER 50000 --local --seed $TRADER_A_SEED
-xrpl-up trustline set USD.$ISSUER 50000 --local --seed $TRADER_B_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $TRADER_A_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $TRADER_B_SEED
 ```
 
 ---
 
 ## 2. Place a sell offer — Trader A sells XRP for USD
 
-Format: `offer create <pays> <gets>` — `pays` is what you put in, `gets` is what you want back.
+Format: `offer create --taker-pays <pays> --taker-gets <gets>` — `pays` is what you put in, `gets` is what you want back.
 
 ```bash
 # Trader A offers 10 XRP in exchange for 20 USD
 # (i.e. selling XRP at 2 USD per XRP)
-xrpl-up offer create "10" "20.USD.$ISSUER" --local --seed $TRADER_A_SEED
+xrpl-up offer create --taker-pays 10 --taker-gets 20/USD/$ISSUER --seed $TRADER_A_SEED
 # ✔ Offer created  sequence 5
 #   pays  10 XRP
 #   gets  20 USD (rIssuerXXX...)
@@ -70,7 +71,7 @@ xrpl-up offer create "10" "20.USD.$ISSUER" --local --seed $TRADER_A_SEED
 
 ```bash
 # Trader B offers 20 USD to get 10 XRP (matches Trader A's offer exactly)
-xrpl-up offer create "20.USD.$ISSUER" "10" --local --seed $TRADER_B_SEED
+xrpl-up offer create --taker-pays 20/USD/$ISSUER --taker-gets 10 --seed $TRADER_B_SEED
 # ✔ Offer filled immediately (matched Trader A)
 ```
 
@@ -79,10 +80,8 @@ xrpl-up offer create "20.USD.$ISSUER" "10" --local --seed $TRADER_B_SEED
 ## 4. List open offers
 
 ```bash
-xrpl-up offer list --local
-# Lists all open offers for the default (first stored) account
-
-xrpl-up offer list --local --account $TRADER_A
+xrpl-up account offers $TRADER_A
+# Lists all open offers for Trader A
 ```
 
 ---
@@ -91,11 +90,11 @@ xrpl-up offer list --local --account $TRADER_A
 
 ```bash
 # Place an offer that is too large to fill right away
-xrpl-up offer create "100" "200.USD.$ISSUER" --local --seed $TRADER_A_SEED
+xrpl-up offer create --taker-pays 100 --taker-gets 200/USD/$ISSUER --seed $TRADER_A_SEED
 # → sequence: 7
 
 # Place a counter-offer that only fills half
-xrpl-up offer create "100.USD.$ISSUER" "50" --local --seed $TRADER_B_SEED
+xrpl-up offer create --taker-pays 100/USD/$ISSUER --taker-gets 50 --seed $TRADER_B_SEED
 # Trader A's offer is now half-filled; the remaining 50 XRP / 100 USD stays on the book
 ```
 
@@ -105,7 +104,7 @@ xrpl-up offer create "100.USD.$ISSUER" "50" --local --seed $TRADER_B_SEED
 
 ```bash
 # Cancel Trader A's open offer by its sequence number
-xrpl-up offer cancel 7 --local --seed $TRADER_A_SEED
+xrpl-up offer cancel 7 --seed $TRADER_A_SEED
 # ✔ Offer 7 cancelled
 ```
 
@@ -122,7 +121,7 @@ xrpl-up offer cancel 7 --local --seed $TRADER_A_SEED
 
 ```bash
 # Immediate-or-cancel sell offer: sell 10 XRP, cancel if not fully filled
-xrpl-up offer create "10" "20.USD.$ISSUER" --local --seed $TRADER_A_SEED \
+xrpl-up offer create --taker-pays 10 --taker-gets 20/USD/$ISSUER --seed $TRADER_A_SEED \
   --sell --immediate-or-cancel
 ```
 
@@ -131,7 +130,7 @@ xrpl-up offer create "10" "20.USD.$ISSUER" --local --seed $TRADER_A_SEED \
 ## 8. View transaction history
 
 ```bash
-xrpl-up tx list $TRADER_A --local --limit 10
+xrpl-up account transactions $TRADER_A --limit 10
 # Each row shows type OfferCreate / OfferCancel, result, and a summary like "buy 10 XRP for 20 USD"
 ```
 

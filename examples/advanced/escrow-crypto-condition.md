@@ -15,6 +15,7 @@ This guide covers:
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 
 # Install five-bells-condition for condition generation
 npm install -g five-bells-condition
@@ -44,7 +45,7 @@ console.log('CONDITION:  ', conditionHex);
 ```
 
 ```bash
-xrpl-up run scripts/gen-condition.ts --local
+xrpl-up run scripts/gen-condition.ts
 # FULFILLMENT: A0228020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 # CONDITION:   A0258020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -78,9 +79,9 @@ RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The sender locks 25 XRP behind the condition. The escrow auto-cancels after 7 days if not finished:
 
 ```bash
-xrpl-up escrow create $RECEIVER 25 --local --seed $SENDER_SEED \
+xrpl-up escrow create --to $RECEIVER --amount 25 --seed $SENDER_SEED \
   --condition $CONDITION \
-  --cancel-after +7d
+  --cancel-after 2024-01-08T00:00:00Z
 # ✔ Escrow created
 #   sequence    42
 #   amount      25 XRP  →  rReceiverXXX...
@@ -98,9 +99,9 @@ Note: `--finish-after` is intentionally omitted — the condition alone gates re
 ## Step 4: Inspect the escrow
 
 ```bash
-xrpl-up escrow list --local --account $SENDER
+xrpl-up escrow list $SENDER
 # sequence  42  amount 25 XRP → rReceiverXXX...
-# condition A0258020...  cancelAfter 7d
+# condition A0258020...  cancelAfter 2024-01-08T00:00:00Z
 ```
 
 ---
@@ -110,7 +111,7 @@ xrpl-up escrow list --local --account $SENDER
 The receiver now presents the fulfillment (received out-of-band from the sender):
 
 ```bash
-xrpl-up escrow finish $ESCROW_OWNER $ESCROW_SEQ --local --seed $RECEIVER_SEED \
+xrpl-up escrow finish --owner $ESCROW_OWNER --sequence $ESCROW_SEQ --seed $RECEIVER_SEED \
   --condition $CONDITION \
   --fulfillment $FULFILLMENT
 # ✔ Escrow finished
@@ -121,7 +122,7 @@ xrpl-up escrow finish $ESCROW_OWNER $ESCROW_SEQ --local --seed $RECEIVER_SEED \
 Verify the escrow is gone and the receiver has the XRP:
 
 ```bash
-xrpl-up escrow list --local --account $SENDER
+xrpl-up escrow list $SENDER
 # (empty)
 
 xrpl-up accounts --local
@@ -157,7 +158,7 @@ await client.disconnect();
 ```
 
 ```bash
-xrpl-up run scripts/wrong-fulfillment.ts --local
+xrpl-up run scripts/wrong-fulfillment.ts
 # tecCRYPTOCONDITION_ERROR
 ```
 
@@ -171,17 +172,17 @@ If the receiver never presents the fulfillment and `CancelAfter` passes, anyone 
 
 ```bash
 # (after CancelAfter time has passed — in the sandbox you can advance time
-#  by waiting, or create a short --cancel-after +30s for testing)
+#  by waiting, or create a short --cancel-after for testing)
 
-xrpl-up escrow create $RECEIVER 10 --local --seed $SENDER_SEED \
+xrpl-up escrow create --to $RECEIVER --amount 10 --seed $SENDER_SEED \
   --condition $CONDITION \
-  --cancel-after +30s
+  --cancel-after 2024-01-01T00:00:30Z
 # → ESCROW_SEQ_SHORT=43
 
 sleep 35
 
 # Cancel the expired escrow (sender or anyone else can do this)
-xrpl-up escrow cancel $SENDER 43 --local --seed $SENDER_SEED
+xrpl-up escrow cancel --owner $SENDER --sequence 43 --seed $SENDER_SEED
 # ✔ Escrow cancelled  10 XRP returned to rSenderXXX...
 ```
 

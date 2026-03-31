@@ -9,6 +9,7 @@ Tickets reserve sequence numbers, allowing you to submit transactions out-of-ord
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -35,7 +36,7 @@ USER_SEED=sEdUserSeedXXXXXXXXXXXXXXXXXXXXXX
 USER=rUserXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Reserve 5 tickets
-xrpl-up ticket create 5 --local --seed $USER_SEED
+xrpl-up ticket create 5 --seed $USER_SEED
 # ✔ 5 tickets created
 #   sequences: 10, 11, 12, 13, 14
 ```
@@ -43,7 +44,7 @@ xrpl-up ticket create 5 --local --seed $USER_SEED
 Or auto-fund a fresh wallet with tickets on local:
 
 ```bash
-xrpl-up ticket create 3 --local --auto-fund
+xrpl-up ticket create 3 --auto-fund
 # ✔ 3 tickets created
 #   address:   rNewWalletXXX...
 #   seed:      sEdNewSeedXXX...
@@ -55,15 +56,13 @@ xrpl-up ticket create 3 --local --auto-fund
 ## 2. List existing tickets
 
 ```bash
-xrpl-up ticket list --local
+xrpl-up ticket list $USER
 # Tickets for rUserXXX...:
 #   TicketSequence  10
 #   TicketSequence  11
 #   TicketSequence  12
 #   TicketSequence  13
 #   TicketSequence  14
-
-xrpl-up ticket list $USER --local
 ```
 
 ---
@@ -100,7 +99,7 @@ await client.disconnect();
 ```
 
 ```bash
-xrpl-up run scripts/use-ticket.ts --local
+xrpl-up run scripts/use-ticket.ts
 # tesSUCCESS
 ```
 
@@ -114,7 +113,7 @@ Tickets shine in multi-sig scenarios where each signer prepares their transactio
 
 ```bash
 # 1. Reserve 3 tickets for 3 parallel transactions
-xrpl-up ticket create 3 --local --seed $USER_SEED
+xrpl-up ticket create 3 --seed $USER_SEED
 # → sequences: 20, 21, 22
 
 # 2. Signer A prepares a transaction using ticket 20
@@ -133,7 +132,7 @@ xrpl-up ticket create 3 --local --seed $USER_SEED
 After using some tickets, inspect what remains:
 
 ```bash
-xrpl-up ticket list $USER --local
+xrpl-up ticket list $USER
 # Shows only unconsumed tickets
 ```
 

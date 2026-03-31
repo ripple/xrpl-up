@@ -11,6 +11,7 @@ Payment channels enable fast, low-cost, off-chain micropayments between two part
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -38,7 +39,7 @@ The sender locks XRP in the channel. The receiver can claim up to this amount ov
 
 ```bash
 # Open a 50 XRP channel with a 1-day settle delay
-xrpl-up channel create $RECEIVER 50 --local --seed $SENDER_SEED \
+xrpl-up channel create --to $RECEIVER --amount 50 --seed $SENDER_SEED \
   --settle-delay 3600
 # ✔ Channel created
 #   channelID    ABCDEF1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -56,8 +57,7 @@ Default `--settle-delay` is 86400 seconds (1 day). This is how long the receiver
 ## 3. List open channels
 
 ```bash
-xrpl-up channel list --local
-xrpl-up channel list --local --account $SENDER
+xrpl-up channel list $SENDER
 # channelID  ABCDEF1234...  amount 50 XRP  balance 0 XRP  dest rReceiverXXX...
 ```
 
@@ -77,7 +77,7 @@ xrpl-up channel sign $CHANNEL_ID 1 --seed $SENDER_SEED
 #   publicKey  ED1234...
 #
 #   Verify:  xrpl-up channel verify ABCDEF1234... 1 3045... ED1234...
-#   Claim:   xrpl-up channel claim  ABCDEF1234... --amount 1 --signature 3045... --public-key ED1234... --local --seed <receiver-seed>
+#   Claim:   xrpl-up channel claim  ABCDEF1234... --amount 1 --signature 3045... --public-key ED1234... --seed <receiver-seed>
 
 SIG_1XRP=3045...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 PUBKEY=ED1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -127,7 +127,7 @@ xrpl-up channel claim $CHANNEL_ID \
   --amount 7 \
   --signature $SIG_7XRP \
   --public-key $PUBKEY \
-  --local --seed $RECEIVER_SEED
+  --seed $RECEIVER_SEED
 # ✔ Channel claim submitted
 #   redeemed  7 XRP
 ```
@@ -141,7 +141,7 @@ The receiver now holds 7 XRP; 43 XRP remains in the channel for future use.
 If the channel is running low, the sender can top it up:
 
 ```bash
-xrpl-up channel fund $CHANNEL_ID 20 --local --seed $SENDER_SEED
+xrpl-up channel fund $CHANNEL_ID 20 --seed $SENDER_SEED
 # ✔ Channel funded  +20 XRP  (total: 70 XRP)
 ```
 
@@ -152,14 +152,14 @@ xrpl-up channel fund $CHANNEL_ID 20 --local --seed $SENDER_SEED
 ### Option A: Receiver requests closure (immediate, if no pending balance)
 
 ```bash
-xrpl-up channel claim $CHANNEL_ID --close --local --seed $RECEIVER_SEED
+xrpl-up channel claim $CHANNEL_ID --close --seed $RECEIVER_SEED
 # ✔ Channel closed
 ```
 
 ### Option B: Sender requests closure (with settle delay)
 
 ```bash
-xrpl-up channel claim $CHANNEL_ID --close --local --seed $SENDER_SEED
+xrpl-up channel claim $CHANNEL_ID --close --seed $SENDER_SEED
 # ✔ Close requested — receiver has 3600 s to submit final claim
 ```
 
@@ -167,7 +167,7 @@ After the settle delay passes without a receiver claim, the sender can close the
 
 ```bash
 # After settle delay expires:
-xrpl-up channel claim $CHANNEL_ID --close --local --seed $SENDER_SEED
+xrpl-up channel claim $CHANNEL_ID --close --seed $SENDER_SEED
 # ✔ Channel closed  remaining 43 XRP returned to sender
 ```
 
@@ -177,7 +177,7 @@ xrpl-up channel claim $CHANNEL_ID --close --local --seed $SENDER_SEED
 
 ```bash
 # 1. Open channel
-xrpl-up channel create $RECEIVER 50 --local --seed $SENDER_SEED
+xrpl-up channel create --to $RECEIVER --amount 50 --seed $SENDER_SEED
 # → CHANNEL_ID
 
 # 2. Off-chain: sign claims as service is delivered (no fee)
@@ -190,10 +190,10 @@ xrpl-up channel verify $CHANNEL_ID 12 $SIG_12 $PUBKEY
 
 # 4. On-chain settlement (once)
 xrpl-up channel claim $CHANNEL_ID --amount 12 --signature $SIG_12 \
-  --public-key $PUBKEY --local --seed $RECEIVER_SEED
+  --public-key $PUBKEY --seed $RECEIVER_SEED
 
 # 5. Close
-xrpl-up channel claim $CHANNEL_ID --close --local --seed $RECEIVER_SEED
+xrpl-up channel claim $CHANNEL_ID --close --seed $RECEIVER_SEED
 ```
 
 ---

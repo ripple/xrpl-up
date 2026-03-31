@@ -11,6 +11,7 @@ Combine a **SignerList** (2-of-3 multi-signature) with **Tickets** (reserved seq
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -47,14 +48,14 @@ CAROL=rCarolXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ```bash
 xrpl-up accountset signer-list 2 "$ALICE:1,$BOB:1,$CAROL:1" \
-  --local --seed $TREASURY_SEED
+  --seed $TREASURY_SEED
 # ✔ Signer list set  quorum 2  signers: rAliceXXX(1) rBobXXX(1) rCarolXXX(1)
 ```
 
 Verify the signer list was applied:
 
 ```bash
-xrpl-up accountset info --local --account $TREASURY
+xrpl-up account info $TREASURY
 # SignerList:  quorum 2
 #   rAliceXXX  weight 1
 #   rBobXXX    weight 1
@@ -66,7 +67,7 @@ xrpl-up accountset info --local --account $TREASURY
 > ⚠️ Only do this after confirming the signer list is correct. If you disable the master key with no valid signer list you permanently lose access.
 
 ```bash
-xrpl-up accountset set disableMaster --local --seed $TREASURY_SEED
+xrpl-up account set --set-flag disableMaster --seed $TREASURY_SEED
 # ✔ Flag set: disableMaster
 # ⚠  Master key is now disabled. All future transactions require multi-sig.
 ```
@@ -83,7 +84,7 @@ Tickets let co-signers prepare transactions independently — no sequence depend
 # The treasury account reserves 3 tickets
 # (requires multi-sig now that master key is disabled — use a script for this
 #  or reserve tickets BEFORE disabling the master key)
-xrpl-up ticket create 3 --local --seed $TREASURY_SEED
+xrpl-up ticket create 3 --seed $TREASURY_SEED
 # ✔ 3 tickets created
 #   sequences: 10, 11, 12
 
@@ -95,7 +96,7 @@ T3=12
 ### 2b. List the reserved tickets
 
 ```bash
-xrpl-up ticket list $TREASURY --local
+xrpl-up ticket list $TREASURY
 # TicketSequence  10
 # TicketSequence  11
 # TicketSequence  12
@@ -155,7 +156,7 @@ await client.disconnect();
 ```
 
 ```bash
-xrpl-up run scripts/multisig-sign.ts --local
+xrpl-up run scripts/multisig-sign.ts
 # tesSUCCESS   (ticket 10 consumed)
 ```
 
@@ -167,21 +168,21 @@ With tickets, there is **no ordering requirement**. Submit Tx using ticket 12 be
 
 ```bash
 # Tx using ticket 12 submitted first
-xrpl-up run scripts/multisig-sign-t12.ts --local
+xrpl-up run scripts/multisig-sign-t12.ts
 # tesSUCCESS   (ticket 12 consumed)
 
 # Tx using ticket 11 submitted second — still valid
-xrpl-up run scripts/multisig-sign-t11.ts --local
+xrpl-up run scripts/multisig-sign-t11.ts
 # tesSUCCESS   (ticket 11 consumed)
 ```
 
 After all tickets are used:
 
 ```bash
-xrpl-up ticket list $TREASURY --local
+xrpl-up ticket list $TREASURY
 # (empty — all tickets consumed)
 
-xrpl-up tx list $TREASURY --local --limit 5
+xrpl-up account transactions $TREASURY --limit 5
 # Three Payment txs — submitted out of order (12 before 11 before 10)
 ```
 
@@ -190,7 +191,7 @@ xrpl-up tx list $TREASURY --local --limit 5
 ## Part 5 — Verify the Account State
 
 ```bash
-xrpl-up accountset info --local --account $TREASURY
+xrpl-up account info $TREASURY
 # DisableMaster  ✔
 # SignerList     quorum 2  (Alice, Bob, Carol)
 ```

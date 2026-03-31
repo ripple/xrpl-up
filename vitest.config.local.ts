@@ -1,0 +1,50 @@
+import { defineConfig } from "vitest/config";
+import path from "path";
+
+export default defineConfig({
+  resolve: {
+    alias: [
+      {
+        // Redirect any import whose raw import string ends in /helpers/fund
+        // → local.ts (same public API, uses local faucet instead of testnet).
+        // NOTE: Vite matches resolve.alias against the raw import id ("../helpers/fund"),
+        // not the resolved absolute path, so the pattern must match the relative string.
+        find: /.*\/helpers\/fund$/,
+        replacement: path.resolve(__dirname, "tests/e2e/helpers/local"),
+      },
+    ],
+  },
+  test: {
+    globals: true,
+    // Patch Date.now() to account for standalone rippled startup ledger drift.
+    // See tests/setup/patch-clock.ts for details.
+    setupFiles: ["tests/setup/patch-clock.ts"],
+    // Local node is much faster than testnet
+    testTimeout: 10_000,
+    hookTimeout: 30_000,
+    maxConcurrency: 10,
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        // Keep to 1 fork so test-file beforeAll hooks (fundMaster) are never
+        // concurrent. The local faucet uses a single genesis account; two
+        // simultaneous faucet calls collide on the same sequence number,
+        // causing one payment to fail silently.
+        minForks: 1,
+        maxForks: 4,
+      },
+    },
+    include: ["tests/e2e/**/*.test.ts"],
+    exclude: [
+      "**/node_modules/**",
+      "**/.worktrees/**",
+      "**/dist/**",
+      // Calls the xrpl-up CLI faucet command which checks for altnet/devnet URL
+      "tests/e2e/wallet/fund.test.ts",
+      // These features target devnet specifically and import helpers/devnet.ts
+      "tests/e2e/vault/**",
+      "tests/e2e/permissioned-domain/**",
+    ],
+    globalSetup: ["tests/setup/local-node.ts"],
+  },
+});

@@ -3,3 +3,6 @@ dist/
 *.docx
 .claude/
 CONTEXT-*.md
+# Compiled TypeScript output in test directories
+tests/**/*.js
+tests/**/*.d.ts
