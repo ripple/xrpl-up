@@ -1,9 +1,16 @@
 {
-  "name": "xrpl-up",
+  "name": "@shichengsh001/xrpl-up",
   "version": "0.1.0",
   "description": "XRPL sandbox for local development",
-  "author": "",
+  "author": "shichengsh001",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ripple/xrpl-up.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": [
     "xrpl",
     "xrp",
@@ -26,7 +33,9 @@
   "files": [
     "dist/",
     "src/faucet-server/Dockerfile",
-    "src/faucet-server/package.json"
+    "src/faucet-server/package.json",
+    "LICENSE",
+    "README.md"
   ],
   "dependencies": {
     "@xrplf/isomorphic": "^1.0.1",

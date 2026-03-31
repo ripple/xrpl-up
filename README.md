@@ -65,6 +65,8 @@ xrpl-up channel create rDestination... 10 --local
 
 Wrapper commands are intentionally non-exhaustive. For complex or production-grade flows, use `xrpl.js` directly or call `rippled` RPC endpoints.
 
+> **⚠️ Mainnet safety:** Wrapper commands (`amm`, `nft`, `mpt`, `offer`, `escrow`, `channel`, `check`, `trustline`, `accountset`, `clawback`, `ticket`, `depositpreauth`) have **no mainnet guard**. Passing `--network mainnet` (or a custom mainnet URL) will submit real transactions. These commands are intended for local and testnet development only.
+
 ### `xrpl-up node`
 
 Starts a sandbox environment and funds accounts. Supports a fully local rippled node (via Docker) or a connection to XRPL Testnet/Devnet.
@@ -1012,7 +1014,7 @@ When `local` is selected as the default network, the example scripts use the loc
 
 Save and restore ledger state checkpoints. Useful for complex test setups (AMM pools, issued currencies, multi-step escrows) where re-running setup from scratch is expensive.
 
-> **Requires `--persist` mode.** Snapshots copy the named Docker volume (`xrpl-up-local-db`). In ephemeral mode (default), there is no persistent volume to snapshot.
+> **Requires `--persist` mode.** Snapshots tar the named Docker volume (`xrpl-up-local-db`) into a self-contained `.tar.gz` file. Restore recreates the volume from that tarball — the volume does not need to have survived between runs. In ephemeral mode (default), there is no persistent volume to snapshot.
 
 ```bash
 # Save the current ledger state
@@ -1055,6 +1057,94 @@ xrpl-up accounts --local                         # snapshot accounts restored
 Snapshots are stored at `~/.xrpl-up/snapshots/`. Each snapshot is a pair of files:
 - `<name>.tar.gz` — compressed NuDB ledger volume (typically 5–100 MB)
 - `<name>-accounts.json` — account store at snapshot time
+
+**Using snapshots in CI / GitHub Actions:**
+
+GitHub-hosted runners are ephemeral — the `~/.xrpl-up/snapshots/` directory disappears after each job. Snapshots work natively within a single job. For cross-job or cross-run use, treat the snapshot files as portable artifacts.
+
+*Within one job* — save state after setup, restore between test suites (no extra configuration):
+
+```yaml
+steps:
+  - run: xrpl-up node --local --persist --detach
+  - run: |
+      xrpl-up faucet --network local
+      xrpl-up amm create XRP USD --local
+      xrpl-up snapshot save after-setup
+  - run: npm test -- --suite=suite-a
+  - run: xrpl-up snapshot restore after-setup
+  - run: npm test -- --suite=suite-b
+  - run: xrpl-up stop
+    if: always()
+```
+
+*Across jobs* — upload snapshot as an artifact in a setup job, download and restore in parallel test jobs:
+
+```yaml
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - run: xrpl-up node --local --persist --detach
+      - run: |
+          xrpl-up faucet --network local
+          xrpl-up amm create XRP USD --local
+          xrpl-up snapshot save after-setup
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xrpl-snapshots
+          path: ~/.xrpl-up/snapshots/
+      - run: xrpl-up stop
+
+  test-suite-a:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: xrpl-snapshots
+          path: ~/.xrpl-up/snapshots/
+      - run: xrpl-up node --local --persist --detach
+      - run: xrpl-up snapshot restore after-setup
+      - run: npm test -- --suite=suite-a
+      - run: xrpl-up stop
+        if: always()
+
+  test-suite-b:
+    needs: setup
+    runs-on: ubuntu-latest      # different VM, doesn't matter
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: xrpl-snapshots
+          path: ~/.xrpl-up/snapshots/
+      - run: xrpl-up node --local --persist --detach
+      - run: xrpl-up snapshot restore after-setup
+      - run: npm test -- --suite=suite-b
+      - run: xrpl-up stop
+        if: always()
+```
+
+*Across runs* — cache the snapshot directory so expensive setup only runs once:
+
+```yaml
+steps:
+  - uses: actions/cache@v4
+    with:
+      path: ~/.xrpl-up/snapshots
+      key: xrpl-snapshot-v1          # bump to force regeneration when setup changes
+
+  - run: xrpl-up node --local --persist --detach
+  - run: |
+      if ! xrpl-up snapshot restore after-setup; then
+        xrpl-up faucet --network local
+        xrpl-up amm create XRP USD --local
+        xrpl-up snapshot save after-setup
+      fi
+  - run: npm test
+  - run: xrpl-up stop
+    if: always()
+```
 
 ---
 
@@ -1122,7 +1212,9 @@ Validation also runs automatically when `--config` is passed to `xrpl-up node --
 
 ## CI/CD
 
-Use `--detach` to start the sandbox non-interactively and `xrpl-up stop` to tear it down after tests.
+Docker is available on all GitHub-hosted runners (`ubuntu-latest`, `macos-latest`).
+
+**Minimal setup** — start the sandbox, run tests, tear down:
 
 ```yaml
 # .github/workflows/test.yml
@@ -1133,7 +1225,27 @@ steps:
     if: always()
 ```
 
-Docker is available on all GitHub-hosted runners (`ubuntu-latest`, `macos-latest`). The faucet server handles ledger auto-advance while the sandbox runs in the background.
+**With snapshots** — do expensive setup once, restore before each test suite:
+
+```yaml
+steps:
+  - run: xrpl-up node --local --persist --detach
+  - run: |
+      xrpl-up faucet --network local
+      xrpl-up amm create XRP USD --local
+      xrpl-up snapshot save after-setup
+  - run: npm test -- --suite=suite-a
+  - run: xrpl-up snapshot restore after-setup
+  - run: npm test -- --suite=suite-b
+  - run: xrpl-up stop
+    if: always()
+```
+
+**Parallel jobs sharing a snapshot** — run test suites concurrently against identical ledger state. See the [snapshot section](#xrpl-up-snapshot) for the full `upload-artifact` / `download-artifact` pattern.
+
+**Cross-run snapshot cache** — skip setup on subsequent runs using `actions/cache`. See the [snapshot section](#xrpl-up-snapshot) for details.
+
+The faucet server handles ledger auto-advance while the sandbox runs in the background.
 
 ---
 
