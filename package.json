@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ripple/xrpl-up"
+    "url": "https://github.com/ripple/xrpl-up.git"
   },
   "keywords": [
     "xrpl",
@@ -39,7 +39,9 @@
   "files": [
     "dist/",
     "src/faucet-server/Dockerfile",
-    "src/faucet-server/package.json"
+    "src/faucet-server/package.json",
+    "LICENSE",
+    "README.md"
   ],
   "dependencies": {
     "@xrplf/isomorphic": "^1.0.1",

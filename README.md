@@ -48,7 +48,7 @@ xrpl-up amm create XRP USD --local
 xrpl-up nft mint --local --uri https://example.com/meta.json --transferable
 
 # Create an MPT issuance (Multi-Purpose Token)
-xrpl-up mpt create --local --max-amount 1000000 --asset-scale 6 --transferable
+xrpl-up mptoken issuance create --node ws://localhost:6006 --max-amount 1000000 --asset-scale 6
 
 # Open a payment channel
 xrpl-up channel create rDestination... 10 --local
@@ -60,10 +60,37 @@ xrpl-up channel create rDestination... 10 --local
 
 `xrpl-up` has two command sets:
 
-- **Sandbox operation commands**: environment lifecycle and state control (`node`, `stop`, `reset`, `snapshot`, `status`, `accounts`, `logs`, `config`, `run`, `init`, `faucet`).
-- **rippled API wrapper commands**: convenience workflows for demos and quick experimentation (`amm`, `nft`, `channel`, `mpt`, `offer`, `trustline`, `escrow`, `check`, `accountset`).
+- **Sandbox operation commands**: environment lifecycle and state control (`node`, `stop`, `reset`, `snapshot`, `status`, `accounts`, `logs`, `config`, `run`, `init`, `faucet`, `amendment`).
+- **XRPL interaction commands**: transaction submission and account management (`wallet`, `account`, `payment`, `trust`, `offer`, `amm`, `nft`, `mptoken`, `escrow`, `check`, `channel`, `ticket`, `clawback`, `credential`, `did`, `multisig`, `oracle`, `deposit-preauth`, `permissioned-domain`, `vault`).
 
-Wrapper commands are intentionally non-exhaustive. For complex or production-grade flows, use `xrpl.js` directly or call `rippled` RPC endpoints.
+XRPL interaction commands are intentionally non-exhaustive. For complex or production-grade flows, use `xrpl.js` directly or call `rippled` RPC endpoints.
+
+> **⚠️ Mainnet safety:** XRPL interaction commands (`wallet`, `account`, `payment`, `trust`, `offer`, `amm`, `nft`, `mptoken`, `escrow`, `check`, `channel`, `ticket`, `clawback`, `credential`, `did`, `multisig`, `oracle`, `deposit-preauth`, `permissioned-domain`, `vault`) have **no mainnet guard**. Passing `--node mainnet` (or a mainnet WebSocket URL) will submit real transactions. These commands are intended for local and testnet development only.
+
+### Global flag: `--node`
+
+All XRPL interaction commands accept a global `--node` option that sets the network target:
+
+| Value | Connects to |
+|-------|-------------|
+| `testnet` (default) | XRPL Testnet |
+| `devnet` | XRPL Devnet |
+| `mainnet` | XRPL Mainnet (caution) |
+| `ws://localhost:6006` | Local sandbox started with `xrpl-up node --local` |
+
+```bash
+# Use local sandbox (start first with: xrpl-up node --local)
+xrpl-up account info rMyAddress --node ws://localhost:6006
+
+# Use testnet (default)
+xrpl-up wallet fund --account rMyAddress
+
+# Set via environment variable
+export XRPL_NODE=ws://localhost:6006
+xrpl-up payment --to rDest --amount 10
+```
+
+`--node` only applies to XRPL interaction commands; sandbox lifecycle commands (`node`, `stop`, `reset`, etc.) use their own `--local` / `--network` flags.
 
 ### `xrpl-up node`
 
@@ -456,104 +483,92 @@ xrpl-up channel claim ABC123... --local --seed sDestSeed... \
 
 ---
 
-### `xrpl-up mpt`
+### `xrpl-up mptoken`
 
-Multi-Purpose Token (MPT / XLS-33) operations. MPT is enabled automatically in the local sandbox alongside AMM. Requires xrpl.js 4.1.0+ (included in xrpl-up).
+Multi-Purpose Token (MPT / XLS-33) operations. MPT is enabled automatically in the local sandbox. Use `--node ws://localhost:6006` to target the local sandbox, or `--node testnet` for Testnet.
 
-#### `xrpl-up mpt create`
+#### `xrpl-up mptoken issuance create`
 
-Creates a new MPT issuance. On `--local` the issuer wallet is auto-funded.
+Creates a new MPT issuance.
 
 ```bash
-# Minimal transferable token (local, auto-funds wallet)
-xrpl-up mpt create --local --transferable
+# Local sandbox
+xrpl-up mptoken issuance create --node ws://localhost:6006 --seed sIssuerSeed... \
+  --max-amount 1000000 --asset-scale 6 --transfer-fee 100 --metadata "My Token"
 
-# Full example with supply cap, decimals, fee, and metadata
-xrpl-up mpt create --local --seed sIssuerSeed... \
-  --max-amount 1000000 --asset-scale 6 \
-  --transfer-fee 100 --metadata "My Token v1" \
-  --transferable --can-clawback
+# Minimal (no supply cap, non-transferable by default)
+xrpl-up mptoken issuance create --node ws://localhost:6006 --seed sIssuerSeed...
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--max-amount <n>` | unlimited | Maximum token supply (integer string) |
+| `--max-amount <n>` | unlimited | Maximum token supply |
 | `--asset-scale <n>` | `0` | Decimal places, 0–19 |
 | `--transfer-fee <n>` | `0` | Fee in hundredths of a percent, 0–50000 |
-| `--metadata <string>` | — | Metadata (UTF-8 string, hex-encoded on-chain) |
-| `--transferable` | off | Holders can transfer tokens (`tfMPTCanTransfer`) |
-| `--require-auth` | off | Issuer must authorize each holder (`tfMPTRequireAuth`) |
-| `--can-lock` | off | Issuer can lock individual holders (`tfMPTCanLock`) |
-| `--can-clawback` | off | Issuer can reclaim tokens from holders (`tfMPTCanClawback`) |
-| `-s, --seed <seed>` | — | Issuer seed (omit to auto-fund on `--local`) |
+| `--metadata <string>` | — | Metadata string (hex-encoded on-chain) |
+| `--seed / --mnemonic / --account` | — | Key material |
 
-#### `xrpl-up mpt destroy <issuanceId>`
+#### `xrpl-up mptoken issuance destroy <issuanceId>`
 
 Destroys an MPT issuance. Outstanding supply must be zero.
 
 ```bash
-xrpl-up mpt destroy 00070C4495F14B0E... --local --seed sIssuerSeed...
+xrpl-up mptoken issuance destroy 00070C44... --node ws://localhost:6006 --seed sIssuerSeed...
 ```
 
-#### `xrpl-up mpt authorize <issuanceId>`
+#### `xrpl-up mptoken authorize <issuanceId>`
 
-Authorizes (or unauthorizes) a holder to hold the token. Required when the issuance was created with `--require-auth`.
+Authorizes (or unauthorizes) a holder to hold the token.
 
 ```bash
 # Issuer side: authorize a holder
-xrpl-up mpt authorize 00070C44... --local --seed sIssuerSeed... --holder rHolderAddress...
+xrpl-up mptoken authorize 00070C44... --holder rHolderAddress... \
+  --node ws://localhost:6006 --seed sIssuerSeed...
 
 # Holder side: opt in (no --holder flag)
-xrpl-up mpt authorize 00070C44... --local --seed sHolderSeed...
+xrpl-up mptoken authorize 00070C44... --node ws://localhost:6006 --seed sHolderSeed...
 
 # Revoke authorization
-xrpl-up mpt authorize 00070C44... --local --seed sIssuerSeed... \
-  --holder rHolderAddress... --unauthorize
+xrpl-up mptoken authorize 00070C44... --holder rHolderAddress... --unauthorize \
+  --node ws://localhost:6006 --seed sIssuerSeed...
 ```
 
-#### `xrpl-up mpt set <issuanceId>`
+#### `xrpl-up mptoken issuance set <issuanceId>`
 
-Locks or unlocks an MPT issuance (or a specific holder's balance). Requires the issuance to have been created with `--can-lock`.
+Locks or unlocks an MPT issuance or a specific holder's balance. Requires the issuance to have been created with `--can-lock`.
 
 ```bash
-# Lock the entire issuance
-xrpl-up mpt set 00070C44... --local --seed sIssuerSeed... --lock
-
-# Lock a specific holder
-xrpl-up mpt set 00070C44... --local --seed sIssuerSeed... --lock --holder rHolderAddress...
-
-# Unlock
-xrpl-up mpt set 00070C44... --local --seed sIssuerSeed... --unlock
+xrpl-up mptoken issuance set 00070C44... --lock --node ws://localhost:6006 --seed sIssuerSeed...
+xrpl-up mptoken issuance set 00070C44... --lock --holder rAddr... --node ws://localhost:6006 --seed sIssuerSeed...
+xrpl-up mptoken issuance set 00070C44... --unlock --node ws://localhost:6006 --seed sIssuerSeed...
 ```
 
-#### `xrpl-up mpt info <issuanceId>`
+#### `xrpl-up mptoken issuance get <issuanceId>`
 
 Shows on-ledger details of an MPT issuance: issuer, outstanding supply, flags, and metadata.
 
 ```bash
-xrpl-up mpt info 00070C4495F14B0E... --local
+xrpl-up mptoken issuance get 00070C4495F14B0E... --node ws://localhost:6006
 ```
 
-#### `xrpl-up mpt pay <issuanceId> <amount> <destination>`
+#### `xrpl-up mptoken issuance list <address>`
 
-Sends MPT tokens from the `--seed` wallet to `<destination>`. The destination must have already opted in via `mpt authorize`.
+Lists MPT issuances created by an account.
 
 ```bash
-xrpl-up mpt pay 00070C44... 500 rDestAddress... --local --seed sHolderSeed...
+xrpl-up mptoken issuance list rMyAddress... --node ws://localhost:6006
 ```
 
-#### `xrpl-up mpt list [account]`
+#### Sending MPT payments
 
-Lists MPT issuances **created** by an account (default), or MPT token balances **held** by an account (`--holdings`). Defaults to the first account in the local wallet store if no address is given.
+Use the `payment` command with an MPT amount format `<amount>/<issuanceId>`:
 
 ```bash
-# List issuances you created
-xrpl-up mpt list --local
-
-# List MPT balances held by an account
-xrpl-up mpt list --local --holdings
-xrpl-up mpt list rAddress... --network testnet --holdings
+xrpl-up payment --to rDestAddress --amount "500/00070C44..." \
+  --node ws://localhost:6006 --seed sHolderSeed...
 ```
+
+For querying MPT balances held by an account, use `xrpl-up account mptokens`.
 
 ---
 
@@ -604,53 +619,50 @@ xrpl-up offer list --local --account rSomeAddress...
 
 ---
 
-### `xrpl-up trustline`
+### `xrpl-up trust`
 
-Trust line operations. Trust lines allow accounts to hold issued currencies (IOUs) from a specific issuer.
+Trust line operations (renamed from `trustline`). Use `xrpl-up account trust-lines` to query existing trust lines.
 
-#### `xrpl-up trustline set <currency.rIssuer> <limit>`
+#### `xrpl-up trust set`
 
-Creates or updates a trust line. `<limit>` is the maximum IOU balance you are willing to hold.
-
-```bash
-# Set a USD trust line with a 1000 limit
-xrpl-up trustline set USD.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh 1000 --local --seed sn3nxiW7...
-
-# Set with NoRipple (prevents rippling through this trust line)
-xrpl-up trustline set USD.rHb9... 1000 --local --seed sn3nxiW7... --no-ripple
-```
-
-#### `xrpl-up trustline freeze <currency.rIssuer>`
-
-Freezes (or unfreezes) a trust line. Only the issuer can freeze.
+Creates or updates a trust line.
 
 ```bash
-xrpl-up trustline freeze USD.rHolderAddress... --local --seed sIssuerSeed...
+# Set a USD trust line with a 1000 limit (local sandbox)
+xrpl-up trust set --currency USD --issuer rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh \
+  --limit 1000 --node ws://localhost:6006 --seed sn3nxiW7...
+
+# With NoRipple flag
+xrpl-up trust set --currency USD --issuer rHb9... --limit 1000 \
+  --no-ripple --node ws://localhost:6006 --seed sn3nxiW7...
+
+# Freeze a trust line (issuer only)
+xrpl-up trust set --currency USD --issuer rHolderAddress... \
+  --limit 0 --freeze --node ws://localhost:6006 --seed sIssuerSeed...
 
 # Unfreeze
-xrpl-up trustline freeze USD.rHolderAddress... --local --seed sIssuerSeed... --unfreeze
+xrpl-up trust set --currency USD --issuer rHolderAddress... \
+  --limit 0 --unfreeze --node ws://localhost:6006 --seed sIssuerSeed...
 ```
 
-#### `xrpl-up trustline list`
+| Flag | Description |
+|------|-------------|
+| `--currency <code>` | Currency code (3-char ASCII or 40-char hex) |
+| `--issuer <address>` | Issuer address |
+| `--limit <value>` | Trust line limit (0 removes the trust line) |
+| `--no-ripple` | Set NoRipple flag |
+| `--clear-no-ripple` | Clear NoRipple flag |
+| `--freeze` | Freeze the trust line (issuer only) |
+| `--unfreeze` | Unfreeze the trust line |
+| `--auth` | Authorize the trust line |
 
-Lists all trust lines for an account — balance, limit, NoRipple, and freeze status.
+#### Query trust lines
 
 ```bash
-xrpl-up trustline list --local
-xrpl-up trustline list --local --account rSomeAddress...
+xrpl-up account trust-lines rMyAddress... --node ws://localhost:6006
 ```
 
-#### `xrpl-up trustline issuer-defaults`
-
-Sets `DefaultRipple` on the issuer account so all new trust lines have rippling enabled by default (required for most IOU payment flows).
-
-```bash
-# Enable DefaultRipple
-xrpl-up trustline issuer-defaults --local --seed sIssuerSeed...
-
-# Clear DefaultRipple
-xrpl-up trustline issuer-defaults --local --seed sIssuerSeed... --no-ripple
-```
+To enable `DefaultRipple` (rippling on all new trust lines), use `xrpl-up account set defaultRipple`.
 
 ---
 
@@ -753,16 +765,17 @@ xrpl-up check list --local --account rSomeAddress...
 
 ---
 
-### `xrpl-up accountset`
+### `xrpl-up account set`
 
-Account settings — enable/disable flags, configure signer lists for multi-signing.
+Enable or disable account flags (replaces the old `accountset` command).
 
-#### `xrpl-up accountset set <flag>` / `xrpl-up accountset clear <flag>`
+```bash
+xrpl-up account set requireDest --node ws://localhost:6006 --seed sn3nxiW7...
+xrpl-up account set requireDest --clear --node ws://localhost:6006 --seed sn3nxiW7...
+```
 
-Enables or disables a named account flag. Each command prints a ready-to-use undo command.
-
-| Flag | Description |
-|------|-------------|
+| Flag name | Description |
+|-----------|-------------|
 | `requireDest` | Require a destination tag on all incoming payments |
 | `requireAuth` | Require the issuer to authorize all trust lines |
 | `disallowXRP` | Signal that this account does not accept direct XRP payments |
@@ -771,78 +784,39 @@ Enables or disables a named account flag. Each command prints a ready-to-use und
 | `depositAuth` | Only accept payments from pre-authorized senders |
 | `allowClawback` | Allow the issuer to clawback IOU tokens from trust line holders (irreversible) |
 
-```bash
-xrpl-up accountset set requireDest --local --seed sn3nxiW7...
-xrpl-up accountset clear requireDest --local --seed sn3nxiW7...
-```
+> **Note:** Set a signer list before disabling the master key (`disableMaster`). For signer list management, use `xrpl-up multisig`. To query account settings, use `xrpl-up account info`.
 
-#### `xrpl-up accountset signer-list <quorum> <signers>`
+---
 
-Sets a multi-signer list. `<signers>` is a comma-separated list of `rAddress:weight` pairs.
+### Transaction history
 
-```bash
-# Require 2-of-3 signatures
-xrpl-up accountset signer-list 2 "rAlice...:1,rBob...:1,rCarol...:1" \
-  --local --seed sn3nxiW7...
-```
-
-> **Note:** Set a signer list before disabling the master key (`disableMaster`). Doing it in the wrong order will permanently lock the account.
-
-#### `xrpl-up accountset info`
-
-Shows the account's current flags, balance, sequence, and signer list if one is set. Includes a reminder of all valid flag names and the toggle commands.
+The `tx` command has been removed. Use `xrpl-up account transactions`:
 
 ```bash
-xrpl-up accountset info --local
-xrpl-up accountset info --local --account rSomeAddress...
+xrpl-up account transactions rMyAddress... --node ws://localhost:6006
+xrpl-up account transactions rMyAddress... --node testnet
 ```
 
 ---
 
-### `xrpl-up tx`
+### `xrpl-up deposit-preauth`
 
-Transaction history for an account.
-
-#### `xrpl-up tx list [account]`
-
-Lists recent transactions for an account. If no account is provided, defaults to the first local account. Use `--limit` to control how many transactions are fetched (default: 20).
-
-```bash
-xrpl-up tx list --local
-xrpl-up tx list rSomeAddress... --local --limit 50
-xrpl-up tx list rSomeAddress... --network testnet
-```
-
----
-
-### `xrpl-up depositpreauth`
-
-Manage DepositPreauth entries. When an account has the `depositAuth` flag set (via `xrpl-up accountset set depositAuth`), only pre-authorized senders can send payments to it.
-
-#### `xrpl-up depositpreauth authorize <address>`
-
-Pre-authorizes a specific address to send payments to this account.
-
-#### `xrpl-up depositpreauth unauthorize <address>`
-
-Revokes an existing pre-authorization.
-
-#### `xrpl-up depositpreauth list [account]`
-
-Lists all pre-authorized addresses for an account.
+Manage DepositPreauth entries (renamed from `depositpreauth`). Required when an account has the `depositAuth` flag set.
 
 ```bash
 # Enable deposit authorization on your account first
-xrpl-up accountset set depositAuth --local --seed sn3nxiW7...
+xrpl-up account set depositAuth --node ws://localhost:6006 --seed sn3nxiW7...
 
 # Pre-authorize a specific sender
-xrpl-up depositpreauth authorize rSender... --local --seed sn3nxiW7...
-
-# List all pre-authorizations
-xrpl-up depositpreauth list --local
+xrpl-up deposit-preauth set --authorize rSender... \
+  --node ws://localhost:6006 --seed sn3nxiW7...
 
 # Revoke a pre-authorization
-xrpl-up depositpreauth unauthorize rSender... --local --seed sn3nxiW7...
+xrpl-up deposit-preauth set --unauthorize rSender... \
+  --node ws://localhost:6006 --seed sn3nxiW7...
+
+# List all pre-authorizations
+xrpl-up deposit-preauth list rMyAddress... --node ws://localhost:6006
 ```
 
 ---
@@ -880,8 +854,8 @@ xrpl-up ticket list rSomeAddress... --local
 Issuer clawback operations. The issuer account must have clawback enabled before use.
 
 > **Prerequisites:**
-> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up accountset set allowClawback --seed <issuer-seed>`
-> - **MPT clawback:** The issuance must have been created with `xrpl-up mpt create --can-clawback`
+> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set allowClawback --node ws://localhost:6006 --seed <issuer-seed>`
+> - **MPT clawback:** The issuance must have been created with `xrpl-up mptoken issuance create --can-clawback`
 
 #### `xrpl-up clawback iou <amount> <currency> <holder>`
 
@@ -897,6 +871,152 @@ xrpl-up clawback iou 10 USD rHolder... --local --seed sIssuerSeed...
 
 # Clawback 500 units of an MPT
 xrpl-up clawback mpt 00000001AABBCCDD... rHolder... 500 --local --seed sIssuerSeed...
+```
+
+---
+
+### `xrpl-up wallet`
+
+Wallet management — create, import, and manage XRPL key pairs in a local keystore (`~/.xrpl/keystore/` by default).
+
+| Subcommand | Description |
+|------------|-------------|
+| `new` | Generate a new random wallet |
+| `new-mnemonic` | Generate a wallet from a BIP39 mnemonic |
+| `import` | Import a wallet by seed or mnemonic |
+| `list` | List all wallets in the keystore |
+| `address` | Print the address for a wallet |
+| `private-key` | Print the private key (requires password) |
+| `public-key` | Print the public key |
+| `sign` | Sign arbitrary data |
+| `verify` | Verify a signature |
+| `alias` | Set or clear a human-readable alias for a wallet |
+| `fund` | Fund a wallet from the testnet faucet |
+| `change-password` | Change keystore encryption password |
+| `decrypt-keystore` | Export keystore contents (decrypt to plaintext) |
+| `remove` | Remove a wallet from the keystore |
+
+```bash
+xrpl-up wallet new
+xrpl-up wallet fund --account rMyAddress
+xrpl-up wallet list
+```
+
+---
+
+### `xrpl-up account`
+
+Account query and management. The `account` command provides both query subcommands and mutation subcommands.
+
+| Subcommand | Description |
+|------------|-------------|
+| `info` | Account flags, sequence, balance, signer list |
+| `balance` | XRP and IOU balances |
+| `transactions` | Recent transaction history (replaces `tx list`) |
+| `offers` | Open offers on the DEX |
+| `trust-lines` | Trust lines (replaces `trustline list`) |
+| `channels` | Open payment channels |
+| `nfts` | NFTs owned by the account |
+| `mptokens` | MPT balances held by the account |
+| `set` | Enable/disable account flags (replaces `accountset set/clear`) |
+| `set-regular-key` | Set or remove the regular key |
+| `delete` | Delete the account |
+
+```bash
+xrpl-up account info rMyAddress --node ws://localhost:6006
+xrpl-up account transactions rMyAddress --node ws://localhost:6006
+xrpl-up account trust-lines rMyAddress --node ws://localhost:6006
+xrpl-up account balance rMyAddress --node testnet
+```
+
+---
+
+### `xrpl-up payment`
+
+Send a Payment transaction. Alias: `xrpl-up send`.
+
+```bash
+# Send XRP
+xrpl-up payment --to rDest... --amount 10 --node ws://localhost:6006 --seed sSrc...
+
+# Send IOU
+xrpl-up payment --to rDest... --amount "10/USD/rIssuer..." \
+  --node ws://localhost:6006 --seed sSrc...
+
+# Send MPT
+xrpl-up payment --to rDest... --amount "500/00070C44..." \
+  --node ws://localhost:6006 --seed sSrc...
+```
+
+| Flag | Description |
+|------|-------------|
+| `--to <address>` | Destination address or alias |
+| `--amount <amount>` | Amount: `10` = XRP, `10/USD/rIssuer` = IOU, `500/<issuanceId>` = MPT |
+| `--destination-tag <n>` | Destination tag |
+| `--memo <text>` | Memo to attach (repeatable) |
+| `--send-max <amount>` | SendMax for cross-currency payments |
+| `--deliver-min <amount>` | Minimum delivery (enables partial payments) |
+| `--partial` | Set tfPartialPayment flag |
+| `--dry-run` | Print signed transaction without submitting |
+
+---
+
+### `xrpl-up multisig`
+
+Multi-signature signer list management (replaces `accountset signer-list`).
+
+```bash
+xrpl-up multisig --help
+```
+
+---
+
+### `xrpl-up credential`
+
+Manage DID-based credentials on the XRP Ledger.
+
+```bash
+xrpl-up credential --help
+```
+
+---
+
+### `xrpl-up did`
+
+Manage Decentralized Identifiers (DID) on the XRP Ledger.
+
+```bash
+xrpl-up did --help
+```
+
+---
+
+### `xrpl-up oracle`
+
+Price oracle management on the XRP Ledger.
+
+```bash
+xrpl-up oracle --help
+```
+
+---
+
+### `xrpl-up permissioned-domain`
+
+Manage Permissioned Domains on the XRP Ledger (XLS-80d).
+
+```bash
+xrpl-up permissioned-domain --help
+```
+
+---
+
+### `xrpl-up vault`
+
+Manage vaults on the XRP Ledger.
+
+```bash
+xrpl-up vault --help
 ```
 
 ---
@@ -1012,7 +1132,7 @@ When `local` is selected as the default network, the example scripts use the loc
 
 Save and restore ledger state checkpoints. Useful for complex test setups (AMM pools, issued currencies, multi-step escrows) where re-running setup from scratch is expensive.
 
-> **Requires `--persist` mode.** Snapshots copy the named Docker volume (`xrpl-up-local-db`). In ephemeral mode (default), there is no persistent volume to snapshot.
+> **Requires `--persist` mode.** Snapshots tar the named Docker volume (`xrpl-up-local-db`) into a self-contained `.tar.gz` file. Restore recreates the volume from that tarball — the volume does not need to have survived between runs. In ephemeral mode (default), there is no persistent volume to snapshot.
 
 ```bash
 # Save the current ledger state
@@ -1055,6 +1175,94 @@ xrpl-up accounts --local                         # snapshot accounts restored
 Snapshots are stored at `~/.xrpl-up/snapshots/`. Each snapshot is a pair of files:
 - `<name>.tar.gz` — compressed NuDB ledger volume (typically 5–100 MB)
 - `<name>-accounts.json` — account store at snapshot time
+
+**Using snapshots in CI / GitHub Actions:**
+
+GitHub-hosted runners are ephemeral — the `~/.xrpl-up/snapshots/` directory disappears after each job. Snapshots work natively within a single job. For cross-job or cross-run use, treat the snapshot files as portable artifacts.
+
+*Within one job* — save state after setup, restore between test suites (no extra configuration):
+
+```yaml
+steps:
+  - run: xrpl-up node --local --persist --detach
+  - run: |
+      xrpl-up faucet --network local
+      xrpl-up amm create XRP USD --local
+      xrpl-up snapshot save after-setup
+  - run: npm test -- --suite=suite-a
+  - run: xrpl-up snapshot restore after-setup
+  - run: npm test -- --suite=suite-b
+  - run: xrpl-up stop
+    if: always()
+```
+
+*Across jobs* — upload snapshot as an artifact in a setup job, download and restore in parallel test jobs:
+
+```yaml
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - run: xrpl-up node --local --persist --detach
+      - run: |
+          xrpl-up faucet --network local
+          xrpl-up amm create XRP USD --local
+          xrpl-up snapshot save after-setup
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xrpl-snapshots
+          path: ~/.xrpl-up/snapshots/
+      - run: xrpl-up stop
+
+  test-suite-a:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: xrpl-snapshots
+          path: ~/.xrpl-up/snapshots/
+      - run: xrpl-up node --local --persist --detach
+      - run: xrpl-up snapshot restore after-setup
+      - run: npm test -- --suite=suite-a
+      - run: xrpl-up stop
+        if: always()
+
+  test-suite-b:
+    needs: setup
+    runs-on: ubuntu-latest      # different VM, doesn't matter
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: xrpl-snapshots
+          path: ~/.xrpl-up/snapshots/
+      - run: xrpl-up node --local --persist --detach
+      - run: xrpl-up snapshot restore after-setup
+      - run: npm test -- --suite=suite-b
+      - run: xrpl-up stop
+        if: always()
+```
+
+*Across runs* — cache the snapshot directory so expensive setup only runs once:
+
+```yaml
+steps:
+  - uses: actions/cache@v4
+    with:
+      path: ~/.xrpl-up/snapshots
+      key: xrpl-snapshot-v1          # bump to force regeneration when setup changes
+
+  - run: xrpl-up node --local --persist --detach
+  - run: |
+      if ! xrpl-up snapshot restore after-setup; then
+        xrpl-up faucet --network local
+        xrpl-up amm create XRP USD --local
+        xrpl-up snapshot save after-setup
+      fi
+  - run: npm test
+  - run: xrpl-up stop
+    if: always()
+```
 
 ---
 
@@ -1122,7 +1330,9 @@ Validation also runs automatically when `--config` is passed to `xrpl-up node --
 
 ## CI/CD
 
-Use `--detach` to start the sandbox non-interactively and `xrpl-up stop` to tear it down after tests.
+Docker is available on all GitHub-hosted runners (`ubuntu-latest`, `macos-latest`).
+
+**Minimal setup** — start the sandbox, run tests, tear down:
 
 ```yaml
 # .github/workflows/test.yml
@@ -1133,7 +1343,27 @@ steps:
     if: always()
 ```
 
-Docker is available on all GitHub-hosted runners (`ubuntu-latest`, `macos-latest`). The faucet server handles ledger auto-advance while the sandbox runs in the background.
+**With snapshots** — do expensive setup once, restore before each test suite:
+
+```yaml
+steps:
+  - run: xrpl-up node --local --persist --detach
+  - run: |
+      xrpl-up faucet --network local
+      xrpl-up amm create XRP USD --local
+      xrpl-up snapshot save after-setup
+  - run: npm test -- --suite=suite-a
+  - run: xrpl-up snapshot restore after-setup
+  - run: npm test -- --suite=suite-b
+  - run: xrpl-up stop
+    if: always()
+```
+
+**Parallel jobs sharing a snapshot** — run test suites concurrently against identical ledger state. See the [snapshot section](#xrpl-up-snapshot) for the full `upload-artifact` / `download-artifact` pattern.
+
+**Cross-run snapshot cache** — skip setup on subsequent runs using `actions/cache`. See the [snapshot section](#xrpl-up-snapshot) for details.
+
+The faucet server handles ledger auto-advance while the sandbox runs in the background.
 
 ---
 
