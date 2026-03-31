@@ -564,6 +564,7 @@ jobs:
             echo "Stable releases (tagged with 'latest') must use x.y.z SemVer. Found '${PKG_VERSION}'." >&2
             exit 1
           fi
+          npm i -g npm@11.6.0
           npm publish "${PKG}" --provenance --access public --registry=https://registry.npmjs.org/ --tag "$NPM_DIST_TAG"
 
       - name: Ensure Git tag exists
