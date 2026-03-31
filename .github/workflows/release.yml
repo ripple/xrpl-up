@@ -243,9 +243,9 @@ jobs:
         run: |
           curl -X POST \
             -H "X-Api-Key: ${OWASP_TOKEN}" \
-            -F "autoCreate=true" \
-            -F "projectName=@shichengsh001/xrpl-up" \
-            -F "projectVersion=${PKG_VERSION}" \
+            --form-string "autoCreate=true" \
+            --form-string "projectName=@shichengsh001/xrpl-up" \
+            --form-string "projectVersion=${PKG_VERSION}" \
             -F "bom=@sbom.json" \
             https://owasp-dt-api.prod.ripplex.io/api/v1/bom
 
