@@ -112,37 +112,11 @@ jobs:
 
   run_tests:
     name: Build and test ${{ needs.get_version.outputs.package_version }}
-    runs-on: ubuntu-latest
     needs: [get_version]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ needs.get_version.outputs.release_branch }}
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Run tests (placeholder)
-        run: |
-          # TODO: replace with `npm test` once test suite is added
-          echo "✅ Tests: placeholder — suite not yet implemented"
-
-      - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ needs.get_version.outputs.release_branch }}
+      upload-dist: true
 
   pre_release:
     runs-on: ubuntu-latest

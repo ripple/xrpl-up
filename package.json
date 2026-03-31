@@ -8,9 +8,6 @@
     "type": "git",
     "url": "https://github.com/ripple/xrpl-up.git"
   },
-  "engines": {
-    "node": ">=18"
-  },
   "keywords": [
     "xrpl",
     "xrp",
