@@ -11,6 +11,7 @@ This guide complements [MPT](mpt.md) with a focus on the **policy controls** rat
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -19,10 +20,10 @@ xrpl-up status   # wait until "healthy"
 
 | Policy flag | CLI flag | Effect |
 |-------------|----------|--------|
-| `tfMPTRequireAuth` | `--require-auth` | Issuer must approve each holder before tokens can flow |
-| `tfMPTCanLock` | `--can-lock` | Issuer can freeze individual holders or the entire issuance |
-| `tfMPTCanClawback` | `--can-clawback` | Issuer can reclaim tokens from any holder |
-| `tfMPTCanTransfer` | `--transferable` | Holders can transfer tokens to each other (off by default) |
+| `tfMPTRequireAuth` | `--flags require-auth` | Issuer must approve each holder before tokens can flow |
+| `tfMPTCanLock` | `--flags can-lock` | Issuer can freeze individual holders or the entire issuance |
+| `tfMPTCanClawback` | `--flags can-clawback` | Issuer can reclaim tokens from any holder |
+| `tfMPTCanTransfer` | `--flags can-transfer` | Holders can transfer tokens to each other (off by default) |
 
 All policy flags are **set at issuance creation and cannot be changed afterwards**.
 
@@ -58,15 +59,12 @@ HOLDER_C=rHolderCXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Step 2: Create the MPT issuance with all policy controls
 
 ```bash
-xrpl-up mpt create --local --seed $ISSUER_SEED \
+xrpl-up mptoken issuance create --seed $ISSUER_SEED \
   --max-amount 1000000 \
   --asset-scale 2 \
   --transfer-fee 50 \
   --metadata "Regulated MPT v1" \
-  --transferable \
-  --require-auth \
-  --can-lock \
-  --can-clawback
+  --flags can-transfer,require-auth,can-lock,can-clawback
 # ✔ MPT issuance created
 #   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #   issuer       rIssuerXXX...
@@ -84,7 +82,7 @@ MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Step 3: Verify issuance details
 
 ```bash
-xrpl-up mpt info $MPT_ID --local
+xrpl-up mptoken issuance get $MPT_ID
 # issuer           rIssuerXXX...
 # outstanding      0
 # max amount       1000000
@@ -98,19 +96,19 @@ xrpl-up mpt info $MPT_ID --local
 
 ## Step 4: Holders opt in (MPTokenAuthorize)
 
-With `--require-auth`, holders can opt in but tokens cannot flow until the issuer approves them:
+With `--flags require-auth`, holders can opt in but tokens cannot flow until the issuer approves them:
 
 ```bash
 # Holder A opts in
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_A_SEED
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_A_SEED
 # ✔ MPToken holder opted in (pending issuer authorization)  rHolderAXXX...
 
 # Holder B opts in
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_B_SEED
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_B_SEED
 # ✔ MPToken holder opted in (pending issuer authorization)  rHolderBXXX...
 
 # Holder C opts in
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_C_SEED
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_C_SEED
 # ✔ MPToken holder opted in (pending issuer authorization)  rHolderCXXX...
 ```
 
@@ -120,11 +118,11 @@ xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_C_SEED
 
 ```bash
 # Authorize Holder A
-xrpl-up mpt authorize $MPT_ID --local --seed $ISSUER_SEED --holder $HOLDER_A
+xrpl-up mptoken authorize $MPT_ID --seed $ISSUER_SEED --holder $HOLDER_A
 # ✔ Holder authorized by issuer  rHolderAXXX...
 
 # Authorize Holder C
-xrpl-up mpt authorize $MPT_ID --local --seed $ISSUER_SEED --holder $HOLDER_C
+xrpl-up mptoken authorize $MPT_ID --seed $ISSUER_SEED --holder $HOLDER_C
 # ✔ Holder authorized by issuer  rHolderCXXX...
 
 # Holder B: NOT authorized — left pending intentionally
@@ -136,23 +134,23 @@ xrpl-up mpt authorize $MPT_ID --local --seed $ISSUER_SEED --holder $HOLDER_C
 ## Step 6: Issue tokens to Holder A and Holder C
 
 ```bash
-xrpl-up mpt pay $MPT_ID 5000 $HOLDER_A --local --seed $ISSUER_SEED
+xrpl-up payment --to $HOLDER_A --amount 5000/$MPT_ID --seed $ISSUER_SEED
 # ✔ MPT payment sent  5000  →  rHolderAXXX...
 
-xrpl-up mpt pay $MPT_ID 3000 $HOLDER_C --local --seed $ISSUER_SEED
+xrpl-up payment --to $HOLDER_C --amount 3000/$MPT_ID --seed $ISSUER_SEED
 # ✔ MPT payment sent  3000  →  rHolderCXXX...
 ```
 
 Verify balances:
 
 ```bash
-xrpl-up mpt list $HOLDER_A --local --holdings
+xrpl-up account mptokens $HOLDER_A
 # MPTokenIssuanceID  00070C44...   MPTAmount 5000   locked false
 
-xrpl-up mpt list $HOLDER_C --local --holdings
+xrpl-up account mptokens $HOLDER_C
 # MPTokenIssuanceID  00070C44...   MPTAmount 3000   locked false
 
-xrpl-up mpt info $MPT_ID --local
+xrpl-up mptoken issuance get $MPT_ID
 # outstanding  8000   (5000 + 3000)
 ```
 
@@ -160,17 +158,17 @@ xrpl-up mpt info $MPT_ID --local
 
 ## Step 7: Holder A transfers tokens to Holder C (transferable)
 
-Since `--transferable` was set, holders can send tokens to each other:
+Since `--flags can-transfer` was set, holders can send tokens to each other:
 
 ```bash
-xrpl-up mpt pay $MPT_ID 1000 $HOLDER_C --local --seed $HOLDER_A_SEED
+xrpl-up payment --to $HOLDER_C --amount 1000/$MPT_ID --seed $HOLDER_A_SEED
 # ✔ MPT payment sent  1000  →  rHolderCXXX...
 # Transfer fee: 5 tokens (0.5% of 1000) deducted and burned
 
-xrpl-up mpt list $HOLDER_A --local --holdings
+xrpl-up account mptokens $HOLDER_A
 # MPTAmount  3995   (5000 − 1000 − 5 fee)
 
-xrpl-up mpt list $HOLDER_C --local --holdings
+xrpl-up account mptokens $HOLDER_C
 # MPTAmount  4000   (3000 + 1000 received)
 ```
 
@@ -181,10 +179,10 @@ xrpl-up mpt list $HOLDER_C --local --holdings
 Issuer places a hold on Holder C (e.g., pending compliance review):
 
 ```bash
-xrpl-up mpt set $MPT_ID --local --seed $ISSUER_SEED --lock --holder $HOLDER_C
+xrpl-up mptoken issuance set $MPT_ID --seed $ISSUER_SEED --lock --holder $HOLDER_C
 # ✔ MPToken locked  rHolderCXXX...
 
-xrpl-up mpt list $HOLDER_C --local --holdings
+xrpl-up account mptokens $HOLDER_C
 # MPTAmount 4000   locked  ✔
 ```
 
@@ -192,11 +190,11 @@ While locked, Holder C cannot send or receive tokens:
 
 ```bash
 # Attempt to send from Holder C → fails
-xrpl-up mpt pay $MPT_ID 100 $HOLDER_A --local --seed $HOLDER_C_SEED
+xrpl-up payment --to $HOLDER_A --amount 100/$MPT_ID --seed $HOLDER_C_SEED
 # ✗  tecLOCKED  (holder is locked)
 
 # Attempt to send TO Holder C → also fails
-xrpl-up mpt pay $MPT_ID 100 $HOLDER_C --local --seed $HOLDER_A_SEED
+xrpl-up payment --to $HOLDER_C --amount 100/$MPT_ID --seed $HOLDER_A_SEED
 # ✗  tecLOCKED
 ```
 
@@ -205,11 +203,11 @@ xrpl-up mpt pay $MPT_ID 100 $HOLDER_C --local --seed $HOLDER_A_SEED
 ## Step 9: Lock the entire issuance (emergency freeze)
 
 ```bash
-xrpl-up mpt set $MPT_ID --local --seed $ISSUER_SEED --lock
+xrpl-up mptoken issuance set $MPT_ID --seed $ISSUER_SEED --lock
 # ✔ Issuance locked (all holders frozen)
 
 # All payments fail during global lock, even for Holder A
-xrpl-up mpt pay $MPT_ID 100 $HOLDER_A --local --seed $ISSUER_SEED
+xrpl-up payment --to $HOLDER_A --amount 100/$MPT_ID --seed $ISSUER_SEED
 # ✗  tecLOCKED
 ```
 
@@ -218,11 +216,11 @@ xrpl-up mpt pay $MPT_ID 100 $HOLDER_A --local --seed $ISSUER_SEED
 ## Step 10: Unlock the issuance (resume trading)
 
 ```bash
-xrpl-up mpt set $MPT_ID --local --seed $ISSUER_SEED --unlock
+xrpl-up mptoken issuance set $MPT_ID --seed $ISSUER_SEED --unlock
 # ✔ Issuance unlocked
 
 # Holder C remains individually locked — unlock them separately
-xrpl-up mpt set $MPT_ID --local --seed $ISSUER_SEED --unlock --holder $HOLDER_C
+xrpl-up mptoken issuance set $MPT_ID --seed $ISSUER_SEED --unlock --holder $HOLDER_C
 # ✔ MPToken unlocked  rHolderCXXX...
 ```
 
@@ -232,13 +230,13 @@ xrpl-up mpt set $MPT_ID --local --seed $ISSUER_SEED --unlock --holder $HOLDER_C
 
 ```bash
 # Reclaim all of Holder C's balance (e.g. sanctions enforcement)
-xrpl-up clawback mpt $MPT_ID $HOLDER_C 4000 --local --seed $ISSUER_SEED
+xrpl-up clawback --amount 4000/$MPT_ID --holder $HOLDER_C --seed $ISSUER_SEED
 # ✔ Clawback successful  4000  ← rHolderCXXX...
 
-xrpl-up mpt list $HOLDER_C --local --holdings
+xrpl-up account mptokens $HOLDER_C
 # MPTAmount  0
 
-xrpl-up mpt info $MPT_ID --local
+xrpl-up mptoken issuance get $MPT_ID
 # outstanding  3995   (only Holder A remains)
 ```
 
@@ -248,11 +246,11 @@ xrpl-up mpt info $MPT_ID --local
 
 ```bash
 # Holder C opts out (balance is now 0)
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_C_SEED --unauthorize
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_C_SEED --unauthorize
 # ✔ MPToken holder removed  rHolderCXXX...
 
 # Issuer revokes Holder B's pending opt-in (they were never authorized)
-xrpl-up mpt authorize $MPT_ID --local --seed $ISSUER_SEED --holder $HOLDER_B --unauthorize
+xrpl-up mptoken authorize $MPT_ID --seed $ISSUER_SEED --holder $HOLDER_B --unauthorize
 # ✔ Holder authorization revoked  rHolderBXXX...
 ```
 
@@ -262,17 +260,17 @@ xrpl-up mpt authorize $MPT_ID --local --seed $ISSUER_SEED --holder $HOLDER_B --u
 
 ```bash
 # Clawback all remaining tokens from Holder A
-xrpl-up clawback mpt $MPT_ID $HOLDER_A 3995 --local --seed $ISSUER_SEED
+xrpl-up clawback --amount 3995/$MPT_ID --holder $HOLDER_A --seed $ISSUER_SEED
 
 # Holder A opts out
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_A_SEED --unauthorize
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_A_SEED --unauthorize
 
 # Outstanding supply is now 0 — destroy the issuance
-xrpl-up mpt destroy $MPT_ID --local --seed $ISSUER_SEED
+xrpl-up mptoken issuance destroy $MPT_ID --seed $ISSUER_SEED
 # ✔ MPT issuance destroyed  00070C44...
 
 # Confirm gone
-xrpl-up mpt list --local
+xrpl-up mptoken issuance list $ISSUER
 # (empty)
 ```
 
@@ -281,7 +279,7 @@ xrpl-up mpt list --local
 ## Full policy lifecycle at a glance
 
 ```
-Create issuance (require-auth + can-lock + can-clawback + transferable)
+Create issuance (require-auth + can-lock + can-clawback + can-transfer)
     ↓
 Holders opt in → issuer approves selectively
     ↓
@@ -304,10 +302,10 @@ Wind down: clawback all → holders opt out → destroy
 
 | Concept | Detail |
 |---------|--------|
-| **require-auth** | Two-step opt-in: holder opts in, issuer approves. Both sides must run `mpt authorize`. |
+| **require-auth** | Two-step opt-in: holder opts in, issuer approves. Both sides must run `mptoken authorize`. |
 | **can-lock** | Issuer can freeze an individual holder OR the entire issuance. Individual unlock is independent of global unlock. |
 | **can-clawback** | Issuer reclaims any amount from any holder. Partial clawback supported. |
-| **transferable** | Required for holder-to-holder payments. Without it, only issuer↔holder transfers work. |
+| **can-transfer** | Required for holder-to-holder payments. Without it, only issuer↔holder transfers work. |
 | **transfer-fee** | Deducted from the **sender** side on each holder-to-holder transfer. Burned (reduces outstanding supply). |
 | **asset-scale** | Number of decimal places. Scale 2 means `100` represents `1.00`. |
 

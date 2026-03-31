@@ -15,6 +15,7 @@ This guide:
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -23,7 +24,7 @@ xrpl-up status   # wait until "healthy"
 
 ```bash
 # XRP/USD pool: 100 XRP, 100 USD → implicit price 1 XRP = 1 USD
-xrpl-up amm create XRP USD --local --amount1 100 --amount2 100 --fee 0.3
+xrpl-up amm create XRP USD --amount1 100 --amount2 100 --fee 0.3
 # ✔ AMM pool created
 #   XRP reserve  100
 #   USD reserve  100
@@ -38,7 +39,7 @@ ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Step 2: Check the initial AMM price
 
 ```bash
-xrpl-up amm info XRP USD.$ISSUER --local
+xrpl-up amm info XRP USD.$ISSUER
 # XRP reserve   100 XRP
 # USD reserve   100 USD
 # → implicit price: 1 XRP = 1 USD
@@ -58,11 +59,11 @@ MM_SEED=sEdMMSeedXXXXXXXXXXXXXXXXXXXXXXXX
 MM=rMMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # MM needs a USD trust line
-xrpl-up trustline set USD.$ISSUER 50000 --local --seed $MM_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $MM_SEED
 
 # MM places an offer: pay 25 USD, get 20 XRP (= 1.25 USD per XRP)
 # i.e. MM is willing to sell USD at a 25% premium over AMM price
-xrpl-up offer create "25.USD.$ISSUER" "20" --local --seed $MM_SEED
+xrpl-up offer create --taker-pays 25/USD/$ISSUER --taker-gets 20 --seed $MM_SEED
 # ✔ Offer created  sequence 5
 #   pays  25 USD
 #   gets  20 XRP
@@ -76,7 +77,7 @@ xrpl-up offer create "25.USD.$ISSUER" "20" --local --seed $MM_SEED
 **AMM quote** — inspect the pool state to estimate the swap output:
 
 ```bash
-xrpl-up amm info XRP USD.$ISSUER --local
+xrpl-up amm info XRP USD.$ISSUER
 # XRP reserve   100 XRP
 # USD reserve   100 USD
 # fee           0.3%
@@ -88,7 +89,7 @@ xrpl-up amm info XRP USD.$ISSUER --local
 **DEX quote** — check the open order book:
 
 ```bash
-xrpl-up offer list --local --account $MM
+xrpl-up account offers $MM
 # pays 25 USD  gets 20 XRP  →  costs 25 USD to acquire 20 XRP on DEX
 ```
 
@@ -114,14 +115,14 @@ xrpl-up faucet --local
 ARB_SEED=sEdArbitragerSeedXXXXXXXXXXXXXXXX
 ARB=rArbitragerXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-xrpl-up trustline set USD.$ISSUER 50000 --local --seed $ARB_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $ARB_SEED
 ```
 
 Place an IOC offer to buy XRP by paying USD — the ledger routes through the cheapest source (AMM first):
 
 ```bash
 # Buy up to 20 XRP by paying at most 20 USD — immediate-or-cancel
-xrpl-up offer create "20.USD.$ISSUER" "20" --local --seed $ARB_SEED \
+xrpl-up offer create --taker-pays 20/USD/$ISSUER --taker-gets 20 --seed $ARB_SEED \
   --immediate-or-cancel
 # ✔ Offer filled via AMM
 #   paid  ~16.77 USD
@@ -137,7 +138,7 @@ The DEX still has the MM's order at 1.25 USD/XRP. The arbitrageur sells their XR
 
 ```bash
 # Sell 20 XRP into the MM's open offer, get 25 USD back
-xrpl-up offer create "20" "25.USD.$ISSUER" --local --seed $ARB_SEED \
+xrpl-up offer create --taker-pays 20 --taker-gets 25/USD/$ISSUER --seed $ARB_SEED \
   --immediate-or-cancel
 # ✔ Offer filled via DEX order book
 #   paid  20 XRP
@@ -155,7 +156,7 @@ xrpl-up offer create "20" "25.USD.$ISSUER" --local --seed $ARB_SEED \
 #   Profit ~8.23 USD
 
 # Check the AMM pool — it shifted toward the DEX price
-xrpl-up amm info XRP USD.$ISSUER --local
+xrpl-up amm info XRP USD.$ISSUER
 # XRP reserve   80 XRP   ← decreased (sold 20 XRP to arb)
 # USD reserve  125 USD   ← increased (received ~16.77 USD from arb)
 # → new price: 125/80 = 1.5625 USD/XRP  (moved toward DEX price of 1.25)
@@ -166,7 +167,7 @@ xrpl-up amm info XRP USD.$ISSUER --local
 ## Step 8: View full transaction history
 
 ```bash
-xrpl-up tx list $ARB --local --limit 5
+xrpl-up account transactions $ARB --limit 5
 # OfferCreate  tesSUCCESS  buy 20 XRP for ~16.77 USD  (AMM route)
 # OfferCreate  tesSUCCESS  sell 20 XRP for 25 USD     (DEX route)
 ```

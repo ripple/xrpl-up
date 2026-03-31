@@ -11,6 +11,7 @@ Checks work with both **XRP** and **IOUs**.
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -37,8 +38,8 @@ RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The sender creates a check for up to 10 XRP, valid for 7 days:
 
 ```bash
-xrpl-up check create $RECEIVER 10 --local --seed $SENDER_SEED \
-  --expiry +7d
+xrpl-up check create --to $RECEIVER --send-max 10 --seed $SENDER_SEED \
+  --expiration 2024-01-15T00:00:00Z
 # ✔ Check created
 #   checkID  A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #   sendMax  10 XRP → rReceiverXXX...
@@ -53,10 +54,10 @@ CHECK_ID=A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ```bash
 # Requires the receiver to have a trust line for USD first
-xrpl-up trustline set USD.$ISSUER 10000 --local --seed $RECEIVER_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $RECEIVER_SEED
 
-xrpl-up check create $RECEIVER "50.USD.$ISSUER" --local --seed $SENDER_SEED \
-  --expiry +30d
+xrpl-up check create --to $RECEIVER --send-max 50/USD/$ISSUER --seed $SENDER_SEED \
+  --expiration 2024-02-01T00:00:00Z
 # ✔ Check created  sendMax 50 USD  checkID EFGH5678...
 ```
 
@@ -65,8 +66,8 @@ xrpl-up check create $RECEIVER "50.USD.$ISSUER" --local --seed $SENDER_SEED \
 ## 4. List outstanding checks
 
 ```bash
-xrpl-up check list --local
-xrpl-up check list --local --account $RECEIVER
+xrpl-up check list $SENDER
+xrpl-up check list $RECEIVER
 # checkID  A1B2C3D4...  sendMax 10 XRP  from rSenderXXX...  expiry 7d
 ```
 
@@ -77,7 +78,7 @@ xrpl-up check list --local --account $RECEIVER
 The receiver cashes for exactly 5 XRP (less than the 10 XRP maximum):
 
 ```bash
-xrpl-up check cash $CHECK_ID 5 --local --seed $RECEIVER_SEED
+xrpl-up check cash $CHECK_ID --amount 5 --seed $RECEIVER_SEED
 # ✔ Check cashed  received 5 XRP
 ```
 
@@ -88,7 +89,7 @@ xrpl-up check cash $CHECK_ID 5 --local --seed $RECEIVER_SEED
 Instead of an exact amount, the receiver asks for "as much as possible, but at least 3 XRP":
 
 ```bash
-xrpl-up check cash $CHECK_ID --deliver-min 3 --local --seed $RECEIVER_SEED
+xrpl-up check cash $CHECK_ID --deliver-min 3 --seed $RECEIVER_SEED
 # ✔ Check cashed  received 10 XRP  (full sendMax)
 ```
 
@@ -102,26 +103,26 @@ Either the sender or the receiver can cancel at any time. After the expiry, anyo
 
 ```bash
 # Sender cancels their own check
-xrpl-up check cancel $CHECK_ID --local --seed $SENDER_SEED
+xrpl-up check cancel $CHECK_ID --seed $SENDER_SEED
 # ✔ Check cancelled  A1B2C3D4...
 
 # Receiver cancels (also valid)
-xrpl-up check cancel $CHECK_ID --local --seed $RECEIVER_SEED
+xrpl-up check cancel $CHECK_ID --seed $RECEIVER_SEED
 ```
 
 ---
 
 ## 8. Expiry and auto-cleanup
 
-Checks with a past `--expiry` can be cancelled by anyone (including the sender), freeing up the 2 XRP object reserve:
+Checks with a past `--expiration` can be cancelled by anyone (including the sender), freeing up the 2 XRP object reserve:
 
 ```bash
 # Create a check that expires in 10 seconds (for testing)
-xrpl-up check create $RECEIVER 5 --local --seed $SENDER_SEED --expiry +10s
+xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_SEED --expiration 2024-01-01T00:00:10Z
 
 # Wait 10 seconds, then cancel (anyone can do this after expiry)
 sleep 10
-xrpl-up check cancel $EXPIRED_CHECK_ID --local --seed $SENDER_SEED
+xrpl-up check cancel $EXPIRED_CHECK_ID --seed $SENDER_SEED
 ```
 
 ---

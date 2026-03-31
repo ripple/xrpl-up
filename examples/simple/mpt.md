@@ -11,6 +11,7 @@ MPT is XRPL's next-generation fungible token standard. Unlike IOU trust lines, M
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -21,13 +22,13 @@ Auto-fund a wallet and mint a new token:
 
 ```bash
 # Minimal — just a transferable token
-xrpl-up mpt create --local --transferable
+xrpl-up mptoken issuance create --flags can-transfer
 # ✔ MPT issuance created
 #   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #   issuer       rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #   seed         sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
 #
-#   Hint: xrpl-up mpt authorize 00070C44... --local --seed <holder-seed>
+#   Hint: xrpl-up mptoken authorize 00070C44... --seed <holder-seed>
 
 MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
@@ -37,15 +38,12 @@ ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ### Full issuance with all controls
 
 ```bash
-xrpl-up mpt create --local --seed $ISSUER_SEED \
+xrpl-up mptoken issuance create --seed $ISSUER_SEED \
   --max-amount 1000000 \
   --asset-scale 6 \
   --transfer-fee 100 \
   --metadata "My Token v1" \
-  --transferable \
-  --can-clawback \
-  --can-lock \
-  --require-auth
+  --flags can-transfer,can-clawback,can-lock,require-auth
 ```
 
 | Flag | Default | Description |
@@ -54,17 +52,17 @@ xrpl-up mpt create --local --seed $ISSUER_SEED \
 | `--asset-scale <n>` | `0` | Decimal places (0–19). `6` = values in millionths |
 | `--transfer-fee <n>` | `0` | Fee in hundredths of a percent (e.g. `100` = 1%) |
 | `--metadata <string>` | — | Freeform metadata, hex-encoded on-chain |
-| `--transferable` | off | Holders can transfer tokens to other accounts |
-| `--require-auth` | off | Issuer must explicitly authorize each holder |
-| `--can-lock` | off | Issuer can freeze individual holders |
-| `--can-clawback` | off | Issuer can reclaim tokens from holders |
+| `--flags can-transfer` | off | Holders can transfer tokens to other accounts |
+| `--flags require-auth` | off | Issuer must explicitly authorize each holder |
+| `--flags can-lock` | off | Issuer can freeze individual holders |
+| `--flags can-clawback` | off | Issuer can reclaim tokens from holders |
 
 ---
 
 ## 2. Inspect the issuance
 
 ```bash
-xrpl-up mpt info $MPT_ID --local
+xrpl-up mptoken issuance get $MPT_ID
 # issuer           rIssuerXXX...
 # outstanding      0
 # max amount       1000000
@@ -78,7 +76,7 @@ xrpl-up mpt info $MPT_ID --local
 
 ## 3. Holder opts in (MPTokenAuthorize)
 
-Before a holder can receive MPTs they must opt in by running `mpt authorize` from their own account. This reserves a small amount of XRP (the MPToken ledger object reserve).
+Before a holder can receive MPTs they must opt in by running `mptoken authorize` from their own account. This reserves a small amount of XRP (the MPToken ledger object reserve).
 
 ```bash
 # Fund a holder wallet
@@ -89,17 +87,17 @@ HOLDER_SEED=sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
 HOLDER=rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Holder opts in (no --holder flag means "this account is opting in for itself")
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_SEED
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED
 # ✔ MPToken holder authorized  rHolderXXX...
 ```
 
-### When `--require-auth` is set
+### When `--flags require-auth` is set
 
 If the issuance requires authorization, the issuer must also authorize the holder:
 
 ```bash
 # Issuer authorizes the holder
-xrpl-up mpt authorize $MPT_ID --local --seed $ISSUER_SEED --holder $HOLDER
+xrpl-up mptoken authorize $MPT_ID --seed $ISSUER_SEED --holder $HOLDER
 # ✔ MPToken holder authorized by issuer
 ```
 
@@ -110,7 +108,7 @@ Both sides must run `authorize` before the holder can receive tokens.
 ## 4. Send MPT tokens
 
 ```bash
-xrpl-up mpt pay $MPT_ID 1000 $HOLDER --local --seed $ISSUER_SEED
+xrpl-up payment --to $HOLDER --amount 1000/$MPT_ID --seed $ISSUER_SEED
 # ✔ MPT payment sent
 #   amount  1000  →  rHolderXXX...
 #   hash    ABCDEF...
@@ -123,11 +121,11 @@ xrpl-up mpt pay $MPT_ID 1000 $HOLDER --local --seed $ISSUER_SEED
 ## 5. Check holder balances
 
 ```bash
-# Issuances created by the default account
-xrpl-up mpt list --local
+# Issuances created by the issuer account
+xrpl-up mptoken issuance list $ISSUER
 
 # MPT balances held by an account
-xrpl-up mpt list $HOLDER --local --holdings
+xrpl-up account mptokens $HOLDER
 # MPTokenIssuanceID  00070C44...
 # MPTAmount          1000
 # locked             false
@@ -146,37 +144,37 @@ HOLDER2_SEED=sEdHolder2SeedXXXXXXXXXXXXXXXXXXXXX
 HOLDER2=rHolder2XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Holder 2 opts in
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER2_SEED
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER2_SEED
 
 # Holder 1 sends 250 tokens to Holder 2
-xrpl-up mpt pay $MPT_ID 250 $HOLDER2 --local --seed $HOLDER_SEED
+xrpl-up payment --to $HOLDER2 --amount 250/$MPT_ID --seed $HOLDER_SEED
 ```
 
 ---
 
-## 7. Lock a holder (optional — requires `--can-lock`)
+## 7. Lock a holder (optional — requires `--flags can-lock`)
 
 ```bash
 # Lock Holder 1's balance
-xrpl-up mpt set $MPT_ID --local --seed $ISSUER_SEED --lock --holder $HOLDER
+xrpl-up mptoken issuance set $MPT_ID --seed $ISSUER_SEED --lock --holder $HOLDER
 # ✔ MPToken locked  rHolderXXX...
 
 # Unlock
-xrpl-up mpt set $MPT_ID --local --seed $ISSUER_SEED --unlock --holder $HOLDER
+xrpl-up mptoken issuance set $MPT_ID --seed $ISSUER_SEED --unlock --holder $HOLDER
 ```
 
 Lock the entire issuance at once:
 
 ```bash
-xrpl-up mpt set $MPT_ID --local --seed $ISSUER_SEED --lock
+xrpl-up mptoken issuance set $MPT_ID --seed $ISSUER_SEED --lock
 ```
 
 ---
 
-## 8. Clawback tokens (requires `--can-clawback`)
+## 8. Clawback tokens (requires `--flags can-clawback`)
 
 ```bash
-xrpl-up clawback mpt $MPT_ID $HOLDER 500 --local --seed $ISSUER_SEED
+xrpl-up clawback --amount 500/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
 # ✔ Clawback successful  500 ← rHolderXXX...
 ```
 
@@ -186,7 +184,7 @@ xrpl-up clawback mpt $MPT_ID $HOLDER 500 --local --seed $ISSUER_SEED
 
 ```bash
 # Holder opts back out (balance must be zero first)
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_SEED --unauthorize
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED --unauthorize
 ```
 
 ---
@@ -196,7 +194,7 @@ xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_SEED --unauthorize
 Outstanding supply must be zero before you can destroy:
 
 ```bash
-xrpl-up mpt destroy $MPT_ID --local --seed $ISSUER_SEED
+xrpl-up mptoken issuance destroy $MPT_ID --seed $ISSUER_SEED
 # ✔ MPT issuance destroyed  00070C44...
 ```
 
@@ -206,27 +204,27 @@ xrpl-up mpt destroy $MPT_ID --local --seed $ISSUER_SEED
 
 ```bash
 # 1. Create
-xrpl-up mpt create --local --transferable --can-clawback
+xrpl-up mptoken issuance create --flags can-transfer,can-clawback
 # → MPT_ID, ISSUER_SEED, ISSUER
 
 # 2. Holder opts in
 xrpl-up faucet --local    # → HOLDER, HOLDER_SEED
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_SEED
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED
 
 # 3. Send tokens
-xrpl-up mpt pay $MPT_ID 1000 $HOLDER --local --seed $ISSUER_SEED
+xrpl-up payment --to $HOLDER --amount 1000/$MPT_ID --seed $ISSUER_SEED
 
 # 4. Check balances
-xrpl-up mpt list $HOLDER --local --holdings
+xrpl-up account mptokens $HOLDER
 
 # 5. Clawback
-xrpl-up clawback mpt $MPT_ID $HOLDER 1000 --local --seed $ISSUER_SEED
+xrpl-up clawback --amount 1000/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
 
 # 6. Holder opts out
-xrpl-up mpt authorize $MPT_ID --local --seed $HOLDER_SEED --unauthorize
+xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED --unauthorize
 
 # 7. Destroy
-xrpl-up mpt destroy $MPT_ID --local --seed $ISSUER_SEED
+xrpl-up mptoken issuance destroy $MPT_ID --seed $ISSUER_SEED
 ```
 
 ---
@@ -235,11 +233,11 @@ xrpl-up mpt destroy $MPT_ID --local --seed $ISSUER_SEED
 
 | Feature | IOU (Trust Line) | MPT |
 |---------|-----------------|-----|
-| **Holder opt-in** | Set trust line | `mpt authorize` |
+| **Holder opt-in** | Set trust line | `mptoken authorize` |
 | **Rippling** | Supported (DefaultRipple) | Not applicable |
 | **Transfer fee** | Not built-in | Built-in (`--transfer-fee`) |
-| **Clawback** | Requires account flag | Requires `--can-clawback` at issuance |
-| **Per-holder lock** | Individual freeze | `mpt set --lock --holder` |
+| **Clawback** | Requires account flag | Requires `--flags can-clawback` at issuance |
+| **Per-holder lock** | Individual freeze | `mptoken issuance set --lock --holder` |
 | **Supply cap** | No | `--max-amount` |
 | **Metadata** | No | `--metadata` |
 

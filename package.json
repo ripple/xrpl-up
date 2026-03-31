@@ -19,16 +19,25 @@
     "sandbox"
   ],
   "bin": {
-    "xrpl-up": "./dist/cli.js"
+    "xrpl-up": "./dist/cli.js",
+    "xrpl": "./dist/cli/index.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "build": "tsc",
-    "postbuild": "cp src/faucet-server/package.json dist/faucet-server/package.json && cp src/faucet-server/Dockerfile dist/faucet-server/Dockerfile",
+    "postbuild": "cp src/faucet-server/package.json dist/faucet-server/package.json && cp src/faucet-server/Dockerfile dist/faucet-server/Dockerfile && chmod +x dist/cli.js dist/cli/index.js",
     "dev": "tsx src/cli.ts",
     "clean": "rm -rf dist",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run tests/e2e",
+    "test:e2e:local": "vitest run --config vitest.config.local.ts tests/e2e",
+    "typecheck": "tsc --noEmit"
   },
   "files": [
     "dist/",
@@ -41,15 +50,16 @@
     "@xrplf/isomorphic": "^1.0.1",
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.3",
-    "commander": "^11.1.0",
+    "commander": "^12.0.0",
     "inquirer": "^8.2.6",
     "ora": "^5.4.1",
     "xrpl": "^4.6.0"
   },
   "devDependencies": {
     "@types/inquirer": "^8.2.10",
-    "@types/node": "^20.11.0",
+    "@types/node": "^22.0.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^2.1.9"
   }
 }

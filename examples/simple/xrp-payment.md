@@ -11,6 +11,7 @@ Start a local sandbox (or skip this and use `--network testnet` instead):
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -46,7 +47,7 @@ RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ```bash
 # Send 10 XRP from the sender to the receiver
-xrpl-up offer create "10" "10" --local   # not the right command — see below
+xrpl-up offer create --taker-pays 10 --taker-gets 10   # not the right command — see below
 ```
 
 Actually, XRP payments are sent with the `faucet` command for funded wallets, or directly via a script. For a direct send between two existing accounts, use:
@@ -79,10 +80,10 @@ After any on-chain activity, inspect an account's history:
 
 ```bash
 # Show the last 20 transactions for an account
-xrpl-up tx list rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX --local
+xrpl-up account transactions rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Limit to the last 5
-xrpl-up tx list rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX --local --limit 5
+xrpl-up account transactions rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX --limit 5
 ```
 
 Each row shows: date, transaction type, result (`tesSUCCESS` / error), hash, and a short summary.

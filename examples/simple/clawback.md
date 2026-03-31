@@ -11,6 +11,7 @@ Both **IOU (trust line)** and **MPT** tokens support clawback.
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -30,14 +31,14 @@ ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
 ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Enable clawback BEFORE creating any trust lines
-xrpl-up accountset set allowClawback --local --seed $ISSUER_SEED
+xrpl-up account set --allow-clawback --seed $ISSUER_SEED
 # ✔ Flag set: allowClawback  (permanent)
 ```
 
 Verify the flag:
 
 ```bash
-xrpl-up accountset info --local --account $ISSUER
+xrpl-up account info $ISSUER
 # AllowTrustLineClawback  ✔
 ```
 
@@ -54,10 +55,10 @@ HOLDER_SEED=sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
 HOLDER=rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Enable DefaultRipple on the issuer
-xrpl-up trustline issuer-defaults --local --seed $ISSUER_SEED
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
 
 # Holder sets a trust line
-xrpl-up trustline set USD.$ISSUER 10000 --local --seed $HOLDER_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $HOLDER_SEED
 
 # Issue 500 USD to the holder
 # (use xrpl-up run with a Payment script, or via the DEX)
@@ -69,12 +70,12 @@ xrpl-up trustline set USD.$ISSUER 10000 --local --seed $HOLDER_SEED
 
 ```bash
 # Reclaim 100 USD from the holder
-xrpl-up clawback iou 100 USD $HOLDER --local --seed $ISSUER_SEED
+xrpl-up clawback --amount 100/USD/$HOLDER --seed $ISSUER_SEED
 # ✔ Clawback successful
 #   reclaimed  100 USD  ←  rHolderXXX...
 
 # Reclaim the full remaining balance
-xrpl-up clawback iou 400 USD $HOLDER --local --seed $ISSUER_SEED
+xrpl-up clawback --amount 400/USD/$HOLDER --seed $ISSUER_SEED
 ```
 
 After clawback the holder's trust-line balance decreases. The issuer's outstanding supply decreases correspondingly.
@@ -84,7 +85,7 @@ After clawback the holder's trust-line balance decreases. The issuer's outstandi
 ### Step 4: Verify
 
 ```bash
-xrpl-up trustline list --local --account $HOLDER
+xrpl-up account trust-lines $HOLDER
 # USD  rIssuerXXX...  balance 0  limit 10000
 ```
 
@@ -101,8 +102,8 @@ xrpl-up faucet --local
 MPT_ISSUER_SEED=sEdMptIssuerSeedXXXXXXXXXXXXXXX
 MPT_ISSUER=rMptIssuerXXXXXXXXXXXXXXXXXXXXXXXXX
 
-xrpl-up mpt create --local --seed $MPT_ISSUER_SEED \
-  --transferable --can-clawback \
+xrpl-up mptoken issuance create --seed $MPT_ISSUER_SEED \
+  --flags can-transfer,can-clawback \
   --max-amount 1000000
 # ✔ MPT issuance created
 #   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -122,10 +123,10 @@ MPT_HOLDER_SEED=sEdMptHolderSeedXXXXXXXXXXXXXXX
 MPT_HOLDER=rMptHolderXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Holder opts in
-xrpl-up mpt authorize $MPT_ID --local --seed $MPT_HOLDER_SEED
+xrpl-up mptoken authorize $MPT_ID --seed $MPT_HOLDER_SEED
 
 # Send 2000 MPT tokens to the holder
-xrpl-up mpt pay $MPT_ID 2000 $MPT_HOLDER --local --seed $MPT_ISSUER_SEED
+xrpl-up payment --to $MPT_HOLDER --amount 2000/$MPT_ID --seed $MPT_ISSUER_SEED
 ```
 
 ---
@@ -134,7 +135,7 @@ xrpl-up mpt pay $MPT_ID 2000 $MPT_HOLDER --local --seed $MPT_ISSUER_SEED
 
 ```bash
 # Reclaim 500 tokens from the holder
-xrpl-up clawback mpt $MPT_ID $MPT_HOLDER 500 --local --seed $MPT_ISSUER_SEED
+xrpl-up clawback --amount 500/$MPT_ID --holder $MPT_HOLDER --seed $MPT_ISSUER_SEED
 # ✔ Clawback successful
 #   reclaimed  500  ←  rMptHolderXXX...
 ```
@@ -144,7 +145,7 @@ xrpl-up clawback mpt $MPT_ID $MPT_HOLDER 500 --local --seed $MPT_ISSUER_SEED
 ### Step 4: Verify
 
 ```bash
-xrpl-up mpt list $MPT_HOLDER --local --holdings
+xrpl-up account mptokens $MPT_HOLDER
 # MPTokenIssuanceID  00070C44...
 # MPTAmount          1500   ← 2000 - 500
 ```
@@ -155,9 +156,9 @@ xrpl-up mpt list $MPT_HOLDER --local --holdings
 
 | | IOU Clawback | MPT Clawback |
 |--|-------------|--------------|
-| **Enable** | `accountset set allowClawback` (permanent, on issuer account) | `mpt create --can-clawback` (per issuance) |
+| **Enable** | `account set --allow-clawback` (permanent, on issuer account) | `mptoken issuance create --flags can-clawback` (per issuance) |
 | **Prerequisite timing** | Must be set before any trust lines | Must be set at issuance creation |
-| **Command** | `clawback iou <amount> <currency> <holder>` | `clawback mpt <issuanceId> <holder> <amount>` |
+| **Command** | `clawback --amount <amount>/<currency>/<holder>` | `clawback --amount <amount>/<issuanceId> --holder <holder>` |
 | **Reversible?** | Flag is permanent; individual clawback can be partial | Partial clawback supported |
 
 ---

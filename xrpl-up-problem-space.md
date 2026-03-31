@@ -6,8 +6,8 @@ XRPL Local Development Sandbox — what it solves today and what it could solve 
 
 ## Problem Statement
 
-- XRPL developer tooling is fragmented, and there is no unified sandbox workflow for rapid prototyping and repeatable testing.
-- Community feedback repeatedly highlights unreliable/inconsistent test environments and outdated onboarding/tooling experience.
+- XRPL developer always complain about there is no unified sandbox workflow for rapid prototyping and repeatable testing.
+- Community feedback repeatedly highlights unreliable/inconsistent test environments and outdated onboarding experience.
 - Public Testnet/Devnet introduce resets, downtime, and rate limits that reduce confidence in test repeatability.
 - Direct standalone `rippled` setup is operationally heavy (config, funding, lifecycle, resets), so app teams spend time on infrastructure mechanics instead of product logic.
 - Teams need a practical way to run local `rippled` on modest hardware (without full network sync/consensus overhead) so development is feasible on typical laptops and CI runners.

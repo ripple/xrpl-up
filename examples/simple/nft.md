@@ -9,6 +9,7 @@ Mint, sell, buy, and burn Non-Fungible Tokens on XRPL. XRPL NFTs (XLS-20) are na
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -18,18 +19,17 @@ xrpl-up status   # wait until "healthy"
 Auto-funds a new wallet and mints a transferable NFT with a metadata URI:
 
 ```bash
-xrpl-up nft mint --local \
+xrpl-up nft mint \
   --uri https://example.com/nft-metadata.json \
-  --transferable \
-  --transfer-fee 5 \
+  --transfer-fee 500 \
   --taxon 1
 # ✔ NFT minted
 #   NFTokenID  000800006B9C0BXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #   issuer     rMinterXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #   taxon      1
-#   fee        5%
+#   fee        500 bps
 #
-#   Hint: xrpl-up nft sell 000800006B9C0B... 5 --local --seed <seed>
+#   Hint: xrpl-up nft offer create --nft 000800006B9C0B... --amount 5 --seed <seed>
 ```
 
 Save values:
@@ -48,19 +48,16 @@ MINTER=rMinterXXXXXXXXXXXXXXXXXXXXXXXXXXX
 | `--transferable` | Allow the NFT to be transferred to other accounts |
 | `--burnable` | Allow the issuer to burn the NFT even if held by another account |
 | `--taxon <n>` | Group identifier for a collection (0–2147483647) |
-| `--transfer-fee <pct>` | Royalty percentage paid to the issuer on every resale (0–50%) |
+| `--transfer-fee <bps>` | Royalty in basis points paid to the issuer on every resale (0–50000 bps, where 10000 = 100%) |
 
 ---
 
 ## 2. List NFTs for an account
 
 ```bash
-xrpl-up nft list --local
-# Shows NFTs owned by the first stored local account
-
-xrpl-up nft list --local --account $MINTER
+xrpl-up account nfts $MINTER
 # NFTokenID  000800006B9C0B...
-# taxon      1    transferable: true    fee: 5%
+# taxon      1    transferable: true    fee: 500 bps
 # uri        https://example.com/nft-metadata.json
 ```
 
@@ -72,7 +69,7 @@ The owner puts the NFT up for sale:
 
 ```bash
 # Sell for 5 XRP
-xrpl-up nft sell $NFT_ID 5 --local --seed $MINTER_SEED
+xrpl-up nft offer create --nft $NFT_ID --amount 5 --seed $MINTER_SEED
 # ✔ Sell offer created
 #   offerID  A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #   price    5 XRP
@@ -84,7 +81,7 @@ Sell for an IOU instead:
 
 ```bash
 # Sell for 100 USD (requires buyer to have a USD trust line)
-xrpl-up nft sell $NFT_ID "100.USD.$ISSUER" --local --seed $MINTER_SEED
+xrpl-up nft offer create --nft $NFT_ID --amount 100/USD/$ISSUER --seed $MINTER_SEED
 ```
 
 ---
@@ -92,7 +89,7 @@ xrpl-up nft sell $NFT_ID "100.USD.$ISSUER" --local --seed $MINTER_SEED
 ## 4. View open offers for an NFT
 
 ```bash
-xrpl-up nft offers $NFT_ID --local
+xrpl-up nft offer list $NFT_ID
 # sell offers:
 #   offerID  A1B2C3D4...  price 5 XRP  owner rMinterXXX...
 ```
@@ -105,7 +102,7 @@ A different wallet accepts the offer and pays the price:
 
 ```bash
 # Auto-fund a buyer wallet and accept the offer
-xrpl-up nft accept $OFFER_ID --local
+xrpl-up nft offer accept --sell-offer $OFFER_ID
 # ✔ Offer accepted
 #   buyer    rBuyerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #   price    5 XRP
@@ -118,7 +115,7 @@ BUYER=rBuyerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 Provide a specific buyer seed:
 
 ```bash
-xrpl-up nft accept $OFFER_ID --local --seed $BUYER_SEED
+xrpl-up nft offer accept --sell-offer $OFFER_ID --seed $BUYER_SEED
 ```
 
 ---
@@ -126,10 +123,10 @@ xrpl-up nft accept $OFFER_ID --local --seed $BUYER_SEED
 ## 6. Verify ownership transferred
 
 ```bash
-xrpl-up nft list --local --account $BUYER
+xrpl-up account nfts $BUYER
 # NFTokenID  000800006B9C0B...   ← now owned by buyer
 
-xrpl-up nft list --local --account $MINTER
+xrpl-up account nfts $MINTER
 # (empty — no longer holds the NFT)
 ```
 
@@ -154,14 +151,14 @@ xrpl-up faucet --local
 Only the current owner can burn (unless `--burnable` was set, in which case the issuer can too):
 
 ```bash
-xrpl-up nft burn $NFT_ID --local --seed $BUYER_SEED
+xrpl-up nft burn --nft $NFT_ID --seed $BUYER_SEED
 # ✔ NFT burned  000800006B9C0B...
 ```
 
 Confirm it's gone:
 
 ```bash
-xrpl-up nft list --local --account $BUYER
+xrpl-up account nfts $BUYER
 # (empty)
 ```
 
@@ -171,19 +168,19 @@ xrpl-up nft list --local --account $BUYER
 
 ```bash
 # 1. Mint
-xrpl-up nft mint --local --uri https://example.com/meta.json --transferable --transfer-fee 5
+xrpl-up nft mint --taxon 1 --uri https://example.com/meta.json --transfer-fee 500
 # → NFT_ID, MINTER_SEED
 
 # 2. List for sale
-xrpl-up nft sell $NFT_ID 5 --local --seed $MINTER_SEED
+xrpl-up nft offer create --nft $NFT_ID --amount 5 --seed $MINTER_SEED
 # → OFFER_ID
 
 # 3. Accept (buy)
-xrpl-up nft accept $OFFER_ID --local
+xrpl-up nft offer accept --sell-offer $OFFER_ID
 # → BUYER_SEED
 
 # 4. Burn
-xrpl-up nft burn $NFT_ID --local --seed $BUYER_SEED
+xrpl-up nft burn --nft $NFT_ID --seed $BUYER_SEED
 ```
 
 ---
@@ -194,7 +191,7 @@ xrpl-up nft burn $NFT_ID --local --seed $BUYER_SEED
 |---------|--------|
 | **NFTokenID** | 256-bit unique identifier encoding the issuer, taxon, transfer fee, and a sequence counter. |
 | **Taxon** | Collection identifier. All NFTs from the same mint with the same taxon belong to one "collection". |
-| **Transfer fee** | Royalty paid to the original minter on every resale (1/1000ths of a percent, 0–50%). |
+| **Transfer fee** | Royalty paid to the original minter on every resale, specified in basis points (0–50000 bps; 10000 bps = 100%). |
 | **Burnable flag** | If set at mint time, the issuer can burn the NFT even after it has been sold. |
 | **Offer** | Sell and buy offers live on-chain as ledger objects until accepted, cancelled, or expired. |
 

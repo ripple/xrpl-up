@@ -11,6 +11,7 @@ A fully-regulated IOU token flow where the issuer controls every step: only appr
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -49,26 +50,26 @@ ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ```bash
 # Allow clawback of issued tokens (must come first, before any trust lines)
-xrpl-up accountset set allowClawback --local --seed $ISSUER_SEED
+xrpl-up account set --allow-clawback --seed $ISSUER_SEED
 # ✔ Flag set: allowClawback (permanent)
 
 # Require issuer approval for every trust line
-xrpl-up accountset set requireAuth --local --seed $ISSUER_SEED
+xrpl-up account set --set-flag requireAuth --seed $ISSUER_SEED
 # ✔ Flag set: requireAuth
 
 # Block unsolicited deposits (whitelist-only incoming payments)
-xrpl-up accountset set depositAuth --local --seed $ISSUER_SEED
+xrpl-up account set --set-flag depositAuth --seed $ISSUER_SEED
 # ✔ Flag set: depositAuth
 
 # Enable DefaultRipple so tokens can ripple through the issuer's trust lines
-xrpl-up trustline issuer-defaults --local --seed $ISSUER_SEED
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
 # ✔ DefaultRipple enabled
 ```
 
 Verify all flags are set:
 
 ```bash
-xrpl-up accountset info --local --account $ISSUER
+xrpl-up account info $ISSUER
 # requireAuth              ✔
 # depositAuth              ✔
 # defaultRipple            ✔
@@ -99,10 +100,10 @@ HOLDER_B=rHolderBXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 Both holders set trust lines. With `requireAuth` active, the trust line exists but is **unauthorized** until the issuer approves it — no tokens can flow yet.
 
 ```bash
-xrpl-up trustline set USD.$ISSUER 10000 --local --seed $HOLDER_A_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $HOLDER_A_SEED
 # ✔ Trust line set (pending issuer authorization)
 
-xrpl-up trustline set USD.$ISSUER 10000 --local --seed $HOLDER_B_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $HOLDER_B_SEED
 # ✔ Trust line set (pending issuer authorization)
 ```
 
@@ -112,7 +113,7 @@ xrpl-up trustline set USD.$ISSUER 10000 --local --seed $HOLDER_B_SEED
 
 ```bash
 # Approve Holder A's trust line
-xrpl-up trustline freeze USD.$HOLDER_A --local --seed $ISSUER_SEED --authorize
+xrpl-up trust set --currency USD --issuer $HOLDER_A --limit 0 --freeze --seed $ISSUER_SEED --authorize
 # ✔ Trust line authorized: USD / rHolderAXXX...
 
 # Holder B is NOT authorized — deliberately left pending
@@ -121,10 +122,10 @@ xrpl-up trustline freeze USD.$HOLDER_A --local --seed $ISSUER_SEED --authorize
 Verify:
 
 ```bash
-xrpl-up trustline list --local --account $HOLDER_A
+xrpl-up account trust-lines $HOLDER_A
 # USD  rIssuerXXX...  balance 0  limit 10000  authorized: true
 
-xrpl-up trustline list --local --account $HOLDER_B
+xrpl-up account trust-lines $HOLDER_B
 # USD  rIssuerXXX...  balance 0  limit 10000  authorized: false
 ```
 
@@ -135,10 +136,10 @@ xrpl-up trustline list --local --account $HOLDER_B
 With `depositAuth` active on the issuer, only whitelisted accounts can pay it. Pre-authorize Holder A:
 
 ```bash
-xrpl-up depositpreauth authorize $HOLDER_A --local --seed $ISSUER_SEED
+xrpl-up deposit-preauth set --authorize $HOLDER_A --seed $ISSUER_SEED
 # ✔ Pre-authorized: rHolderAXXX...  →  rIssuerXXX...
 
-xrpl-up depositpreauth list --local
+xrpl-up deposit-preauth list $ISSUER
 # rHolderAXXX...
 ```
 
@@ -168,7 +169,7 @@ await client.disconnect();
 ```
 
 ```bash
-xrpl-up run scripts/issue-tokens.ts --local
+xrpl-up run scripts/issue-tokens.ts
 # tesSUCCESS
 ```
 
@@ -190,12 +191,12 @@ Holder B's trust line is unauthorized — any attempt to send USD to Holder B fr
 Suspending a holder while a compliance review is conducted:
 
 ```bash
-xrpl-up trustline freeze USD.$HOLDER_A --local --seed $ISSUER_SEED
+xrpl-up trust set --currency USD --issuer $HOLDER_A --limit 0 --freeze --seed $ISSUER_SEED
 # ✔ Trust line frozen: USD / rHolderAXXX...
 # (Holder A can no longer send or receive USD)
 
 # After review, unfreeze:
-xrpl-up trustline freeze USD.$HOLDER_A --local --seed $ISSUER_SEED --unfreeze
+xrpl-up trust set --currency USD --issuer $HOLDER_A --limit 0 --unfreeze --seed $ISSUER_SEED
 # ✔ Trust line unfrozen
 ```
 
@@ -205,11 +206,11 @@ xrpl-up trustline freeze USD.$HOLDER_A --local --seed $ISSUER_SEED --unfreeze
 
 ```bash
 # Reclaim 200 USD from Holder A (e.g. sanctions hit)
-xrpl-up clawback iou 200 USD $HOLDER_A --local --seed $ISSUER_SEED
+xrpl-up clawback --amount 200/USD/$HOLDER_A --seed $ISSUER_SEED
 # ✔ Clawback successful  200 USD  ← rHolderAXXX...
 
 # Verify balance dropped
-xrpl-up trustline list --local --account $HOLDER_A
+xrpl-up account trust-lines $HOLDER_A
 # USD  rIssuerXXX...  balance 800  (was 1000)
 ```
 
@@ -219,13 +220,13 @@ xrpl-up trustline list --local --account $HOLDER_A
 
 ```bash
 # Revoke Holder A's deposit whitelist entry
-xrpl-up depositpreauth unauthorize $HOLDER_A --local --seed $ISSUER_SEED
+xrpl-up deposit-preauth set --unauthorize $HOLDER_A --seed $ISSUER_SEED
 
 # Clear requireAuth (allowed — no tokens remain to be authorized)
-xrpl-up accountset clear requireAuth --local --seed $ISSUER_SEED
+xrpl-up account set --clear-flag requireAuth --seed $ISSUER_SEED
 
 # Clear depositAuth
-xrpl-up accountset clear depositAuth --local --seed $ISSUER_SEED
+xrpl-up account set --clear-flag depositAuth --seed $ISSUER_SEED
 ```
 
 > **Note:** `allowClawback` cannot be cleared — it is permanent by design.
@@ -236,13 +237,13 @@ xrpl-up accountset clear depositAuth --local --seed $ISSUER_SEED
 
 | Scenario | Command |
 |----------|---------|
-| Approve a new holder | `trustline freeze USD.$HOLDER --authorize --seed $ISSUER_SEED` |
-| Suspend a holder | `trustline freeze USD.$HOLDER --seed $ISSUER_SEED` |
-| Reinstate a holder | `trustline freeze USD.$HOLDER --unfreeze --seed $ISSUER_SEED` |
-| Freeze all holders (emergency) | `accountset set globalFreeze --seed $ISSUER_SEED` |
-| Reclaim tokens | `clawback iou <amount> USD $HOLDER --seed $ISSUER_SEED` |
-| Block a sender | `depositpreauth unauthorize $SENDER --seed $ISSUER_SEED` |
-| Allow a sender | `depositpreauth authorize $SENDER --seed $ISSUER_SEED` |
+| Approve a new holder | `trust set --currency USD --issuer $HOLDER --limit 0 --freeze --authorize --seed $ISSUER_SEED` |
+| Suspend a holder | `trust set --currency USD --issuer $HOLDER --limit 0 --freeze --seed $ISSUER_SEED` |
+| Reinstate a holder | `trust set --currency USD --issuer $HOLDER --limit 0 --unfreeze --seed $ISSUER_SEED` |
+| Freeze all holders (emergency) | `account set --set-flag globalFreeze --seed $ISSUER_SEED` |
+| Reclaim tokens | `clawback --amount <amount>/USD/$HOLDER --seed $ISSUER_SEED` |
+| Block a sender | `deposit-preauth set --unauthorize $SENDER --seed $ISSUER_SEED` |
+| Allow a sender | `deposit-preauth set --authorize $SENDER --seed $ISSUER_SEED` |
 
 ---
 

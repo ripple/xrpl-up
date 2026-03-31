@@ -9,6 +9,7 @@ XRPL's native support for custom currencies. An issuer account mints tokens; hol
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -39,7 +40,7 @@ HOLDER_ADDR=rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
 `DefaultRipple` lets payments ripple through the issuer's trust lines — required for most IOU payment flows.
 
 ```bash
-xrpl-up trustline issuer-defaults --local --seed $ISSUER_SEED
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
 # ✔ DefaultRipple enabled on rIssuerXXX...
 ```
 
@@ -50,7 +51,7 @@ xrpl-up trustline issuer-defaults --local --seed $ISSUER_SEED
 The holder declares they are willing to receive up to 10,000 USD from this issuer.
 
 ```bash
-xrpl-up trustline set USD.$ISSUER_ADDR 10000 --local --seed $HOLDER_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER_ADDR --limit 10000 --seed $HOLDER_SEED
 # ✔ Trust line set: USD / rIssuerXXX...  limit 10000
 ```
 
@@ -62,7 +63,7 @@ On XRPL, issuers create tokens simply by sending them to a trust-line holder. Th
 
 ```bash
 # Send 1000 USD to the holder (uses an offer or direct payment path)
-xrpl-up offer create "1000.USD.$ISSUER_ADDR" "999" --local --seed $ISSUER_SEED
+xrpl-up offer create --taker-pays 1000/USD/$ISSUER_ADDR --taker-gets 999 --seed $ISSUER_SEED
 ```
 
 > **Simpler approach for testing:** Use `xrpl-up run` with a script that calls `client.autofill` on a Payment transaction directly.
@@ -74,11 +75,11 @@ xrpl-up offer create "1000.USD.$ISSUER_ADDR" "999" --local --seed $ISSUER_SEED
 
 ```bash
 # Inspect the holder's trust lines
-xrpl-up trustline list --local --account $HOLDER_ADDR
+xrpl-up account trust-lines $HOLDER_ADDR
 # USD  rIssuerXXX...  balance 1000  limit 10000  noRipple: false  freeze: false
 
 # Inspect the issuer's trust lines (mirror side)
-xrpl-up trustline list --local --account $ISSUER_ADDR
+xrpl-up account trust-lines $ISSUER_ADDR
 ```
 
 ---
@@ -86,7 +87,7 @@ xrpl-up trustline list --local --account $ISSUER_ADDR
 ## 6. View transaction history
 
 ```bash
-xrpl-up tx list $HOLDER_ADDR --local --limit 10
+xrpl-up account transactions $HOLDER_ADDR --limit 10
 ```
 
 ---
@@ -97,23 +98,23 @@ Issuers can freeze individual trust lines to prevent the holder from transferrin
 
 ```bash
 # Freeze the holder's USD trust line
-xrpl-up trustline freeze USD.$HOLDER_ADDR --local --seed $ISSUER_SEED
+xrpl-up trust set --currency USD --issuer $HOLDER_ADDR --limit 0 --freeze --seed $ISSUER_SEED
 # ✔ Trust line frozen: USD / rHolderXXX...
 
 # Unfreeze
-xrpl-up trustline freeze USD.$HOLDER_ADDR --local --seed $ISSUER_SEED --unfreeze
+xrpl-up trust set --currency USD --issuer $HOLDER_ADDR --limit 0 --unfreeze --seed $ISSUER_SEED
 ```
 
 ---
 
 ## 8. Enable Global Freeze (emergency)
 
-Use `accountset` to globally freeze all trust lines at once:
+Use `account set` to globally freeze all trust lines at once:
 
 ```bash
-xrpl-up accountset set globalFreeze --local --seed $ISSUER_SEED
+xrpl-up account set --set-flag globalFreeze --seed $ISSUER_SEED
 # ...later, to lift:
-xrpl-up accountset clear globalFreeze --local --seed $ISSUER_SEED
+xrpl-up account set --clear-flag globalFreeze --seed $ISSUER_SEED
 ```
 
 ---
@@ -122,10 +123,10 @@ xrpl-up accountset clear globalFreeze --local --seed $ISSUER_SEED
 
 ```bash
 # On a fresh issuer account, before any holders exist:
-xrpl-up accountset set allowClawback --local --seed $FRESH_ISSUER_SEED
+xrpl-up account set --allow-clawback --seed $FRESH_ISSUER_SEED
 
 # Later, reclaim 10 USD from a holder:
-xrpl-up clawback iou 10 USD $HOLDER_ADDR --local --seed $ISSUER_SEED
+xrpl-up clawback --amount 10/USD/$HOLDER_ADDR --seed $ISSUER_SEED
 ```
 
 > ⚠️ `allowClawback` is permanent — once set it cannot be cleared. Set it before creating any trust lines.

@@ -11,6 +11,7 @@ This guide goes beyond the quick-start [payment-channel.md](../simple/payment-ch
 ```bash
 xrpl-up node
 xrpl-up status   # wait until "healthy"
+export XRPL_NODE=local
 ```
 
 ---
@@ -35,7 +36,7 @@ RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
 Use a short settle delay (600 seconds = 10 minutes) so close timing is easy to observe in the sandbox:
 
 ```bash
-xrpl-up channel create $RECEIVER 100 --local --seed $SENDER_SEED \
+xrpl-up channel create --to $RECEIVER --amount 100 --seed $SENDER_SEED \
   --settle-delay 600
 # ✔ Channel created
 #   channelID    ABCDEF1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -49,7 +50,7 @@ CHANNEL_ID=ABCDEF1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 Inspect the channel:
 
 ```bash
-xrpl-up channel list --local --account $SENDER
+xrpl-up channel list $SENDER
 # channelID  ABCDEF1234...  amount 100 XRP  balance 0 XRP  dest rReceiverXXX...
 ```
 
@@ -98,7 +99,7 @@ The receiver decides to settle 27 XRP mid-session (e.g., end-of-day batch settle
 ```bash
 xrpl-up channel claim $CHANNEL_ID \
   --amount 27 --signature $SIG_27 --public-key $PUBKEY \
-  --local --seed $RECEIVER_SEED
+  --seed $RECEIVER_SEED
 # ✔ Channel claim submitted
 #   redeemed  27 XRP  (channel balance: 27 XRP / 100 XRP)
 ```
@@ -106,7 +107,7 @@ xrpl-up channel claim $CHANNEL_ID \
 Inspect the channel — `balance` increased, `amount` unchanged:
 
 ```bash
-xrpl-up channel list --local --account $SENDER
+xrpl-up channel list $SENDER
 # channelID  ABCDEF1234...  amount 100 XRP  balance 27 XRP  dest rReceiverXXX...
 # → 73 XRP remaining capacity
 ```
@@ -136,7 +137,7 @@ Submit the latest claim (68 XRP cumulative). The channel pays out only the **del
 ```bash
 xrpl-up channel claim $CHANNEL_ID \
   --amount 68 --signature $SIG_68 --public-key $PUBKEY \
-  --local --seed $RECEIVER_SEED
+  --seed $RECEIVER_SEED
 # ✔ Channel claim submitted
 #   total claimed  68 XRP  (delta: 41 XRP this settlement)
 #   channel balance: 68 / 100 XRP
@@ -151,10 +152,10 @@ xrpl-up channel claim $CHANNEL_ID \
 If the sender wants to extend the session beyond the original 100 XRP cap:
 
 ```bash
-xrpl-up channel fund $CHANNEL_ID 50 --local --seed $SENDER_SEED
+xrpl-up channel fund $CHANNEL_ID 50 --seed $SENDER_SEED
 # ✔ Channel funded  +50 XRP  (total: 150 XRP)
 
-xrpl-up channel list --local --account $SENDER
+xrpl-up channel list $SENDER
 # amount 150 XRP  balance 68 XRP  → 82 XRP remaining capacity
 ```
 
@@ -165,7 +166,7 @@ xrpl-up channel list --local --account $SENDER
 When the sender wants to stop the session, they request closure. The settle delay gives the receiver time to submit their final claim:
 
 ```bash
-xrpl-up channel claim $CHANNEL_ID --close --local --seed $SENDER_SEED
+xrpl-up channel claim $CHANNEL_ID --close --seed $SENDER_SEED
 # ✔ Close requested
 # ⏳ Receiver has 600 s to submit final claim
 #    After that, sender can close and recover remaining XRP
@@ -183,7 +184,7 @@ SIG_90=...
 
 xrpl-up channel claim $CHANNEL_ID \
   --amount 90 --signature $SIG_90 --public-key $PUBKEY \
-  --close --local --seed $RECEIVER_SEED
+  --close --seed $RECEIVER_SEED
 # ✔ Final settlement + channel closed
 #   total claimed  90 XRP  (delta: 22 XRP this settlement)
 #   channel closed
@@ -200,7 +201,7 @@ If the receiver does **not** submit within the settle delay after the sender req
 
 ```bash
 # After settle-delay expires (600 s in this example):
-xrpl-up channel claim $CHANNEL_ID --close --local --seed $SENDER_SEED
+xrpl-up channel claim $CHANNEL_ID --close --seed $SENDER_SEED
 # ✔ Channel force-closed
 #   No pending receiver claim — all remaining XRP returned to sender
 ```
@@ -212,15 +213,15 @@ xrpl-up channel claim $CHANNEL_ID --close --local --seed $SENDER_SEED
 ## Final state verification
 
 ```bash
-xrpl-up channel list --local --account $SENDER
+xrpl-up channel list $SENDER
 # (empty — channel closed)
 
-xrpl-up tx list $SENDER --local --limit 10
+xrpl-up account transactions $SENDER --limit 10
 # PaymentChannelCreate   tesSUCCESS  open 100 XRP channel
 # PaymentChannelFund     tesSUCCESS  +50 XRP
 # PaymentChannelClaim    tesSUCCESS  close requested
 
-xrpl-up tx list $RECEIVER --local --limit 10
+xrpl-up account transactions $RECEIVER --limit 10
 # PaymentChannelClaim    tesSUCCESS  27 XRP  (first settlement)
 # PaymentChannelClaim    tesSUCCESS  68 XRP  (second settlement)
 # PaymentChannelClaim    tesSUCCESS  90 XRP  (final + close)
