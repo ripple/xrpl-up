@@ -5,7 +5,7 @@ import { runCLI } from "../../helpers/cli";
 const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
-describe("deposit-preauth set validation (no network)", () => {
+describe("deposit-preauth set validation", () => {
   it.concurrent("missing all main flags exits 1 with error", () => {
     const result = runCLI([
       "deposit-preauth", "set",

@@ -5,7 +5,7 @@ import { runCLI } from "../../helpers/cli";
 const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
-describe("account set-regular-key validation (no network)", () => {
+describe("account set-regular-key validation", () => {
   it.concurrent("exits 1 when both --key and --remove are provided", () => {
     const result = runCLI([
       "account", "set-regular-key",
@@ -46,7 +46,7 @@ describe("account set-regular-key validation (no network)", () => {
     expect(result.stderr).toContain("Error: provide only one of");
   });
 
-  it.concurrent("--dry-run with --key outputs SetRegularKey JSON (no network)", () => {
+  it.concurrent("--dry-run with --key outputs SetRegularKey JSON", () => {
     const result = runCLI([
       "account", "set-regular-key",
       "--key", DUMMY_ADDRESS,
@@ -59,7 +59,7 @@ describe("account set-regular-key validation (no network)", () => {
     expect(tx.RegularKey).toBe(DUMMY_ADDRESS);
   });
 
-  it.concurrent("--dry-run with --remove outputs SetRegularKey JSON without RegularKey field (no network)", () => {
+  it.concurrent("--dry-run with --remove outputs SetRegularKey JSON without RegularKey field", () => {
     const result = runCLI([
       "account", "set-regular-key",
       "--remove",

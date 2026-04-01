@@ -6,7 +6,7 @@ const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 const DUMMY_CHECK_ID = "49647F0D748DC3FE26BDACBC57F251AADEFFF391403EC9BF87C97F67E9977FB0";
 
-describe("check create validation (no network)", () => {
+describe("check create validation", () => {
   it.concurrent("missing --to exits 1", () => {
     const result = runCLI([
       "check", "create",
@@ -60,7 +60,7 @@ describe("check create validation (no network)", () => {
   });
 });
 
-describe("check cash validation (no network)", () => {
+describe("check cash validation", () => {
   it.concurrent("missing --check exits 1", () => {
     const result = runCLI([
       "check", "cash",
@@ -103,7 +103,7 @@ describe("check cash validation (no network)", () => {
   });
 });
 
-describe("check cancel validation (no network)", () => {
+describe("check cancel validation", () => {
   it.concurrent("missing --check exits 1", () => {
     const result = runCLI([
       "check", "cancel",

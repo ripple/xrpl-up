@@ -7,7 +7,7 @@ const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 const DUMMY_NFT_ID = "0".repeat(64);
 
 
-describe("nft mint validation (no network)", () => {
+describe("nft mint validation", () => {
   it.concurrent("missing --taxon exits 1 with error", () => {
     const result = runCLI([
       "nft", "mint",
@@ -61,7 +61,7 @@ describe("nft mint validation (no network)", () => {
   });
 });
 
-describe("nft burn validation (no network)", () => {
+describe("nft burn validation", () => {
   it.concurrent("missing --nft exits 1 with error", () => {
     const result = runCLI([
       "nft", "burn",
@@ -102,7 +102,7 @@ describe("nft burn validation (no network)", () => {
   });
 });
 
-describe("nft offer create validation (no network)", () => {
+describe("nft offer create validation", () => {
   it.concurrent("missing --nft exits 1 with error", () => {
     const result = runCLI([
       "nft", "offer", "create",
@@ -173,7 +173,7 @@ describe("nft offer create validation (no network)", () => {
   });
 });
 
-describe("nft offer accept validation (no network)", () => {
+describe("nft offer accept validation", () => {
   it.concurrent("neither --sell-offer nor --buy-offer exits 1 with error", () => {
     const result = runCLI([
       "nft", "offer", "accept",
@@ -225,7 +225,7 @@ describe("nft offer accept validation (no network)", () => {
   });
 });
 
-describe("nft offer cancel validation (no network)", () => {
+describe("nft offer cancel validation", () => {
   it.concurrent("no --offer exits 1 with error", () => {
     const result = runCLI([
       "nft", "offer", "cancel",
@@ -266,7 +266,7 @@ describe("nft offer cancel validation (no network)", () => {
   });
 });
 
-describe("nft modify validation (no network)", () => {
+describe("nft modify validation", () => {
   it.concurrent("missing --nft exits 1 with error", () => {
     const result = runCLI([
       "nft", "modify",

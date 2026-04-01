@@ -6,7 +6,7 @@ const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 const DUMMY_DOMAIN_ID = "A".repeat(64);
 
-describe("permissioned-domain create validation (no network)", () => {
+describe("permissioned-domain create validation", () => {
   it("missing credentials exits 1 with error", () => {
     const result = runCLI([
       "permissioned-domain", "create",
@@ -68,7 +68,7 @@ describe("permissioned-domain create validation (no network)", () => {
   });
 });
 
-describe("permissioned-domain update validation (no network)", () => {
+describe("permissioned-domain update validation", () => {
   it("missing --domain-id exits 1 with error", () => {
     const result = runCLI([
       "permissioned-domain", "update",
@@ -134,7 +134,7 @@ describe("permissioned-domain update validation (no network)", () => {
   });
 });
 
-describe("permissioned-domain delete validation (no network)", () => {
+describe("permissioned-domain delete validation", () => {
   it("missing --domain-id exits 1 with error", () => {
     const result = runCLI([
       "permissioned-domain", "delete",

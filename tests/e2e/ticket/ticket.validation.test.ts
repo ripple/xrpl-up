@@ -4,7 +4,7 @@ import { runCLI } from "../../helpers/cli";
 // Static dummy values — these tests exit before any network call
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
-describe("ticket create validation (no network)", () => {
+describe("ticket create validation", () => {
   it.concurrent("missing --count exits 1", () => {
     const result = runCLI([
       "ticket", "create",

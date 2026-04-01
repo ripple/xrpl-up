@@ -7,7 +7,7 @@ const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
 
-describe("offer validation (no network)", () => {
+describe("offer validation", () => {
   it.concurrent("missing --taker-pays exits 1", () => {
     const result = runCLI([
       "offer", "create",

@@ -4,7 +4,7 @@ import { runCLI } from "../../helpers/cli";
 // Static dummy values — these tests exit before any network call
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
-describe("mptoken issuance create validation (no network)", () => {
+describe("mptoken issuance create validation", () => {
   it("unknown flag name exits 1 with error", () => {
     const result = runCLI([
       "mptoken", "issuance", "create",
@@ -88,7 +88,7 @@ describe("mptoken issuance create validation (no network)", () => {
   });
 });
 
-describe("mptoken issuance set validation (no network)", () => {
+describe("mptoken issuance set validation", () => {
   it("neither --lock nor --unlock exits 1", () => {
     const result = runCLI([
       "mptoken", "issuance", "set",

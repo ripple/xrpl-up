@@ -5,7 +5,7 @@ import { runCLI } from "../../helpers/cli";
 const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
-describe("account delete validation (no network)", () => {
+describe("account delete validation", () => {
   it.concurrent("missing --destination exits 1", () => {
     const result = runCLI([
       "account", "delete",

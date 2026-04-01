@@ -125,7 +125,7 @@ describe("channel sign / channel verify (offline)", () => {
   });
 });
 
-describe("channel sign validation (no network)", () => {
+describe("channel sign validation", () => {
   it.concurrent("missing --channel exits 1 with error", () => {
     const result = runCLI([
       "channel", "sign",
@@ -180,7 +180,7 @@ describe("channel sign validation (no network)", () => {
   });
 });
 
-describe("channel verify validation (no network)", () => {
+describe("channel verify validation", () => {
   const DUMMY_SIG = "3045022100E5FE1AE4D29F013C4AE5EA8AA48AFA91A797195F985F66ABAF5963ECAABE58E502205F66E5D63BB4225E41FEA886DE3E138E96E327F73653DC7F708E8D5F34406E0F";
 
   it.concurrent("missing --channel exits 1 with error", () => {

@@ -6,7 +6,7 @@ const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 const DUMMY_VAULT_ID = "A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2";
 
-describe("vault create validation (no network)", () => {
+describe("vault create validation", () => {
   it("missing --asset exits 1 with error", () => {
     const result = runCLI([
       "vault", "create",
@@ -107,7 +107,7 @@ describe("vault create validation (no network)", () => {
   });
 });
 
-describe("vault set validation (no network)", () => {
+describe("vault set validation", () => {
   it("missing --vault-id exits 1 with error", () => {
     const result = runCLI([
       "vault", "set",
@@ -150,7 +150,7 @@ describe("vault set validation (no network)", () => {
   });
 });
 
-describe("vault deposit validation (no network)", () => {
+describe("vault deposit validation", () => {
   it("missing --vault-id exits 1 with error", () => {
     const result = runCLI([
       "vault", "deposit",
@@ -183,7 +183,7 @@ describe("vault deposit validation (no network)", () => {
   });
 });
 
-describe("vault withdraw validation (no network)", () => {
+describe("vault withdraw validation", () => {
   it("missing --vault-id exits 1 with error", () => {
     const result = runCLI([
       "vault", "withdraw",
@@ -218,7 +218,7 @@ describe("vault withdraw validation (no network)", () => {
   });
 });
 
-describe("vault delete validation (no network)", () => {
+describe("vault delete validation", () => {
   it("missing --vault-id exits 1 with error", () => {
     const result = runCLI([
       "vault", "delete",
@@ -239,7 +239,7 @@ describe("vault delete validation (no network)", () => {
   });
 });
 
-describe("vault clawback validation (no network)", () => {
+describe("vault clawback validation", () => {
   it("missing --vault-id exits 1 with error", () => {
     const result = runCLI([
       "vault", "clawback",
