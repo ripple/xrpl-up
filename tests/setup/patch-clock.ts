@@ -21,6 +21,8 @@
  * the accurate drift right before the test file runs.
  */
 
+import Socket from "@xrplf/isomorphic/ws";
+
 const XRPL_WS = process.env.XRPL_NODE_OVERRIDE ?? "ws://127.0.0.1:6006";
 const RIPPLE_EPOCH = 946684800;
 // Maximum time to wait for a ledger response before giving up
@@ -39,13 +41,13 @@ async function measureLedgerDrift(): Promise<number> {
     const timer = setTimeout(() => done(0), WS_TIMEOUT_MS);
 
     try {
-      const ws = new globalThis.WebSocket(XRPL_WS);
+      const ws = new Socket(XRPL_WS);
 
       ws.addEventListener("open", () => {
         ws.send(JSON.stringify({ command: "ledger", ledger_index: "validated" }));
       });
 
-      ws.addEventListener("message", (event: MessageEvent) => {
+      ws.addEventListener("message", (event: { data: unknown }) => {
         clearTimeout(timer);
         try {
           const r = JSON.parse(event.data as string) as {
