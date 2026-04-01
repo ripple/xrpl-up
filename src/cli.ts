@@ -3,9 +3,9 @@
 // Must run before any import so the error is readable rather than a cryptic
 // crash inside a dependency.  package.json engines.node mirrors this value.
 const [nodeMajor] = process.versions.node.split('.').map(Number);
-if (nodeMajor < 18) {
+if (nodeMajor < 20) {
   process.stderr.write(
-    `xrpl-up requires Node.js 18 or later.\n` +
+    `xrpl-up requires Node.js 20 or later.\n` +
     `You are running Node.js ${process.versions.node}.\n` +
     `Please upgrade: https://nodejs.org/en/download\n`,
   );
