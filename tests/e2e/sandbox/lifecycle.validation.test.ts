@@ -64,12 +64,6 @@ describe("sandbox amendment validation", () => {
     expect(combined).toContain("--local");
   });
 
-  it("amendment sync --from testnet without --local exits 1 immediately", () => {
-    const result = runXrplUp(["amendment", "sync", "--from", "testnet"]);
-    expect(result.status).toBe(1);
-    const combined = result.stdout + result.stderr;
-    expect(combined).toContain("--local");
-  });
 });
 
 // ── faucet ────────────────────────────────────────────────────────────────────

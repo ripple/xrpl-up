@@ -1057,42 +1057,28 @@ xrpl-up amendment info A730EB18 --local   # hash prefix lookup
 
 #### `xrpl-up amendment enable <nameOrHash>`
 
-Force-enables an amendment in the local sandbox by casting a validator vote. Activation may take up to ~256 ledger closes (flag ledger cycle). For instant activation, add the amendment hash to the genesis config and run `xrpl-up reset --local`. Local only.
+Queues an amendment for activation in the local sandbox genesis config. Because the local node runs in standalone mode (no consensus), amendments cannot be activated via validator voting — they must be present in the genesis config from the very first ledger. The command writes the amendment hash to `~/.xrpl-up/genesis-amendments.txt`, regenerates `rippled.cfg`, then prompts you to reset and restart.
 
 ```bash
 xrpl-up amendment enable PermissionedDomains --local
-# ✔ Amendment enabled: PermissionedDomains
+# ⚠  Activating this amendment requires a full node reset.
+#    All ledger data, funded accounts, and snapshots will be wiped.
+#  Reset and restart the local node now? [y/N]
+
+# Skip the prompt and reset automatically:
+xrpl-up amendment enable PermissionedDomains --local --auto-reset
 ```
+
+> **Local only.** Only works with `--local`; the genesis config approach requires direct filesystem access.
 
 #### `xrpl-up amendment disable <nameOrHash>`
 
-Vetoes an amendment in the local sandbox (prevents it from activating). Local only.
+Removes a previously user-enabled amendment from `~/.xrpl-up/genesis-amendments.txt`. Only amendments added via `amendment enable` can be disabled — built-in genesis amendments cannot be removed. Prompts to reset and restart (same requirement as enable).
 
 ```bash
-xrpl-up amendment disable AMM --local
+xrpl-up amendment disable PermissionedDomains --local
+xrpl-up amendment disable PermissionedDomains --local --auto-reset
 ```
-
-#### `xrpl-up amendment sync`
-
-Fetches all enabled amendments from a source network and force-enables any that are missing locally. Skips amendments not supported by the local rippled build (image too old).
-
-```bash
-# Mirror mainnet's full amendment set locally
-xrpl-up amendment sync --from mainnet --local
-
-# Preview what would change without applying
-xrpl-up amendment sync --from mainnet --local --dry-run
-
-# Sync from testnet (may include pre-release amendments not yet on mainnet)
-xrpl-up amendment sync --from testnet --local
-```
-
-**How it works:**
-1. Fetches `feature` RPC from the source network and from the local node in parallel
-2. Diffs by amendment hash — identifies what's enabled on source but missing locally
-3. Calls `feature <hash> accept` for each gap via the local admin WebSocket
-4. Polls until all amendments activate (up to ~256 ledger closes; flag ledger cycle)
-5. Verifies and reports — surfaces any amendments that couldn't be applied (unsupported by local build)
 
 ---
 

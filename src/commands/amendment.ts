@@ -1,9 +1,13 @@
 import chalk from 'chalk';
 import ora from 'ora';
+import readline from 'node:readline';
 import { Client } from 'xrpl';
 import { loadConfig, resolveNetwork, DEFAULT_CONFIG } from '../core/config';
-import { LOCAL_WS_URL } from '../core/compose';
+import fs from 'node:fs';
+import path from 'node:path';
+import { LOCAL_WS_URL, EXTRA_AMENDMENTS_FILE, writeRippledConfig } from '../core/compose';
 import { logger } from '../utils/logger';
+import { resetCommand } from './reset';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -56,6 +60,33 @@ async function fetchFeatures(url: string): Promise<AmendmentInfo[]> {
 
 function pad(s: string, n: number): string {
   return s.length >= n ? s : s + ' '.repeat(n - s.length);
+}
+
+function printQueuedAmendments(): void {
+  if (!fs.existsSync(EXTRA_AMENDMENTS_FILE)) return;
+  const lines = fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0 && !l.startsWith('#'));
+  if (lines.length === 0) return;
+  logger.blank();
+  logger.log(`  ${chalk.bold('Queued genesis amendments:')}`);
+  for (const line of lines) {
+    const [, ...nameParts] = line.split(' ');
+    const name = nameParts.join(' ') || line.slice(0, 20) + '…';
+    logger.log(`    ${chalk.green('✔')} ${chalk.white(name)}`);
+  }
+  logger.blank();
+}
+
+function confirm(question: string): Promise<boolean> {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(question + ' ', answer => {
+      rl.close();
+      resolve(answer.trim().toLowerCase() === 'y');
+    });
+  });
 }
 
 // ── amendment list ────────────────────────────────────────────────────────────
@@ -219,10 +250,11 @@ export async function amendmentInfoCommand(nameOrHash: string, options: Amendmen
   }
 }
 
-// ── amendment enable / disable ────────────────────────────────────────────────
+// ── amendment enable ──────────────────────────────────────────────────────────
 
 export interface AmendmentToggleOptions {
   local?: boolean;
+  autoReset?: boolean;
 }
 
 export async function amendmentEnableCommand(nameOrHash: string, options: AmendmentToggleOptions): Promise<void> {
@@ -230,23 +262,9 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
     logger.error('amendment enable only works with --local (cannot admin-RPC a public node).');
     process.exit(1);
   }
-  await toggleAmendment(nameOrHash, false /* vetoed = false → accept */);
-}
-
-export async function amendmentDisableCommand(nameOrHash: string, options: AmendmentToggleOptions): Promise<void> {
-  if (!options.local) {
-    logger.error('amendment disable only works with --local (cannot admin-RPC a public node).');
-    process.exit(1);
-  }
-  await toggleAmendment(nameOrHash, true /* vetoed = true → reject */);
-}
-
-async function toggleAmendment(nameOrHash: string, veto: boolean): Promise<void> {
-  const verb = veto ? 'Disabling' : 'Enabling';
-  const done = veto ? 'disabled (vetoed)' : 'enabled';
 
   const spinner = ora({
-    text: `${verb} amendment ${chalk.cyan(nameOrHash)} on local sandbox…`,
+    text: `Enabling amendment ${chalk.cyan(nameOrHash)} on local sandbox…`,
     color: 'cyan',
     indent: 2,
   }).start();
@@ -276,50 +294,61 @@ async function toggleAmendment(nameOrHash: string, veto: boolean): Promise<void>
       process.exit(1);
     }
 
-    if (!veto && found.enabled) {
+    if (found.enabled) {
       spinner.succeed(chalk.green(`Already enabled: ${found.name}`));
       await client.disconnect();
       return;
     }
 
-    // Submit feature accept/reject via admin RPC
-    await (client as any).connection.request({
-      command: 'feature',
-      feature: found.hash,
-      vetoed: veto,
-    });
+    // Amendments cannot be activated at runtime in standalone mode — the voting
+    // process requires validator messages that ledger_accept does not generate.
+    // Instead, add the amendment to the genesis config so it activates on the
+    // next fresh start (after xrpl-up reset).
+    spinner.text = `Adding ${chalk.cyan(found.name)} to genesis config…`;
 
-    // Amendments go through rippled's voting process even in standalone mode.
-    // A flag ledger occurs every 256 ledger closes; only then does the
-    // amendment transition from "majority" to "enabled". Poll until enabled
-    // (or up to ~FLAG_LEDGER_COUNT+1 ledger closes before giving up).
-    const FLAG_LEDGER = 256;
-    const POLL_TIMEOUT_MS = (FLAG_LEDGER + 10) * 2000; // ~10 min ceiling
-    const deadline = Date.now() + POLL_TIMEOUT_MS;
-    let activated = false;
+    const line = `${found.hash} ${found.name}`;
+    const existing = fs.existsSync(EXTRA_AMENDMENTS_FILE)
+      ? fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8')
+      : '';
 
-    spinner.text = `Waiting for amendment to activate (may take up to ~${FLAG_LEDGER} ledger closes)…`;
-
-    while (Date.now() < deadline) {
-      await waitForLedgerClose(client, 3000);
-      const current = await fetchFeatures(LOCAL_WS_URL);
-      const status = current.find(a => a.hash === found.hash);
-      if (!veto && status?.enabled) { activated = true; break; }
-      if (veto  && !status?.enabled) { activated = true; break; }
+    if (!existing.includes(found.hash)) {
+      fs.mkdirSync(path.dirname(EXTRA_AMENDMENTS_FILE), { recursive: true });
+      fs.writeFileSync(EXTRA_AMENDMENTS_FILE, existing + line + '\n', 'utf-8');
     }
 
-    if (activated) {
-      spinner.succeed(chalk.green(`Amendment ${done}: ${found.name}`));
-      logger.dim(`  Hash: ${found.hash}`);
-    } else {
-      spinner.warn(chalk.yellow(`Amendment vote cast but not yet active: ${found.name}`));
-      logger.dim(`  The amendment is queued and will activate after the next flag ledger.`);
-      logger.dim(`  Tip: for instant activation use genesis config then xrpl-up reset.`);
-    }
+    // Regenerate rippled.cfg so the next `xrpl-up node` picks it up automatically.
+    writeRippledConfig();
+
+    spinner.succeed(chalk.green(`Amendment queued for next genesis: ${found.name}`));
     logger.blank();
+    logger.dim(`  Hash: ${found.hash}`);
+    logger.blank();
+
+    logger.log(
+      chalk.yellow('  ⚠  Activating this amendment requires a full node reset.\n') +
+      chalk.dim('     All ledger data, funded accounts, and snapshots will be wiped.')
+    );
+    logger.blank();
+
+    const yes = options.autoReset || await confirm(chalk.bold('  Reset and restart the local node now? [y/N]'));
+
+    if (yes) {
+      logger.blank();
+      resetCommand();
+      printQueuedAmendments();
+      logger.dim('  Run the following to start with the new amendment active:');
+      logger.dim('    xrpl-up node --local');
+      logger.blank();
+    } else {
+      logger.blank();
+      logger.dim('  To activate later, run:');
+      logger.dim('    xrpl-up reset');
+      logger.dim('    xrpl-up node --local');
+      logger.blank();
+    }
   } catch (err: unknown) {
     await client.disconnect().catch(() => {});
-    spinner.fail(`Failed to ${veto ? 'disable' : 'enable'} amendment`);
+    spinner.fail('Failed to enable amendment');
     logger.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
@@ -327,176 +356,94 @@ async function toggleAmendment(nameOrHash: string, veto: boolean): Promise<void>
   await client.disconnect().catch(() => {});
 }
 
-// ── amendment sync ────────────────────────────────────────────────────────────
 
-export interface AmendmentSyncOptions {
-  from: string;
-  local?: boolean;
-  dryRun?: boolean;
-}
+// ── amendment disable ─────────────────────────────────────────────────────────
 
-export async function amendmentSyncCommand(options: AmendmentSyncOptions): Promise<void> {
+export async function amendmentDisableCommand(nameOrHash: string, options: AmendmentToggleOptions): Promise<void> {
   if (!options.local) {
-    logger.error('amendment sync only works with --local (cannot admin-RPC a public node).');
+    logger.error('amendment disable only works with --local (cannot admin-RPC a public node).');
     process.exit(1);
   }
 
-  const sourceUrl   = resolveSourceUrl(options.from);
-  const sourceLabel = options.from;
-
   const spinner = ora({
-    text: `Fetching amendments from ${chalk.cyan(sourceLabel)}…`,
+    text: `Looking up amendment ${chalk.cyan(nameOrHash)}…`,
     color: 'cyan',
     indent: 2,
   }).start();
 
-  const client = new Client(LOCAL_WS_URL);
-
   try {
-    // 1. Fetch both networks in parallel
-    const [sourceAmendments, localAmendments] = await Promise.all([
-      fetchFeatures(sourceUrl),
-      (async () => {
-        await client.connect();
-        return fetchFeatures(LOCAL_WS_URL);
-      })(),
-    ]);
+    // Resolve name → hash
+    const amendments = await fetchFeatures(LOCAL_WS_URL);
+    const query = nameOrHash.toLowerCase();
+    const found = amendments.find(
+      a => a.name.toLowerCase() === query || a.hash.toLowerCase() === query || a.hash.toLowerCase().startsWith(query)
+    );
 
-    // 2. Diff
-    const localMap  = new Map(localAmendments.map(a => [a.hash, a]));
-
-    const toEnable:    AmendmentInfo[] = [];
-    const alreadyOn:   AmendmentInfo[] = [];
-    const unsupported: AmendmentInfo[] = [];
-
-    for (const a of sourceAmendments) {
-      if (!a.enabled) continue;           // not active on source — skip
-      const local = localMap.get(a.hash);
-      if (!local)          { unsupported.push(a); continue; }   // image too old
-      if (local.enabled)   { alreadyOn.push(a);   continue; }   // already on
-      toEnable.push(a);
+    if (!found) {
+      spinner.fail(`Amendment not found: ${nameOrHash}`);
+      logger.dim('  Run: xrpl-up amendment list --local to see available amendments.');
+      process.exit(1);
     }
 
-    spinner.stop();
+    // Check whether this amendment is user-enabled (present in EXTRA_AMENDMENTS_FILE)
+    const existing = fs.existsSync(EXTRA_AMENDMENTS_FILE)
+      ? fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8')
+      : '';
 
-    // 3. Report diff
-    const NAME_W = 34;
-
-    if (alreadyOn.length > 0) {
-      logger.log(chalk.dim(`\n  ── Already enabled (${alreadyOn.length}) ─────────────────────────────────────`));
-      for (const a of alreadyOn.sort((x, y) => x.name.localeCompare(y.name))) {
-        logger.log(`  ${chalk.green('✔')}  ${chalk.dim(pad(a.name, NAME_W))} ${chalk.dim(a.hash.slice(0, 16) + '…')}`);
+    if (!existing.includes(found.hash)) {
+      spinner.fail(`Amendment not in user-enabled list: ${found.name}`);
+      if (found.enabled) {
+        logger.dim('  This amendment is part of the default genesis config and cannot be disabled.');
+      } else {
+        logger.dim('  This amendment is not currently queued for activation.');
       }
+      process.exit(1);
     }
 
-    if (toEnable.length > 0) {
-      logger.log(chalk.cyan(`\n  ── To enable from ${sourceLabel} (${toEnable.length}) ${'─'.repeat(Math.max(0, 38 - sourceLabel.length))}`));
-      for (const a of toEnable.sort((x, y) => x.name.localeCompare(y.name))) {
-        logger.log(`  ${chalk.yellow('+')}  ${pad(a.name, NAME_W)} ${chalk.dim(a.hash.slice(0, 16) + '…')}`);
-      }
-    }
+    // Remove the line from EXTRA_AMENDMENTS_FILE
+    spinner.text = `Removing ${chalk.cyan(found.name)} from genesis config…`;
 
-    if (unsupported.length > 0) {
-      logger.log(chalk.dim(`\n  ── Not supported by local rippled build — skipped (${unsupported.length}) ──`));
-      for (const a of unsupported.sort((x, y) => x.name.localeCompare(y.name))) {
-        logger.log(`  ${chalk.red('✗')}  ${chalk.dim(pad(a.name, NAME_W))} ${chalk.dim(a.hash.slice(0, 16) + '…')}`);
-      }
-      logger.blank();
-      logger.dim('  To include unsupported amendments, upgrade the rippled image:');
-      logger.dim('    Edit the rippled-image field in your xrpl-up config (xrpl-up config export to view path)');
-      logger.dim('    xrpl-up reset --local && xrpl-up node');
-    }
+    const updated = existing
+      .split('\n')
+      .filter(line => !line.includes(found.hash))
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n');
 
+    fs.writeFileSync(EXTRA_AMENDMENTS_FILE, updated, 'utf-8');
+
+    // Regenerate rippled.cfg
+    writeRippledConfig();
+
+    spinner.succeed(chalk.green(`Amendment removed from genesis config: ${found.name}`));
+    logger.blank();
+    logger.dim(`  Hash: ${found.hash}`);
     logger.blank();
 
-    if (toEnable.length === 0) {
-      logger.log(chalk.green(`  ✔ Local sandbox already matches ${sourceLabel}. Nothing to do.`));
+    logger.log(
+      chalk.yellow('  ⚠  Deactivating this amendment requires a full node reset.\n') +
+      chalk.dim('     All ledger data, funded accounts, and snapshots will be wiped.')
+    );
+    logger.blank();
+
+    const yes = options.autoReset || await confirm(chalk.bold('  Reset and restart the local node now? [y/N]'));
+
+    if (yes) {
       logger.blank();
-      await client.disconnect();
-      return;
-    }
-
-    if (options.dryRun) {
-      logger.dim(`  [dry-run] ${toEnable.length} amendment(s) would be enabled. Re-run without --dry-run to apply.`);
+      resetCommand();
+      printQueuedAmendments();
+      logger.dim('  Run the following to start without the removed amendment:');
+      logger.dim('    xrpl-up node --local');
       logger.blank();
-      await client.disconnect();
-      return;
-    }
-
-    // 4. Enable each amendment
-    const applySpinner = ora({
-      text: `Enabling ${toEnable.length} amendment(s)…`,
-      color: 'cyan',
-      indent: 2,
-    }).start();
-
-    for (const a of toEnable) {
-      await (client as any).connection.request({
-        command: 'feature',
-        feature: a.hash,
-        vetoed: false,
-      });
-      applySpinner.text = `Enabled: ${a.name}`;
-    }
-
-    // 5. Poll until all amendments activate (flag ledger may take up to 256 closes)
-    const FLAG_LEDGER = 256;
-    const POLL_TIMEOUT_MS = (FLAG_LEDGER + 10) * 2000; // ~10 min ceiling
-    const deadline = Date.now() + POLL_TIMEOUT_MS;
-    const targetHashes = new Set(toEnable.map(a => a.hash));
-
-    applySpinner.text = `Waiting for amendments to activate (may take up to ~${FLAG_LEDGER} ledger closes)…`;
-
-    let verifiedMap = new Map<string, AmendmentInfo>();
-    while (Date.now() < deadline) {
-      await waitForLedgerClose(client, 3000);
-      const current = await fetchFeatures(LOCAL_WS_URL);
-      verifiedMap = new Map(current.map(a => [a.hash, a]));
-      if ([...targetHashes].every(h => verifiedMap.get(h)?.enabled)) break;
-    }
-
-    // 6. Report
-    const failed = toEnable.filter(a => !verifiedMap.get(a.hash)?.enabled);
-
-    if (failed.length > 0) {
-      applySpinner.warn(chalk.yellow(`${toEnable.length - failed.length} activated, ${failed.length} vote(s) cast but not yet active:`));
-      for (const a of failed) logger.log(`    ${chalk.yellow('~')} ${a.name}`);
-      logger.dim('  Tip: for instant activation use the genesis config then xrpl-up reset --local.');
     } else {
-      applySpinner.succeed(
-        chalk.green(`${toEnable.length} amendment(s) enabled. Local sandbox now matches ${sourceLabel}.`)
-      );
-      if (unsupported.length > 0) {
-        logger.dim(`  ⚠  ${unsupported.length} amendment(s) skipped (not supported by local rippled build).`);
-      }
+      logger.blank();
+      logger.dim('  To deactivate later, run:');
+      logger.dim('    xrpl-up reset');
+      logger.dim('    xrpl-up node --local');
+      logger.blank();
     }
-
-    logger.blank();
   } catch (err: unknown) {
-    await client.disconnect().catch(() => {});
-    spinner.fail('Sync failed');
+    spinner.fail('Failed to disable amendment');
     logger.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
-
-  await client.disconnect().catch(() => {});
-}
-
-// ── Internal: wait for next ledger close ──────────────────────────────────────
-
-function waitForLedgerClose(client: Client, timeoutMs = 10_000): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(resolve, timeoutMs);
-    client.request({ command: 'subscribe', streams: ['ledger'] } as any)
-      .then(() => {
-        client.once('ledgerClosed' as any, () => {
-          clearTimeout(timer);
-          resolve();
-        });
-      })
-      .catch(() => {
-        clearTimeout(timer);
-        resolve();
-      });
-  });
 }
