@@ -22,15 +22,20 @@ concurrency:
 
 jobs:
   test:
+    name: e2e (node-${{ matrix.node-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.sha }}
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
       - run: npm ci
       - run: npm run build
@@ -39,7 +44,9 @@ jobs:
           XRPL_LOCAL_TEARDOWN: '1'
         run: npm run test:e2e:local
       - name: Upload dist artifact
-        if: ${{ inputs.upload-dist }}
+        # Only upload from the canonical Node version used by the release job.
+        # Uploading from all matrix legs would create duplicate artifacts.
+        if: ${{ inputs.upload-dist && matrix.node-version == 22 }}
         uses: actions/upload-artifact@v4
         with:
           name: dist
