@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { runCLI } from "../../helpers/cli";
+import { XRPL_WS } from "../helpers/fund";
 
 // All query tests use a well-known funded testnet address — no faucet call needed.
 const KNOWN_TESTNET_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
