@@ -27,6 +27,8 @@ export default defineConfig({
     testTimeout: 120_000,
     hookTimeout: 60_000,
     include: ["tests/e2e/sandbox/snapshot.test.ts"],
-    globalSetup: ["tests/setup/local-node.ts"],
+    // Use snapshot-setup (not local-node) so the node is always restarted
+    // with --persist, even when the node was already running without it.
+    globalSetup: ["tests/setup/snapshot-setup.ts"],
   },
 });
