@@ -228,11 +228,12 @@ program
 // ── status ────────────────────────────────────────────────────────────────────
 program
   .command('status')
-  .description('Show rippled server info and faucet health')
-  .option('-n, --network <network>', 'Network', 'testnet')
+  .description('Show rippled server info and faucet health (defaults to local sandbox)')
+  .option('-n, --network <network>', 'Remote network to query: testnet | devnet | mainnet')
   .option('--local', 'Show status for the local Docker sandbox')
-  .action((opts: { network: string; local?: boolean }) => {
-    statusCommand({ network: opts.network, local: opts.local }).catch(handleError);
+  .action((opts: { network?: string; local?: boolean }) => {
+    const local = opts.local ?? !opts.network;   // default to local when no --network given
+    statusCommand({ network: opts.network, local }).catch(handleError);
   });
 
 // ── logs ──────────────────────────────────────────────────────────────────────
