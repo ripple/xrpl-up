@@ -1,4 +1,18 @@
 #!/usr/bin/env node
+// ── Node.js version guard ─────────────────────────────────────────────────────
+// Must run before any import so the error is readable rather than a cryptic
+// crash inside a dependency.  package.json engines.node mirrors this value.
+const [nodeMajor] = process.versions.node.split('.').map(Number);
+if (nodeMajor < 18) {
+  process.stderr.write(
+    `xrpl-up requires Node.js 18 or later.\n` +
+    `You are running Node.js ${process.versions.node}.\n` +
+    `Please upgrade: https://nodejs.org/en/download\n`,
+  );
+  process.exit(1);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { Command } from 'commander';
 import { nodeCommand } from './commands/node';
 import { accountsCommand } from './commands/accounts';
