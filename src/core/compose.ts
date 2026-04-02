@@ -400,10 +400,10 @@ export function stopService(service: string): void {
   );
 }
 
-/** Start a previously stopped service. */
+/** Start a previously stopped service (or create it if the container is missing). */
 export function startService(service: string): void {
   execSync(
-    `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" start ${service}`,
+    `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d ${service}`,
     { stdio: 'ignore' }
   );
 }
