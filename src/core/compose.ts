@@ -401,10 +401,17 @@ export function stopService(service: string): void {
   );
 }
 
-/** Start a previously stopped service. */
+/** Start a previously stopped service.
+ *
+ * Uses `up -d` (not `start`) so Docker re-reads the current compose file and
+ * recreates the container if its configuration has changed (e.g. entrypoint
+ * updated after a code upgrade). This ensures the persist-mode smart
+ * entrypoint is always used even when the container was created by an older
+ * version of xrpl-up.
+ */
 export function startService(service: string): void {
   execSync(
-    `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" start ${service}`,
+    `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d ${service}`,
     { stdio: 'ignore' }
   );
 }
