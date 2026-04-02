@@ -58,8 +58,8 @@ function patchComposeEntrypoint(): void {
   const HASH_FILE   = '/var/lib/rippled/db/.restore-hash';
   const newEntrypoint =
     `    entrypoint: ["/bin/sh", "-c", ` +
-    `"if [ -f ${HASH_FILE} ]; then HASH=$(cat ${HASH_FILE}); rm -f ${HASH_FILE}; ` +
-    `exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $HASH; ` +
+    `"if [ -f ${HASH_FILE} ]; then HASH=$$(cat ${HASH_FILE}); rm -f ${HASH_FILE}; ` +
+    `exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $$HASH; ` +
     `else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`;
 
   const content = fs.readFileSync(COMPOSE_FILE, 'utf-8');

@@ -339,7 +339,7 @@ export function writeComposeFile(image = DEFAULT_IMAGE, persist = false, debug =
   const entrypointLine = noRestart
     ? `\n    entrypoint: ["/bin/sh", "-c", "${RIPPLED_BIN} ${RIPPLED_CFG} -a --start 2>/tmp/rip.err & RPID=$! ; wait $RPID ; EC=$? ; cat /tmp/rip.err >&2 ; grep -qF Logic\\ error: /tmp/rip.err 2>/dev/null && exit 134 ; exit $EC"]`
     : persist
-      ? `\n    entrypoint: ["/bin/sh", "-c", "if [ -f ${HASH_FILE} ]; then HASH=$(cat ${HASH_FILE}); rm -f ${HASH_FILE}; exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $HASH; else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`
+      ? `\n    entrypoint: ["/bin/sh", "-c", "if [ -f ${HASH_FILE} ]; then HASH=$$(cat ${HASH_FILE}); rm -f ${HASH_FILE}; exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $$HASH; else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`
       : '';
   const commandLine = (noRestart || persist)
     ? ''  // entrypoint already contains the full rippled invocation
