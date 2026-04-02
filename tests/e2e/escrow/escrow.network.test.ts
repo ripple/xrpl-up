@@ -42,7 +42,7 @@ describe("escrow create", () => {
   it.concurrent("creates a time-based escrow with near-future FinishAfter and prints tesSUCCESS + sequence", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -57,7 +57,7 @@ describe("escrow create", () => {
   it.concurrent("creates an escrow with --cancel-after and prints tesSUCCESS", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -72,7 +72,7 @@ describe("escrow create", () => {
   it.concurrent("--json output includes hash, result, sequence fields", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -91,7 +91,7 @@ describe("escrow create", () => {
   it.concurrent("--dry-run outputs JSON with TransactionType EscrowCreate and does not submit", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "2",
@@ -110,7 +110,7 @@ describe("escrow create", () => {
   it.concurrent("--no-wait exits 0 and output contains 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -125,7 +125,7 @@ describe("escrow create", () => {
   it.concurrent("--destination-tag appears in dry-run tx", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -142,7 +142,7 @@ describe("escrow create", () => {
   it.concurrent("--source-tag appears in dry-run tx", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -159,7 +159,7 @@ describe("escrow create", () => {
   it.concurrent("--condition + --cancel-after appears in dry-run tx", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -187,7 +187,7 @@ describe("escrow create", () => {
       expect(importResult.status, `stdout: ${importResult.stdout} stderr: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "escrow", "create",
         "--to", receiver.address,
         "--amount", "1",
@@ -211,7 +211,7 @@ describe("escrow list", () => {
   it.concurrent("lists pending escrows and shows sequence + amount + destination", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -223,7 +223,7 @@ describe("escrow list", () => {
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "list",
       sender.address,
     ]);
@@ -236,7 +236,7 @@ describe("escrow list", () => {
   it.concurrent("--json outputs an array with the expected escrow entry", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -248,7 +248,7 @@ describe("escrow list", () => {
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "list",
       sender.address,
       "--json",

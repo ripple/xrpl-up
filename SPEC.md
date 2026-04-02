@@ -566,7 +566,6 @@ Subcommands: `list`, `info <nameOrHash>`, `enable <nameOrHash>`, `disable <nameO
 | `info <nameOrHash>` | — | No |
 | `enable <nameOrHash>` | — | Yes |
 | `disable <nameOrHash>` | — | Yes |
-| `sync` | `--from <network>` (required), `--dry-run` | Yes |
 
 ---
 
@@ -688,20 +687,16 @@ Forked accounts have `forked: true` in the WalletStore and no known seed. The ge
 - Shows: full hash, name, enabled status, supported status, vote count
 
 **`amendment enable <nameOrHash>`** (local only):
-- Calls `feature <hash> accept` via the admin WebSocket
-- Polls until the amendment activates (flag ledger cycle, up to ~256 ledger closes)
+- Appends `<hash> <name>` to `~/.xrpl-up/genesis-amendments.txt`
+- Regenerates `rippled.cfg` so the amendment is present in the `[amendments]` genesis stanza
+- Prompts to reset and restart (a full node reset is required for the genesis config to take effect)
+- `--auto-reset`: skips the prompt and resets immediately
 
 **`amendment disable <nameOrHash>`** (local only):
-- Calls `feature <hash> reject` via the admin WebSocket
-- Prevents the amendment from activating (veto)
-
-**`amendment sync`** (local only):
-- Fetches `feature` from both the source network and local node in parallel
-- Diffs by hash — finds amendments enabled on source but missing locally
-- Calls `feature <hash> accept` for each gap
-- Polls for activation
-- Reports any amendments that could not be applied (not supported by local build)
-- `--dry-run`: shows the diff without applying
+- Removes the amendment hash from `~/.xrpl-up/genesis-amendments.txt`
+- Regenerates `rippled.cfg`
+- Only works for amendments added via `amendment enable`; built-in genesis amendments cannot be removed
+- Prompts to reset and restart (same requirement as enable)
 
 ### 5.8 AMM (XLS-30)
 
@@ -932,7 +927,7 @@ Required for all `--local` commands. Any Docker Engine version that supports Com
 - Default image: `xrpllabsofficial/xrpld:latest`
 - The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.1.1**.
 - Pinning to a specific tag (`--image xrpllabsofficial/xrpld:3.1.1`) is supported via `--image`.
-- If a new rippled release adds amendments not in the `[amendments]` stanza, run `xrpl-up amendment sync --from mainnet --local` to pick them up.
+- If a new rippled release adds amendments not in the `[amendments]` stanza, use `xrpl-up amendment enable <name> --local` to queue them for the next genesis start.
 
 ### 9.4 xrpl.js Compatibility
 

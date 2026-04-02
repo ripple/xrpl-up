@@ -34,7 +34,7 @@ describe("account set-regular-key", () => {
     const [accountWallet, regularKeyWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "set-regular-key",
       "--key", regularKeyWallet.address,
       "--seed", accountWallet.seed!,
@@ -46,7 +46,7 @@ describe("account set-regular-key", () => {
     await new Promise<void>((res) => setTimeout(res, 8_000));
 
     const infoResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "info", accountWallet.address,
     ]);
     expect(infoResult.status).toBe(0);
@@ -59,7 +59,7 @@ describe("account set-regular-key", () => {
 
     // Set first
     const setResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "set-regular-key",
       "--key", regularKeyWallet.address,
       "--seed", accountWallet.seed!,
@@ -70,7 +70,7 @@ describe("account set-regular-key", () => {
 
     // Remove
     const removeResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "set-regular-key",
       "--remove",
       "--seed", accountWallet.seed!,
@@ -81,7 +81,7 @@ describe("account set-regular-key", () => {
     await new Promise<void>((res) => setTimeout(res, 8_000));
 
     const infoResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "info", accountWallet.address,
     ]);
     expect(infoResult.status).toBe(0);
@@ -92,7 +92,7 @@ describe("account set-regular-key", () => {
     const [accountWallet, regularKeyWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "set-regular-key",
       "--key", regularKeyWallet.address,
       "--seed", accountWallet.seed!,
@@ -109,7 +109,7 @@ describe("account set-regular-key", () => {
     const [accountWallet, regularKeyWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "set-regular-key",
       "--remove",
       "--seed", accountWallet.seed!,
@@ -126,7 +126,7 @@ describe("account set-regular-key", () => {
     const [accountWallet, regularKeyWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "set-regular-key",
       "--key", regularKeyWallet.address,
       "--seed", accountWallet.seed!,
@@ -147,7 +147,7 @@ describe("account delete", () => {
     const [fundedWallet, destWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "delete",
       "--destination", destWallet.address,
       "--seed", fundedWallet.seed!,
@@ -168,7 +168,7 @@ describe("account delete", () => {
     const [fundedWallet, destWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "delete",
       "--destination", destWallet.address,
       "--destination-tag", "42",
@@ -187,7 +187,7 @@ describe("account delete", () => {
     // AccountDelete will likely fail with tecTOO_SOON for fresh accounts
     // but --no-wait just submits and returns hash without waiting for validation.
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "delete",
       "--destination", destWallet.address,
       "--seed", fundedWallet.seed!,
@@ -202,7 +202,7 @@ describe("account delete", () => {
     const [fundedWallet, destWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "delete",
       "--destination", destWallet.address,
       "--seed", fundedWallet.seed!,
@@ -219,7 +219,7 @@ describe("account delete", () => {
   it.concurrent("account info returns actNotFound for a non-existent (unfunded) account", () => {
     const unfundedWallet = Wallet.generate();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "info", unfundedWallet.address,
     ]);
     expect(result.status).toBe(1);

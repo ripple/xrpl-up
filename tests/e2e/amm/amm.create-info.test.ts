@@ -77,7 +77,7 @@ describe("amm create", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -103,7 +103,7 @@ describe("amm create", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -138,7 +138,7 @@ describe("amm create", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -169,7 +169,7 @@ describe("amm create", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -197,7 +197,7 @@ describe("amm info", () => {
 
       // First create the pool
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -210,7 +210,7 @@ describe("amm info", () => {
 
       // Then query amm info
       const infoResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "info",
         "--asset", "XRP",
         "--asset2", iouSpec,

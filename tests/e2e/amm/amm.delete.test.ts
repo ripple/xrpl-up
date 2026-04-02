@@ -119,7 +119,7 @@ describe("amm delete", () => {
       await new Promise(r => setTimeout(r, 10_000));
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "delete",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -142,7 +142,7 @@ describe("amm delete", () => {
       await new Promise(r => setTimeout(r, 10_000));
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "delete",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -167,7 +167,7 @@ describe("amm delete", () => {
 
       // dry-run doesn't require pool to be empty
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "delete",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -196,7 +196,7 @@ describe("amm delete", () => {
       await new Promise(r => setTimeout(r, 10_000));
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "delete",
         "--asset", "XRP",
         "--asset2", iouSpec,

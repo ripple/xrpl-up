@@ -33,7 +33,7 @@ afterAll(async () => {
 });
 
 function getBalanceDrops(address: string): number {
-  const result = runCLI(["--node", "testnet", "account", "info", "--json", address]);
+  const result = runCLI(["--node", XRPL_WS, "account", "info", "--json", address]);
   const data = JSON.parse(result.stdout) as { Balance: string };
   return Number(data.Balance);
 }
@@ -46,7 +46,7 @@ describe("payment network", () => {
     const receiverBefore = getBalanceDrops(receiver.address);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "1",
@@ -66,7 +66,7 @@ describe("payment network", () => {
     const [sender, receiver] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "send",
       "--to", receiver.address,
       "--amount", "0.5",
@@ -80,14 +80,14 @@ describe("payment network", () => {
     const [sender, receiver] = await createFunded(client, master, 2, 3);
 
     const txsBefore = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "transactions", "--json", "--limit", "5", sender.address,
     ]);
     expect(txsBefore.status).toBe(0);
     const countBefore = (JSON.parse(txsBefore.stdout) as { transactions: unknown[] }).transactions.length;
 
     const dryRunResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "0.1",
@@ -100,7 +100,7 @@ describe("payment network", () => {
     expect(typeof out.tx_blob).toBe("string");
 
     const txsAfter = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "transactions", "--json", "--limit", "5", sender.address,
     ]);
     expect(txsAfter.status).toBe(0);
@@ -111,7 +111,7 @@ describe("payment network", () => {
     const [sender, receiver] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "0.5",
@@ -126,7 +126,7 @@ describe("payment network", () => {
     const [sender, receiver] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "0.5",
@@ -140,7 +140,7 @@ describe("payment network", () => {
     expect(out.destinationTag).toBe(12345);
 
     const txsResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "transactions", "--json", "--limit", "5", sender.address,
     ]);
     expect(txsResult.status).toBe(0);
@@ -153,7 +153,7 @@ describe("payment network", () => {
     const [sender, receiver] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "0.5",
@@ -174,7 +174,7 @@ describe("payment network", () => {
     const memoFormatHex = Buffer.from("text/plain").toString("hex").toUpperCase();
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "0.1",
@@ -206,7 +206,7 @@ describe("payment network", () => {
     await fundAddress(client, master, mnemonicWallet.address, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "0.5",
@@ -229,7 +229,7 @@ describe("payment network", () => {
       expect(importResult.status, `stdout: ${importResult.stdout} stderr: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "payment",
         "--to", receiver.address,
         "--amount", "0.5",
@@ -248,7 +248,7 @@ describe("payment network", () => {
     const [sender, receiver] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "0.1",
@@ -267,7 +267,7 @@ describe("payment network", () => {
     const [sender, receiver] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "0.1",
@@ -285,7 +285,7 @@ describe("payment network", () => {
   it.concurrent("--amount with invalid format exits 1 and stderr contains 'invalid amount'", () => {
     // Validation test — uses static values, no network call
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
       "--amount", "notanamount!!",

@@ -32,7 +32,7 @@ describe("did delete", () => {
 
     // Create DID
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/delete-test",
       "--seed", owner.seed!,
@@ -42,7 +42,7 @@ describe("did delete", () => {
 
     // Delete DID
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "delete",
       "--seed", owner.seed!,
     ]);
@@ -51,7 +51,7 @@ describe("did delete", () => {
 
     // Verify DID is gone
     const getResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "get",
       owner.address,
     ]);
@@ -64,7 +64,7 @@ describe("did delete", () => {
 
     // Create DID first
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/json-delete",
       "--seed", owner.seed!,
@@ -72,7 +72,7 @@ describe("did delete", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "delete",
       "--json",
       "--seed", owner.seed!,
@@ -88,7 +88,7 @@ describe("did delete", () => {
   it.concurrent("--dry-run prints tx_blob without submitting", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "delete",
       "--dry-run",
       "--seed", owner.seed!,
@@ -104,14 +104,14 @@ describe("did delete", () => {
 
     // Create DID first to have something to delete
     runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/nowait-delete",
       "--seed", owner.seed!,
     ]);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "delete",
       "--no-wait",
       "--seed", owner.seed!,

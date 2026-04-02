@@ -37,7 +37,7 @@ describe("trust set core", () => {
     const [trustor, issuer] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "USD",
       "--issuer", issuer.address,
@@ -47,7 +47,7 @@ describe("trust set core", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
 
-    const linesResult = runCLI(["--node", "testnet", "account", "trust-lines", "--json", trustor.address]);
+    const linesResult = runCLI(["--node", XRPL_WS, "account", "trust-lines", "--json", trustor.address]);
     expect(linesResult.status).toBe(0);
     const lines = JSON.parse(linesResult.stdout) as Array<{ account: string; currency: string }>;
     const usdLine = lines.find((l) => l.currency === "USD" && l.account === issuer.address);
@@ -58,7 +58,7 @@ describe("trust set core", () => {
     const [trustor, issuer] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "s",
       "--currency", "EUR",
       "--issuer", issuer.address,
@@ -68,7 +68,7 @@ describe("trust set core", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
 
-    const linesResult = runCLI(["--node", "testnet", "account", "trust-lines", "--json", trustor.address]);
+    const linesResult = runCLI(["--node", XRPL_WS, "account", "trust-lines", "--json", trustor.address]);
     expect(linesResult.status).toBe(0);
     const lines = JSON.parse(linesResult.stdout) as Array<{ account: string; currency: string }>;
     const eurLine = lines.find((l) => l.currency === "EUR" && l.account === issuer.address);
@@ -79,14 +79,14 @@ describe("trust set core", () => {
     const [trustor, issuer] = await createFunded(client, master, 2, 3);
 
     const linesBefore = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "trust-lines", "--json", trustor.address,
     ]);
     expect(linesBefore.status).toBe(0);
     const countBefore = (JSON.parse(linesBefore.stdout) as unknown[]).length;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "XYZ",
       "--issuer", issuer.address,
@@ -100,7 +100,7 @@ describe("trust set core", () => {
     expect(typeof out.tx_blob).toBe("string");
 
     const linesAfter = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "trust-lines", "--json", trustor.address,
     ]);
     expect(linesAfter.status).toBe(0);
@@ -111,7 +111,7 @@ describe("trust set core", () => {
     const [trustor, issuer] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "GBP",
       "--issuer", issuer.address,
@@ -127,7 +127,7 @@ describe("trust set core", () => {
     const [trustor, issuer] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "CAD",
       "--issuer", issuer.address,
@@ -147,7 +147,7 @@ describe("trust set core", () => {
     const [trustor, issuer] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "MXN",
       "--issuer", issuer.address,
@@ -159,7 +159,7 @@ describe("trust set core", () => {
     expect(result.stdout).toContain("tesSUCCESS");
 
     const linesResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "trust-lines", "--json", trustor.address,
     ]);
     expect(linesResult.status).toBe(0);
@@ -182,7 +182,7 @@ describe("trust set core", () => {
       expect(importResult.status, `stdout: ${importResult.stdout} stderr: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "trust", "set",
         "--currency", "CNY",
         "--issuer", issuer.address,
@@ -194,7 +194,7 @@ describe("trust set core", () => {
       expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
       expect(result.stdout).toContain("tesSUCCESS");
 
-      const linesResult = runCLI(["--node", "testnet", "account", "trust-lines", "--json", trustor.address]);
+      const linesResult = runCLI(["--node", XRPL_WS, "account", "trust-lines", "--json", trustor.address]);
       expect(linesResult.status).toBe(0);
       const lines = JSON.parse(linesResult.stdout) as Array<{ account: string; currency: string }>;
       const cnyLine = lines.find((l) => l.currency === "CNY" && l.account === issuer.address);
@@ -208,7 +208,7 @@ describe("trust set core", () => {
     const [trustor, issuer] = await createFunded(client, master, 2, 3);
 
     const setResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "SGD",
       "--issuer", issuer.address,
@@ -219,7 +219,7 @@ describe("trust set core", () => {
     expect(setResult.status, `stdout: ${setResult.stdout} stderr: ${setResult.stderr}`).toBe(0);
 
     const clearResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "SGD",
       "--issuer", issuer.address,
@@ -231,7 +231,7 @@ describe("trust set core", () => {
     expect(clearResult.stdout).toContain("tesSUCCESS");
 
     const linesResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "trust-lines", "--json", trustor.address,
     ]);
     expect(linesResult.status).toBe(0);
@@ -251,7 +251,7 @@ describe("trust set core", () => {
     await fundAddress(client, master, mnemonicWallet.address, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "MNE",
       "--issuer", issuer.address,
@@ -261,7 +261,7 @@ describe("trust set core", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
 
-    const linesResult = runCLI(["--node", "testnet", "account", "trust-lines", "--json", mnemonicWallet.address]);
+    const linesResult = runCLI(["--node", XRPL_WS, "account", "trust-lines", "--json", mnemonicWallet.address]);
     expect(linesResult.status).toBe(0);
     const lines = JSON.parse(linesResult.stdout) as Array<{ account: string; currency: string }>;
     const mneLine = lines.find((l) => l.currency === "MNE" && l.account === issuer.address);
@@ -272,7 +272,7 @@ describe("trust set core", () => {
     const [trustor, issuer] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "JPY",
       "--issuer", issuer.address,
@@ -285,7 +285,7 @@ describe("trust set core", () => {
     expect(result.stdout).toContain("tesSUCCESS");
 
     const linesResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "trust-lines", "--json", trustor.address,
     ]);
     expect(linesResult.status).toBe(0);
@@ -302,7 +302,7 @@ describe("trust set issuer-side flags", () => {
     const [trustor, issuer] = await createFunded(client, master, 2, 3);
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "FRZ",
       "--issuer", issuer.address,
@@ -312,7 +312,7 @@ describe("trust set issuer-side flags", () => {
     expect(createResult.status, `stdout: ${createResult.stdout} stderr: ${createResult.stderr}`).toBe(0);
 
     const freezeResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "FRZ",
       "--issuer", trustor.address,
@@ -324,7 +324,7 @@ describe("trust set issuer-side flags", () => {
     expect(freezeResult.stdout).toContain("tesSUCCESS");
 
     const linesResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "trust-lines", "--json", trustor.address,
     ]);
     expect(linesResult.status).toBe(0);
@@ -339,7 +339,7 @@ describe("trust set issuer-side flags", () => {
 
     // Set up: create trust line and freeze it
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "UFZ",
       "--issuer", issuer.address,
@@ -349,7 +349,7 @@ describe("trust set issuer-side flags", () => {
     expect(createResult.status, `stdout: ${createResult.stdout} stderr: ${createResult.stderr}`).toBe(0);
 
     const freezeResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "UFZ",
       "--issuer", trustor.address,
@@ -361,7 +361,7 @@ describe("trust set issuer-side flags", () => {
 
     // Now unfreeze
     const unfreezeResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "UFZ",
       "--issuer", trustor.address,
@@ -373,7 +373,7 @@ describe("trust set issuer-side flags", () => {
     expect(unfreezeResult.stdout).toContain("tesSUCCESS");
 
     const linesResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "trust-lines", "--json", trustor.address,
     ]);
     expect(linesResult.status).toBe(0);
@@ -396,7 +396,7 @@ describe("trust set issuer-side flags", () => {
 
     // Trustor creates trust line to authIssuer
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "AUT",
       "--issuer", authIssuer.address,
@@ -407,7 +407,7 @@ describe("trust set issuer-side flags", () => {
 
     // authIssuer authorizes the trust line
     const authResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "trust", "set",
       "--currency", "AUT",
       "--issuer", trustor.address,
@@ -419,7 +419,7 @@ describe("trust set issuer-side flags", () => {
     expect(authResult.stdout).toContain("tesSUCCESS");
 
     const linesResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "trust-lines", "--json", trustor.address,
     ]);
     expect(linesResult.status).toBe(0);

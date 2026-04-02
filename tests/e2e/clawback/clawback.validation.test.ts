@@ -7,7 +7,7 @@ const DUMMY_HOLDER = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_ISSUER = "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe";
 const DUMMY_MPT_ID = "000000000000000000000000000000000000000000000000"; // 48-char hex
 
-describe("clawback validation (no network)", () => {
+describe("clawback validation", () => {
   it.concurrent("exits 1 with error when amount value is zero (IOU)", () => {
     const result = runCLI([
       "clawback",

@@ -12,7 +12,7 @@ import { runXrplUp } from "../../helpers/sandbox-cli";
 
 // ── snapshot ──────────────────────────────────────────────────────────────────
 
-describe("sandbox snapshot validation (no network)", () => {
+describe("sandbox snapshot validation", () => {
   it("snapshot save without <name> exits 1", () => {
     const result = runXrplUp(["snapshot", "save"]);
     expect(result.status).toBe(1);
@@ -26,7 +26,7 @@ describe("sandbox snapshot validation (no network)", () => {
 
 // ── config ────────────────────────────────────────────────────────────────────
 
-describe("sandbox config validate validation (no network)", () => {
+describe("sandbox config validate validation", () => {
   it("config validate without <file> exits 1", () => {
     const result = runXrplUp(["config", "validate"]);
     expect(result.status).toBe(1);
@@ -43,7 +43,7 @@ describe("sandbox config validate validation (no network)", () => {
 
 // ── amendment ─────────────────────────────────────────────────────────────────
 
-describe("sandbox amendment validation (no network)", () => {
+describe("sandbox amendment validation", () => {
   it("amendment info without <nameOrHash> exits 1", () => {
     const result = runXrplUp(["amendment", "info"]);
     expect(result.status).toBe(1);
@@ -64,17 +64,11 @@ describe("sandbox amendment validation (no network)", () => {
     expect(combined).toContain("--local");
   });
 
-  it("amendment sync --from testnet without --local exits 1 immediately", () => {
-    const result = runXrplUp(["amendment", "sync", "--from", "testnet"]);
-    expect(result.status).toBe(1);
-    const combined = result.stdout + result.stderr;
-    expect(combined).toContain("--local");
-  });
 });
 
 // ── faucet ────────────────────────────────────────────────────────────────────
 
-describe("sandbox faucet validation (no network)", () => {
+describe("sandbox faucet validation", () => {
   it("faucet --network mainnet exits 1 with mainnet guard message", () => {
     // faucetCommand rejects mainnet before attempting any network call
     const result = runXrplUp(["faucet", "--network", "mainnet"]);

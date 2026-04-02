@@ -36,7 +36,7 @@ describe("permissioned-domain create", () => {
   it.concurrent("creates a domain with 1 credential via --credential", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "create",
       "--credential", `${credIssuer.address}:KYC`,
       "--seed", owner.seed!,
@@ -49,7 +49,7 @@ describe("permissioned-domain create", () => {
   it.concurrent("creates a domain with 3 credentials via --credential", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "create",
       "--credential", `${credIssuer.address}:KYC`,
       "--credential", `${credIssuer.address}:AML`,
@@ -66,7 +66,7 @@ describe("permissioned-domain create", () => {
       { issuer: credIssuer.address, credential_type: "4B5943" }, // "KYC" in hex
     ]);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "create",
       "--credentials-json", credsJson,
       "--seed", owner.seed!,
@@ -78,7 +78,7 @@ describe("permissioned-domain create", () => {
   it.concurrent("--json outputs {result, domainId, tx}", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "create",
       "--credential", `${credIssuer.address}:JSON_TEST`,
       "--seed", owner.seed!,
@@ -99,7 +99,7 @@ describe("permissioned-domain create", () => {
   it.concurrent("--dry-run prints unsigned tx JSON without submitting", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "create",
       "--credential", `${credIssuer.address}:KYC_DRY`,
       "--seed", owner.seed!,
@@ -114,7 +114,7 @@ describe("permissioned-domain create", () => {
   it.concurrent("--no-wait submits without waiting for validation", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "create",
       "--credential", `${credIssuer.address}:KYC_NOWAIT`,
       "--seed", owner.seed!,
@@ -137,7 +137,7 @@ describe("permissioned-domain create", () => {
       expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "permissioned-domain", "create",
         "--credential", `${credIssuer.address}:KYC_ACCT`,
         "--account", owner.address,

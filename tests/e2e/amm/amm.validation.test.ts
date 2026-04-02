@@ -5,7 +5,7 @@ import { runCLI } from "../../helpers/cli";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 const DUMMY_ISSUER = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 
-describe("amm validation (no network)", () => {
+describe("amm validation", () => {
   it("missing --asset exits 1", () => {
     const result = runCLI([
       "amm", "create",
@@ -172,7 +172,7 @@ describe("amm validation (no network)", () => {
   });
 });
 
-describe("amm deposit validation (no network)", () => {
+describe("amm deposit validation", () => {
   it("no flags exits 1 with error message", () => {
     const result = runCLI([
       "amm", "deposit",
@@ -197,7 +197,7 @@ describe("amm deposit validation (no network)", () => {
   });
 });
 
-describe("amm withdraw validation (no network)", () => {
+describe("amm withdraw validation", () => {
   it("no flags exits 1 with error message", () => {
     const result = runCLI([
       "amm", "withdraw",
@@ -223,7 +223,7 @@ describe("amm withdraw validation (no network)", () => {
   });
 });
 
-describe("amm bid validation (no network)", () => {
+describe("amm bid validation", () => {
   it("more than 4 --auth-account values exits 1", () => {
     const result = runCLI([
       "amm", "bid",
@@ -241,7 +241,7 @@ describe("amm bid validation (no network)", () => {
   });
 });
 
-describe("amm vote validation (no network)", () => {
+describe("amm vote validation", () => {
   it("--trading-fee above 1000 exits 1", () => {
     const result = runCLI([
       "amm", "vote",
@@ -267,7 +267,7 @@ describe("amm vote validation (no network)", () => {
   });
 });
 
-describe("amm clawback validation (no network)", () => {
+describe("amm clawback validation", () => {
   it("--asset XRP exits 1 with error message", () => {
     const result = runCLI([
       "amm", "clawback",

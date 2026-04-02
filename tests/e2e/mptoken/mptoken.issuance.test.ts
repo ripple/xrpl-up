@@ -66,7 +66,7 @@ describe("mptoken issuance destroy and set", () => {
   it.concurrent("creates an issuance with --flags can-lock via CLI", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--flags", "can-lock",
       "--seed", issuer.seed!,
@@ -81,7 +81,7 @@ describe("mptoken issuance destroy and set", () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const issuanceId = await createIssuance(issuer, MPTokenIssuanceCreateFlags.tfMPTCanLock);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "set", issuanceId,
       "--lock",
       "--seed", issuer.seed!,
@@ -103,7 +103,7 @@ describe("mptoken issuance destroy and set", () => {
     await client.submitAndWait(issuer.sign(lockTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "set", issuanceId,
       "--unlock",
       "--seed", issuer.seed!,
@@ -127,7 +127,7 @@ describe("mptoken issuance destroy and set", () => {
     await client.submitAndWait(holder.sign(authTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "set", issuanceId,
       "--lock", "--holder", holder.address,
       "--seed", issuer.seed!,
@@ -160,7 +160,7 @@ describe("mptoken issuance destroy and set", () => {
     await client.submitAndWait(issuer.sign(lockTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "set", issuanceId,
       "--unlock", "--holder", holder.address,
       "--seed", issuer.seed!,
@@ -183,7 +183,7 @@ describe("mptoken issuance destroy and set", () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const issuanceId = await createIssuance(issuer, MPTokenIssuanceCreateFlags.tfMPTCanLock);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "set", issuanceId,
       "--lock",
       "--seed", issuer.seed!,
@@ -202,7 +202,7 @@ describe("mptoken issuance destroy and set", () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const issuanceId = await createIssuance(issuer, MPTokenIssuanceCreateFlags.tfMPTCanLock);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "set", issuanceId,
       "--lock",
       "--seed", issuer.seed!,
@@ -216,7 +216,7 @@ describe("mptoken issuance destroy and set", () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     // Create a fresh issuance to destroy (no outstanding MPT, safe to delete)
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--seed", issuer.seed!,
     ]);
@@ -226,7 +226,7 @@ describe("mptoken issuance destroy and set", () => {
     const destroyIssuanceId = idMatch![1]!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "destroy", destroyIssuanceId,
       "--seed", issuer.seed!,
     ]);
@@ -237,7 +237,7 @@ describe("mptoken issuance destroy and set", () => {
   it.concurrent("issuance destroy --json outputs hash, result, fee, ledger", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--seed", issuer.seed!,
     ]);
@@ -247,7 +247,7 @@ describe("mptoken issuance destroy and set", () => {
     const destroyIssuanceId = idMatch![1]!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "destroy", destroyIssuanceId,
       "--seed", issuer.seed!,
       "--json",
@@ -270,7 +270,7 @@ describe("mptoken issuance destroy and set", () => {
     // Create an issuance to use for dry-run (dry-run doesn't actually destroy)
     const issuanceId = await createIssuance(issuer);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "destroy", issuanceId,
       "--seed", issuer.seed!,
       "--dry-run",
@@ -287,7 +287,7 @@ describe("mptoken issuance destroy and set", () => {
   it.concurrent("issuance destroy --no-wait submits without waiting and outputs Transaction hash", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--seed", issuer.seed!,
     ]);
@@ -297,7 +297,7 @@ describe("mptoken issuance destroy and set", () => {
     const destroyIssuanceId = idMatch![1]!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "destroy", destroyIssuanceId,
       "--seed", issuer.seed!,
       "--no-wait",

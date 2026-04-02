@@ -5,7 +5,7 @@ import { runCLI } from "../../helpers/cli";
 const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
-describe("escrow create validation (no network)", () => {
+describe("escrow create validation", () => {
   it.concurrent("missing --to exits 1", () => {
     const result = runCLI([
       "escrow", "create",
@@ -61,7 +61,7 @@ describe("escrow create validation (no network)", () => {
   });
 });
 
-describe("escrow finish validation (no network)", () => {
+describe("escrow finish validation", () => {
   it.concurrent("missing --owner exits 1", () => {
     const result = runCLI([
       "escrow", "finish",
@@ -115,7 +115,7 @@ describe("escrow finish validation (no network)", () => {
   });
 });
 
-describe("escrow cancel validation (no network)", () => {
+describe("escrow cancel validation", () => {
   it.concurrent("missing --owner exits 1", () => {
     const result = runCLI([
       "escrow", "cancel",

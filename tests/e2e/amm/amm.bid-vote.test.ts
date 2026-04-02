@@ -77,7 +77,7 @@ describe("amm bid", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -90,7 +90,7 @@ describe("amm bid", () => {
 
       // lp holds LP tokens from pool creation; bid on the auction slot
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "bid",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -111,7 +111,7 @@ describe("amm bid", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -123,7 +123,7 @@ describe("amm bid", () => {
       expect(createResult.status, `create stderr: ${createResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "bid",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -147,7 +147,7 @@ describe("amm bid", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -159,7 +159,7 @@ describe("amm bid", () => {
       expect(createResult.status, `create stderr: ${createResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "bid",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -188,7 +188,7 @@ describe("amm vote", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -201,7 +201,7 @@ describe("amm vote", () => {
 
       // lp votes for a new trading fee
       const voteResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "vote",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -213,7 +213,7 @@ describe("amm vote", () => {
 
       // Verify new fee via amm info (lp is sole LP holder so vote sets fee exactly)
       const infoResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "info",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -232,7 +232,7 @@ describe("amm vote", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -244,7 +244,7 @@ describe("amm vote", () => {
       expect(createResult.status, `create stderr: ${createResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "vote",
         "--asset", "XRP",
         "--asset2", iouSpec,

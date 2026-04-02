@@ -116,7 +116,10 @@ async function waitForFaucetHealth(timeoutMs: number): Promise<void> {
 
 async function startNode(): Promise<void> {
   console.log("[local-node] Starting local rippled stack…");
-  const result = spawnSync(TSX, [CLI, "node", "--local", "--detach"], {
+  // Remove any stale persist volume so the node always starts with a clean ledger.
+  // This is a no-op when the volume doesn't exist.
+  spawnSync("docker", ["volume", "rm", "-f", "xrpl-up-local-db"], { stdio: "ignore" });
+  const result = spawnSync(TSX, [CLI, "node", "--local", "--persist", "--detach"], {
     encoding: "utf-8",
     timeout: 120_000,
     env: { ...process.env },

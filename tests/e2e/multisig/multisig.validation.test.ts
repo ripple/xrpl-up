@@ -7,7 +7,7 @@ const ADDR_1 = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const ADDR_2 = "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe";
 const ADDR_3 = "r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59";
 
-describe("multisig set validation (no network)", () => {
+describe("multisig set validation", () => {
   it.concurrent("missing --signer exits 1 with error", () => {
     const result = runCLI([
       "multisig", "set",

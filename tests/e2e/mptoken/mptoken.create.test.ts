@@ -30,7 +30,7 @@ describe("mptoken issuance create", () => {
   it.concurrent("creates a basic issuance and prints MPTokenIssuanceID", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--seed", issuer.seed!,
     ]);
@@ -42,7 +42,7 @@ describe("mptoken issuance create", () => {
   it.concurrent("creates an issuance with flags and transfer fee", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--flags", "can-transfer,can-clawback",
       "--transfer-fee", "500",
@@ -60,7 +60,7 @@ describe("mptoken issuance create", () => {
     const issuanceId = idMatch![1];
 
     const getResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "get",
       issuanceId,
       "--json",
@@ -81,7 +81,7 @@ describe("mptoken issuance create", () => {
   it.concurrent("creates an issuance with --metadata and verifies via get", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--metadata", "test-token-metadata",
       "--seed", issuer.seed!,
@@ -96,7 +96,7 @@ describe("mptoken issuance create", () => {
     const issuanceId = idMatch![1];
 
     const getResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "get",
       issuanceId,
     ]);
@@ -107,7 +107,7 @@ describe("mptoken issuance create", () => {
   it.concurrent("--json outputs hash, result, fee, ledger, issuanceId", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--seed", issuer.seed!,
       "--json",
@@ -131,7 +131,7 @@ describe("mptoken issuance create", () => {
   it.concurrent("--dry-run outputs JSON with TransactionType MPTokenIssuanceCreate", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--seed", issuer.seed!,
       "--dry-run",
@@ -145,7 +145,7 @@ describe("mptoken issuance create", () => {
   it.concurrent("--no-wait submits without waiting and outputs transaction hash", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--seed", issuer.seed!,
       "--no-wait",

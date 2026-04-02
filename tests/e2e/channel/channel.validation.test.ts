@@ -8,7 +8,7 @@ const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 // Dummy channel ID (64 hex chars)
 const DUMMY_CHANNEL = "A" .repeat(64);
 
-describe("channel create validation (no network)", () => {
+describe("channel create validation", () => {
   it.concurrent("missing --to exits 1 with error", () => {
     const result = runCLI([
       "channel", "create",
@@ -80,7 +80,7 @@ describe("channel create validation (no network)", () => {
   });
 });
 
-describe("channel fund validation (no network)", () => {
+describe("channel fund validation", () => {
   it.concurrent("missing --channel exits 1 with error", () => {
     const result = runCLI([
       "channel", "fund",
@@ -147,7 +147,7 @@ describe("channel fund validation (no network)", () => {
   });
 });
 
-describe("channel claim validation (no network)", () => {
+describe("channel claim validation", () => {
   it.concurrent("missing --channel exits 1 with error", () => {
     const result = runCLI([
       "channel", "claim",

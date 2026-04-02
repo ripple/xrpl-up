@@ -5,7 +5,7 @@ import { runCLI } from "../../helpers/cli";
 const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
-describe("credential accept validation (no network)", () => {
+describe("credential accept validation", () => {
   it.concurrent("missing --issuer exits 1 with error", () => {
     const result = runCLI([
       "credential", "accept",
@@ -49,7 +49,7 @@ describe("credential accept validation (no network)", () => {
   });
 });
 
-describe("credential delete validation (no network)", () => {
+describe("credential delete validation", () => {
   it.concurrent("missing credential-type exits 1 with error", () => {
     const result = runCLI([
       "credential", "delete",
@@ -80,7 +80,7 @@ describe("credential delete validation (no network)", () => {
   });
 });
 
-describe("credential create validation (no network)", () => {
+describe("credential create validation", () => {
   it.concurrent("missing --subject exits 1 with error", () => {
     const result = runCLI([
       "credential", "create",

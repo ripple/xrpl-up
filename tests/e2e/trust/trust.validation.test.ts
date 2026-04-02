@@ -7,7 +7,7 @@ const DUMMY_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
 
-describe("trust set validation (no network)", () => {
+describe("trust set validation", () => {
   it.concurrent("invalid currency exits 1 with descriptive error", () => {
     const result = runCLI([
       "trust", "set",

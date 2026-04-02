@@ -50,7 +50,7 @@ describe("credential create", () => {
     await ensureConnected();
     const [issuer, subject] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", "KYC",
@@ -65,7 +65,7 @@ describe("credential create", () => {
     await ensureConnected();
     const [issuer, subject] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type-hex", "41424344", // "ABCD"
@@ -80,7 +80,7 @@ describe("credential create", () => {
     await ensureConnected();
     const [issuer, subject] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", "KYC_URI",
@@ -97,7 +97,7 @@ describe("credential create", () => {
     const [issuer, subject] = await createFunded(client, master, 2, FUND_AMOUNT);
     const future = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", "KYC_EXP",
@@ -112,7 +112,7 @@ describe("credential create", () => {
     await ensureConnected();
     const [issuer, subject] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", "KYC_JSON",
@@ -139,7 +139,7 @@ describe("credential create", () => {
     await ensureConnected();
     const [issuer, subject] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", "KYC_DRY",
@@ -163,7 +163,7 @@ describe("credential accept", () => {
     const credTypeHex = convertStringToHex(credType);
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -172,7 +172,7 @@ describe("credential accept", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const acceptResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "accept",
       "--issuer", issuer.address,
       "--credential-type", credType,
@@ -201,7 +201,7 @@ describe("credential accept", () => {
     const credType = "KYC_ACCEPT_JSON";
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -210,7 +210,7 @@ describe("credential accept", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const acceptResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "accept",
       "--issuer", issuer.address,
       "--credential-type", credType,
@@ -234,7 +234,7 @@ describe("credential accept", () => {
     await ensureConnected();
     const [issuer, subject] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "accept",
       "--issuer", issuer.address,
       "--credential-type", "KYC_DRY",
@@ -254,7 +254,7 @@ describe("credential accept", () => {
     const credTypeHex = convertStringToHex(credType);
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -263,7 +263,7 @@ describe("credential accept", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const acceptResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "accept",
       "--issuer", issuer.address,
       "--credential-type-hex", credTypeHex,
@@ -279,7 +279,7 @@ describe("credential accept", () => {
     const credType = "KYC_ACCEPT_NOWAIT";
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -288,7 +288,7 @@ describe("credential accept", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const acceptResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "accept",
       "--issuer", issuer.address,
       "--credential-type", credType,
@@ -310,7 +310,7 @@ describe("credential delete", () => {
     const credTypeHex = convertStringToHex(credType);
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -319,7 +319,7 @@ describe("credential delete", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "delete",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -348,7 +348,7 @@ describe("credential delete", () => {
     const credTypeHex = convertStringToHex(credType);
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -357,7 +357,7 @@ describe("credential delete", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const acceptResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "accept",
       "--issuer", issuer.address,
       "--credential-type", credType,
@@ -366,7 +366,7 @@ describe("credential delete", () => {
     expect(acceptResult.status, `accept: ${acceptResult.stderr}`).toBe(0);
 
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "delete",
       "--issuer", issuer.address,
       "--credential-type", credType,
@@ -393,7 +393,7 @@ describe("credential delete", () => {
     const credType = "KYC_DELETE_JSON";
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -402,7 +402,7 @@ describe("credential delete", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "delete",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -428,7 +428,7 @@ describe("credential delete", () => {
     await ensureConnected();
     const [issuer, subject] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "delete",
       "--subject", subject.address,
       "--credential-type", "KYC_DRY_DELETE",
@@ -448,7 +448,7 @@ describe("credential delete", () => {
     const credTypeHex = convertStringToHex(credType);
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -457,7 +457,7 @@ describe("credential delete", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "delete",
       "--subject", subject.address,
       "--credential-type-hex", credTypeHex,
@@ -473,7 +473,7 @@ describe("credential delete", () => {
     const credType = "KYC_DELETE_NOWAIT";
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -482,7 +482,7 @@ describe("credential delete", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "delete",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -503,7 +503,7 @@ describe("credential list", () => {
     const credType = "KYC_LIST_ACCEPTED";
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -512,7 +512,7 @@ describe("credential list", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const acceptResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "accept",
       "--issuer", issuer.address,
       "--credential-type", credType,
@@ -521,7 +521,7 @@ describe("credential list", () => {
     expect(acceptResult.status, `accept: ${acceptResult.stderr}`).toBe(0);
 
     const listResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "list",
       subject.address,
     ]);
@@ -538,7 +538,7 @@ describe("credential list", () => {
     const credType = "KYC_LIST_PENDING";
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -547,7 +547,7 @@ describe("credential list", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const listResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "list",
       issuer.address,
     ]);
@@ -563,7 +563,7 @@ describe("credential list", () => {
     const credTypeHex = convertStringToHex(credType);
 
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "create",
       "--subject", subject.address,
       "--credential-type", credType,
@@ -572,7 +572,7 @@ describe("credential list", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const acceptResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "accept",
       "--issuer", issuer.address,
       "--credential-type", credType,
@@ -581,7 +581,7 @@ describe("credential list", () => {
     expect(acceptResult.status, `accept: ${acceptResult.stderr}`).toBe(0);
 
     const listResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "credential", "list",
       subject.address,
       "--json",

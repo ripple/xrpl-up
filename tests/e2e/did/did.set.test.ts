@@ -33,7 +33,7 @@ describe("did set", () => {
   it.concurrent("creates DID with --uri succeeds", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/1",
       "--seed", owner.seed!,
@@ -45,7 +45,7 @@ describe("did set", () => {
   it.concurrent("creates DID with --data succeeds", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--data", "attestation-data",
       "--seed", owner.seed!,
@@ -58,7 +58,7 @@ describe("did set", () => {
     const [owner] = await createFunded(client, master, 1, 3);
     // First set
     const first = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/first",
       "--seed", owner.seed!,
@@ -66,7 +66,7 @@ describe("did set", () => {
     expect(first.status, `first: ${first.stderr}`).toBe(0);
     // Then update
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/updated",
       "--seed", owner.seed!,
@@ -79,7 +79,7 @@ describe("did set", () => {
     const [owner] = await createFunded(client, master, 1, 3);
     // Set both URI and data so the DID is not empty after clearing URI
     const setResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/to-clear",
       "--data", "keep-this",
@@ -87,7 +87,7 @@ describe("did set", () => {
     ]);
     expect(setResult.status, `set: ${setResult.stderr}`).toBe(0);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--clear-uri",
       "--seed", owner.seed!,
@@ -100,14 +100,14 @@ describe("did set", () => {
     const [owner] = await createFunded(client, master, 1, 3);
     // Set both URI and data so the DID is not empty after clearing URI
     runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/tmp",
       "--data", "keep-this",
       "--seed", owner.seed!,
     ]);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "",
       "--seed", owner.seed!,
@@ -119,7 +119,7 @@ describe("did set", () => {
   it.concurrent("--json outputs hash, result, fee, ledger", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/json",
       "--json",
@@ -141,7 +141,7 @@ describe("did set", () => {
   it.concurrent("--dry-run prints tx_blob and tx without submitting", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/dry",
       "--dry-run",
@@ -162,7 +162,7 @@ describe("did set", () => {
   it.concurrent("--no-wait exits 0 with a hash", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/nowait",
       "--no-wait",
@@ -176,7 +176,7 @@ describe("did set", () => {
     const [owner] = await createFunded(client, master, 1, 3);
     const uriHex = Buffer.from("https://example.com/did/hex").toString("hex");
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri-hex", uriHex,
       "--dry-run",
@@ -191,7 +191,7 @@ describe("did set", () => {
     const [owner] = await createFunded(client, master, 1, 3);
     const dataHex = Buffer.from("some-attestation").toString("hex");
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--data-hex", dataHex,
       "--dry-run",
@@ -206,7 +206,7 @@ describe("did set", () => {
     const [owner] = await createFunded(client, master, 1, 3);
     const doc = '{"@context":"https://www.w3.org/ns/did/v1"}';
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--did-document", doc,
       "--dry-run",
@@ -231,7 +231,7 @@ describe("did set", () => {
       expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "did", "set",
         "--uri", "https://example.com/did/account",
         "--account", owner.address,

@@ -34,7 +34,7 @@ import { ticketCommand } from './cli/commands/ticket';
 import { clawbackCommand } from './cli/commands/clawback';
 import {
   amendmentListCommand, amendmentInfoCommand,
-  amendmentEnableCommand, amendmentDisableCommand, amendmentSyncCommand,
+  amendmentEnableCommand, amendmentDisableCommand,
 } from './commands/amendment';
 
 import { logger } from './utils/logger';
@@ -312,7 +312,7 @@ configCmd
 // ── amendment ─────────────────────────────────────────────────────────────────
 const amendment = program
   .command('amendment')
-  .description('Inspect and manage XRPL amendments (list, enable, disable, sync)');
+  .description('Inspect and manage XRPL amendments (list, info, enable, disable)');
 
 amendment
   .command('list')
@@ -338,32 +338,24 @@ amendment
 
 amendment
   .command('enable <nameOrHash>')
-  .description('Force-enable an amendment in the local sandbox (admin RPC, local only)')
+  .description('Queue an amendment for activation in the local sandbox genesis config')
   .option('--local', 'Use the local Docker sandbox')
-  .action((nameOrHash: string, opts: { local?: boolean }) => {
-    amendmentEnableCommand(nameOrHash, { local: opts.local })
+  .option('--auto-reset', 'Automatically reset and restart the node without prompting')
+  .action((nameOrHash: string, opts: { local?: boolean; autoReset?: boolean }) => {
+    amendmentEnableCommand(nameOrHash, { local: opts.local, autoReset: opts.autoReset })
       .catch(handleError);
   });
 
 amendment
   .command('disable <nameOrHash>')
-  .description('Veto an amendment in the local sandbox (admin RPC, local only)')
+  .description('Remove a user-enabled amendment from the local sandbox genesis config')
   .option('--local', 'Use the local Docker sandbox')
-  .action((nameOrHash: string, opts: { local?: boolean }) => {
-    amendmentDisableCommand(nameOrHash, { local: opts.local })
+  .option('--auto-reset', 'Automatically reset and restart the node without prompting')
+  .action((nameOrHash: string, opts: { local?: boolean; autoReset?: boolean }) => {
+    amendmentDisableCommand(nameOrHash, { local: opts.local, autoReset: opts.autoReset })
       .catch(handleError);
   });
 
-amendment
-  .command('sync')
-  .description('Enable all amendments from a source network that are missing locally (local only)')
-  .requiredOption('--from <network>', 'Source network to sync from (mainnet | testnet | devnet)')
-  .option('--local', 'Apply to the local Docker sandbox')
-  .option('--dry-run', 'Show what would change without applying')
-  .action((opts: { from: string; local?: boolean; dryRun?: boolean }) => {
-    amendmentSyncCommand({ from: opts.from, local: opts.local, dryRun: opts.dryRun })
-      .catch(handleError);
-  });
 
 // ── XRPL interaction commands ──────────────────────────────────────────────────
 program.addCommand(walletCommand);

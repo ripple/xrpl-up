@@ -63,7 +63,7 @@ describe("mptoken authorize", () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
     const issuanceId = await createIssuance(issuer);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "authorize", issuanceId,
       "--seed", holder.seed!,
     ]);
@@ -83,7 +83,7 @@ describe("mptoken authorize", () => {
     await client.submitAndWait(holder.sign(optInTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "authorize", issuanceId,
       "--unauthorize",
       "--seed", holder.seed!,
@@ -104,7 +104,7 @@ describe("mptoken authorize", () => {
     await client.submitAndWait(holder.sign(optInTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "authorize", issuanceId,
       "--holder", holder.address,
       "--seed", issuer.seed!,
@@ -134,7 +134,7 @@ describe("mptoken authorize", () => {
 
     // Now revoke via CLI
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "authorize", issuanceId,
       "--holder", holder.address,
       "--unauthorize",
@@ -148,7 +148,7 @@ describe("mptoken authorize", () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
     const issuanceId = await createIssuance(issuer);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "authorize", issuanceId,
       "--seed", holder.seed!,
       "--json",
@@ -170,7 +170,7 @@ describe("mptoken authorize", () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
     const issuanceId = await createIssuance(issuer);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "authorize", issuanceId,
       "--seed", holder.seed!,
       "--dry-run",
@@ -188,7 +188,7 @@ describe("mptoken authorize", () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
     const issuanceId = await createIssuance(issuer);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "authorize", issuanceId,
       "--seed", holder.seed!,
       "--no-wait",

@@ -4,7 +4,7 @@ import { runCLI } from "../../helpers/cli";
 // Static dummy values — these tests exit before any network call
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
-describe("oracle set validation (no network)", () => {
+describe("oracle set validation", () => {
   it.concurrent("missing --document-id exits 1 with error", () => {
     const result = runCLI([
       "oracle", "set",
@@ -131,7 +131,7 @@ describe("oracle set validation (no network)", () => {
   });
 });
 
-describe("oracle delete validation (no network)", () => {
+describe("oracle delete validation", () => {
   it.concurrent("missing --document-id exits 1 with error", () => {
     const result = runCLI([
       "oracle", "delete",

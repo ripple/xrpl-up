@@ -78,7 +78,7 @@ describe("amm deposit", () => {
 
       // Create pool first
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -91,7 +91,7 @@ describe("amm deposit", () => {
 
       // Deposit more assets (tfTwoAsset mode)
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "deposit",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -114,7 +114,7 @@ describe("amm deposit", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -127,7 +127,7 @@ describe("amm deposit", () => {
 
       // Single-asset deposit: XRP only (tfSingleAsset mode)
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "deposit",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -149,7 +149,7 @@ describe("amm deposit", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -161,7 +161,7 @@ describe("amm deposit", () => {
       expect(createResult.status, `create stderr: ${createResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "deposit",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -192,7 +192,7 @@ describe("amm withdraw", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -205,7 +205,7 @@ describe("amm withdraw", () => {
 
       // lp has LP tokens from pool creation; withdraw via CLI (tfLPToken mode)
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "withdraw",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -227,7 +227,7 @@ describe("amm withdraw", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -240,7 +240,7 @@ describe("amm withdraw", () => {
 
       // lp withdraws XRP from pool (tfSingleAsset mode, only --amount specified)
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "withdraw",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -262,7 +262,7 @@ describe("amm withdraw", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const createResult = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
@@ -287,7 +287,7 @@ describe("amm withdraw", () => {
       await resilientSubmitAndWait(client, lp.sign(depositFilled).tx_blob);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "amm", "withdraw",
         "--asset", "XRP",
         "--asset2", iouSpec,

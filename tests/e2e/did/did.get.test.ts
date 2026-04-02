@@ -33,7 +33,7 @@ describe("did get", () => {
 
     // Set up a DID with URI and Data
     const setupResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/get-test",
       "--data", "attestation-payload",
@@ -42,7 +42,7 @@ describe("did get", () => {
     expect(setupResult.status, `setup: ${setupResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "get",
       owner.address,
     ]);
@@ -59,7 +59,7 @@ describe("did get", () => {
 
     // Set up a DID
     const setupResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/json-test",
       "--seed", owner.seed!,
@@ -67,7 +67,7 @@ describe("did get", () => {
     expect(setupResult.status, `setup: ${setupResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "get",
       owner.address,
       "--json",
@@ -82,7 +82,7 @@ describe("did get", () => {
     // Use a fresh wallet that has no DID — no funding needed, just need an address
     const fresh = Wallet.generate();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "get",
       fresh.address,
     ]);
@@ -99,7 +99,7 @@ describe("did get", () => {
 
     // Set up a DID
     const setupResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "did", "set",
       "--uri", "https://example.com/did/node-test",
       "--seed", owner.seed!,

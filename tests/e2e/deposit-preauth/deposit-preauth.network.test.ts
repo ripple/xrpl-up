@@ -51,7 +51,7 @@ describe("deposit-preauth set", () => {
     await enableDepositAuth(owner);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize", other.address,
       "--seed", owner.seed!,
@@ -66,7 +66,7 @@ describe("deposit-preauth set", () => {
 
     // First authorize
     const authResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize", other.address,
       "--seed", owner.seed!,
@@ -75,7 +75,7 @@ describe("deposit-preauth set", () => {
 
     // Then unauthorize
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--unauthorize", other.address,
       "--seed", owner.seed!,
@@ -89,7 +89,7 @@ describe("deposit-preauth set", () => {
     await enableDepositAuth(owner);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize-credential", credIssuer.address,
       "--credential-type", "KYC",
@@ -105,7 +105,7 @@ describe("deposit-preauth set", () => {
 
     // First authorize
     const authResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize-credential", credIssuer.address,
       "--credential-type", "KYC",
@@ -115,7 +115,7 @@ describe("deposit-preauth set", () => {
 
     // Then unauthorize
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--unauthorize-credential", credIssuer.address,
       "--credential-type", "KYC",
@@ -130,7 +130,7 @@ describe("deposit-preauth set", () => {
     await enableDepositAuth(owner);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize-credential", credIssuer.address,
       "--credential-type-hex", "4B594332", // "KYC2"
@@ -145,7 +145,7 @@ describe("deposit-preauth set", () => {
     await enableDepositAuth(owner);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize", other.address,
       "--seed", owner.seed!,
@@ -168,7 +168,7 @@ describe("deposit-preauth set", () => {
     const [owner, other] = await createFunded(client, master, 2, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize", other.address,
       "--seed", owner.seed!,
@@ -185,7 +185,7 @@ describe("deposit-preauth set", () => {
     await enableDepositAuth(owner);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize", other.address,
       "--seed", owner.seed!,
@@ -210,7 +210,7 @@ describe("deposit-preauth set", () => {
       expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "deposit-preauth", "set",
         "--authorize", other.address,
         "--account", owner.address,
@@ -231,7 +231,7 @@ describe("deposit-preauth list", () => {
   it.concurrent("shows 'No deposit preauthorizations.' for account with none", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "list",
       owner.address,
     ]);
@@ -244,7 +244,7 @@ describe("deposit-preauth list", () => {
     await enableDepositAuth(owner);
 
     const setResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize", other.address,
       "--seed", owner.seed!,
@@ -252,7 +252,7 @@ describe("deposit-preauth list", () => {
     expect(setResult.status, `set: ${setResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "list",
       owner.address,
     ]);
@@ -265,7 +265,7 @@ describe("deposit-preauth list", () => {
     await enableDepositAuth(owner);
 
     const setResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize-credential", credIssuer.address,
       "--credential-type", "KYC",
@@ -274,7 +274,7 @@ describe("deposit-preauth list", () => {
     expect(setResult.status, `set: ${setResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "list",
       owner.address,
     ]);
@@ -288,7 +288,7 @@ describe("deposit-preauth list", () => {
 
     // Authorize
     const authResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize", other.address,
       "--seed", owner.seed!,
@@ -297,7 +297,7 @@ describe("deposit-preauth list", () => {
 
     // Unauthorize
     const unsetResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--unauthorize", other.address,
       "--seed", owner.seed!,
@@ -305,7 +305,7 @@ describe("deposit-preauth list", () => {
     expect(unsetResult.status, `unset: ${unsetResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "list",
       owner.address,
     ]);
@@ -318,7 +318,7 @@ describe("deposit-preauth list", () => {
     await enableDepositAuth(owner);
 
     const setResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "set",
       "--authorize-credential", credIssuer.address,
       "--credential-type", "KYC",
@@ -327,7 +327,7 @@ describe("deposit-preauth list", () => {
     expect(setResult.status, `set: ${setResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "deposit-preauth", "list",
       owner.address,
       "--json",

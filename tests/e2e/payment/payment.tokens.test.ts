@@ -40,7 +40,7 @@ describe("payment tokens", () => {
     await client.submitAndWait(iouReceiver.sign(trustTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", iouReceiver.address,
       "--amount", `10/USD/${iouIssuer.address}`,
@@ -50,7 +50,7 @@ describe("payment tokens", () => {
     expect(result.stdout).toContain("tesSUCCESS");
 
     const tlResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "trust-lines", "--json", iouReceiver.address,
     ]);
     expect(tlResult.status, `stdout: ${tlResult.stdout} stderr: ${tlResult.stderr}`).toBe(0);
@@ -92,7 +92,7 @@ describe("payment tokens", () => {
     await client.submitAndWait(mptReceiver.sign(authTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", mptReceiver.address,
       "--amount", `100/${mptIssuanceId}`,
@@ -106,7 +106,7 @@ describe("payment tokens", () => {
     const [sender, receiver] = await createFunded(client, master, 2, 3);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", receiver.address,
       "--amount", "0.5",
@@ -128,7 +128,7 @@ describe("payment tokens", () => {
     await client.submitAndWait(flagHolder.sign(trustTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", flagHolder.address,
       "--amount", `1/USD/${flagIssuer.address}`,
@@ -154,7 +154,7 @@ describe("payment tokens", () => {
     await client.submitAndWait(flagHolder.sign(trustTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "payment",
       "--to", flagHolder.address,
       "--amount", `2/USD/${flagIssuer.address}`,

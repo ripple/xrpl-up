@@ -49,6 +49,8 @@ function getFaucetBuildContext(): string {
 
 const RIPPLED_CFG_FILE = path.join(XRPL_UP_DIR, 'rippled.cfg');
 const VALIDATORS_CFG_FILE = path.join(XRPL_UP_DIR, 'validators.txt');
+/** Extra amendments written by `amendment enable --local`; merged at genesis. */
+export const EXTRA_AMENDMENTS_FILE = path.join(XRPL_UP_DIR, 'genesis-amendments.txt');
 export { RIPPLED_CFG_FILE };
 
 /**
@@ -115,9 +117,9 @@ validators.txt
 #
 # Hashes verified against rippled 3.1.1 (xrpllabsofficial/xrpld:latest).
 # All amendments known to this build are included so the sandbox matches
-# a fully-upgraded network. After node start, run:
-#   xrpl-up amendment sync --from mainnet --local
-# to pick up any newly-enabled mainnet amendments not in this list.
+# a fully-upgraded network. To enable additional amendments, run:
+#   xrpl-up amendment enable <name> --local
+# then reset and restart the node.
 [amendments]
 00C1FC4A53E60AB02C864641002B3172F38677E29C26C5406685179B37E1EDAC RequireFullyCanonicalSig
 03BDC0099C4E14163ADA272C1B6F6FABB448CC3E51F522F978041E4B57D9158C fixNFTokenReserve
@@ -217,6 +219,7 @@ E2E6F2866106419B88C50045ACE96368558C345566AC8F2BDF5A5B5587F0E6FA fix1368
 FBD513F1B893AC765B78F250E6FFA6A11B573209D1842ADC787C850696741288 fix1578
 42426C4D4F1009EE67080A9B7965B44656D7714D104A72F9B4369F97ABF044EE FeeEscalation
 B4E4F5D2D6FB84DF7399960A732309C9FD530EAE5941838160042833625A6076 NegativeUNL
+# sync:end
 `.trim();
 }
 
@@ -225,8 +228,28 @@ B4E4F5D2D6FB84DF7399960A732309C9FD530EAE5941838160042833625A6076 NegativeUNL
  * on 0.0.0.0 so the faucet container can reach it via host.docker.internal.
  * Also writes a companion validators.txt required by the [amendments] section.
  */
-function writeRippledConfig(debug = false): void {
-  fs.writeFileSync(RIPPLED_CFG_FILE, generateRippledConfig(debug), 'utf-8');
+export function writeRippledConfig(debug = false): void {
+  if (!fs.existsSync(XRPL_UP_DIR)) {
+    fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
+  }
+  let cfg = generateRippledConfig(debug);
+
+  // Merge any amendments added via `xrpl-up amendment enable --local`
+  if (fs.existsSync(EXTRA_AMENDMENTS_FILE)) {
+    const extra = fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8').trim();
+    if (extra) {
+      const merged = cfg.replace('# sync:end', extra + '\n# sync:end');
+      if (merged === cfg) {
+        throw new Error(
+          'writeRippledConfig: "# sync:end" sentinel not found in generated config — ' +
+          'extra amendments could not be merged. Check the generateRippledConfig template.'
+        );
+      }
+      cfg = merged;
+    }
+  }
+
+  fs.writeFileSync(RIPPLED_CFG_FILE, cfg, 'utf-8');
   // The [amendments] section in rippled.cfg requires a validators_file with a
   // [validators] section (even empty). Write a minimal one alongside rippled.cfg.
   if (!fs.existsSync(VALIDATORS_CFG_FILE)) {

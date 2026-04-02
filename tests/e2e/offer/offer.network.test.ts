@@ -50,7 +50,7 @@ describe("offer core", () => {
     const { maker, issuer } = await setupMakerIssuer();
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -64,7 +64,7 @@ describe("offer core", () => {
     const seq = parseInt(match![1], 10);
 
     const offersResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "offers", "--json", maker.address,
     ]);
     expect(offersResult.status).toBe(0);
@@ -100,7 +100,7 @@ describe("offer core", () => {
     const seq = (createResult.result.tx_json as { Sequence?: number }).Sequence!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "cancel",
       "--sequence", String(seq),
       "--seed", maker.seed!,
@@ -108,7 +108,7 @@ describe("offer core", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
 
     const offersResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "offers", "--json", maker.address,
     ]);
     expect(offersResult.status).toBe(0);
@@ -129,7 +129,7 @@ describe("offer core", () => {
     const seq = (createResult.result.tx_json as { Sequence?: number }).Sequence!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "cancel",
       "--sequence", String(seq),
       "--json",
@@ -155,12 +155,12 @@ describe("offer core", () => {
 
     const countBefore = (
       JSON.parse(
-        runCLI(["--node", "testnet", "account", "offers", "--json", maker.address]).stdout
+        runCLI(["--node", XRPL_WS, "account", "offers", "--json", maker.address]).stdout
       ) as unknown[]
     ).length;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "cancel",
       "--sequence", String(seq),
       "--dry-run",
@@ -173,7 +173,7 @@ describe("offer core", () => {
 
     const countAfter = (
       JSON.parse(
-        runCLI(["--node", "testnet", "account", "offers", "--json", maker.address]).stdout
+        runCLI(["--node", XRPL_WS, "account", "offers", "--json", maker.address]).stdout
       ) as unknown[]
     ).length;
     expect(countAfter).toBe(countBefore);
@@ -192,7 +192,7 @@ describe("offer core", () => {
     const seq = (createResult.result.tx_json as { Sequence?: number }).Sequence!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "cancel",
       "--sequence", String(seq),
       "--no-wait",
@@ -206,7 +206,7 @@ describe("offer core", () => {
     const { maker, issuer } = await setupMakerIssuer();
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -225,12 +225,12 @@ describe("offer core", () => {
 
     const countBefore = (
       JSON.parse(
-        runCLI(["--node", "testnet", "account", "offers", "--json", maker.address]).stdout
+        runCLI(["--node", XRPL_WS, "account", "offers", "--json", maker.address]).stdout
       ) as unknown[]
     ).length;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -244,7 +244,7 @@ describe("offer core", () => {
 
     const countAfter = (
       JSON.parse(
-        runCLI(["--node", "testnet", "account", "offers", "--json", maker.address]).stdout
+        runCLI(["--node", XRPL_WS, "account", "offers", "--json", maker.address]).stdout
       ) as unknown[]
     ).length;
     expect(countAfter).toBe(countBefore);
@@ -254,7 +254,7 @@ describe("offer core", () => {
     const { maker, issuer } = await setupMakerIssuer();
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -269,7 +269,7 @@ describe("offer core", () => {
     const { maker, issuer } = await setupMakerIssuer();
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -284,7 +284,7 @@ describe("offer core", () => {
     const seq = parseInt(match![1], 10);
 
     const offersResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "offers", "--json", maker.address,
     ]);
     expect(offersResult.status).toBe(0);
@@ -298,7 +298,7 @@ describe("offer flags", () => {
     const { maker, issuer } = await setupMakerIssuer();
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -313,7 +313,7 @@ describe("offer flags", () => {
     const seq = parseInt(match![1], 10);
 
     const offersResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "offers", "--json", maker.address,
     ]);
     expect(offersResult.status).toBe(0);
@@ -334,7 +334,7 @@ describe("offer flags", () => {
     const origSeq = (createResult.result.tx_json as { Sequence?: number }).Sequence!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `2/USD/${issuer.address}`,
       "--taker-gets", "20",
@@ -348,7 +348,7 @@ describe("offer flags", () => {
     const newSeq = parseInt(match![1], 10);
 
     const offersResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "offers", "--json", maker.address,
     ]);
     expect(offersResult.status).toBe(0);
@@ -361,7 +361,7 @@ describe("offer flags", () => {
     const { maker, issuer } = await setupMakerIssuer();
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -375,7 +375,7 @@ describe("offer flags", () => {
     const seq = parseInt(match![1], 10);
 
     const offersResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "offers", "--json", maker.address,
     ]);
     expect(offersResult.status).toBe(0);
@@ -391,12 +391,12 @@ describe("offer flags", () => {
 
     const countBefore = (
       JSON.parse(
-        runCLI(["--node", "testnet", "account", "offers", "--json", maker.address]).stdout
+        runCLI(["--node", XRPL_WS, "account", "offers", "--json", maker.address]).stdout
       ) as unknown[]
     ).length;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -406,7 +406,7 @@ describe("offer flags", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
 
     const offersResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "offers", "--json", maker.address,
     ]);
     expect(offersResult.status).toBe(0);
@@ -419,12 +419,12 @@ describe("offer flags", () => {
 
     const countBefore = (
       JSON.parse(
-        runCLI(["--node", "testnet", "account", "offers", "--json", maker.address]).stdout
+        runCLI(["--node", XRPL_WS, "account", "offers", "--json", maker.address]).stdout
       ) as unknown[]
     ).length;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -434,7 +434,7 @@ describe("offer flags", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
 
     const offersResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "offers", "--json", maker.address,
     ]);
     expect(offersResult.status).toBe(0);
@@ -460,7 +460,7 @@ describe("offer flags", () => {
     await client.submitAndWait(mnemonicWallet.sign(trustTx).tx_blob);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "offer", "create",
       "--taker-pays", `1/USD/${issuer.address}`,
       "--taker-gets", "10",
@@ -483,7 +483,7 @@ describe("offer flags", () => {
       expect(importResult.status, `stdout: ${importResult.stdout} stderr: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "offer", "create",
         "--taker-pays", `1/USD/${issuer.address}`,
         "--taker-gets", "10",

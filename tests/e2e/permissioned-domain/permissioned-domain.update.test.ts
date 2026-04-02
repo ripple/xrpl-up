@@ -28,7 +28,7 @@ let master: Wallet;
  */
 function createDomain(ownerSeed: string, credentialArg: string): string {
   const result = runCLI([
-    "--node", "testnet",
+    "--node", XRPL_WS,
     "permissioned-domain", "create",
     "--credential", credentialArg,
     "--seed", ownerSeed,
@@ -60,7 +60,7 @@ describe("permissioned-domain update", () => {
     const domainId = createDomain(owner.seed!, `${credIssuer.address}:KYC`);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "update",
       "--domain-id", domainId,
       "--credential", `${credIssuer.address}:AML`,
@@ -79,7 +79,7 @@ describe("permissioned-domain update", () => {
     ]);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "update",
       "--domain-id", domainId,
       "--credentials-json", credsJson,
@@ -96,7 +96,7 @@ describe("permissioned-domain update", () => {
 
     // Update with a different credential type
     const updateResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "update",
       "--domain-id", domainId,
       "--credential", `${credIssuer.address}:ACCREDITED`,
@@ -123,7 +123,7 @@ describe("permissioned-domain update", () => {
     const domainId = createDomain(owner.seed!, `${credIssuer.address}:KYC`);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "update",
       "--domain-id", domainId,
       "--credential", `${credIssuer.address}:JSON_UPDATE`,
@@ -146,7 +146,7 @@ describe("permissioned-domain update", () => {
     const domainId = createDomain(owner.seed!, `${credIssuer.address}:KYC`);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "update",
       "--domain-id", domainId,
       "--credential", `${credIssuer.address}:DRY_UPDATE`,
@@ -168,7 +168,7 @@ describe("permissioned-domain update", () => {
     const domainId = createDomain(owner.seed!, `${credIssuer.address}:KYC`);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "permissioned-domain", "update",
       "--domain-id", domainId,
       "--credential", `${credIssuer.address}:NOWAIT_UPDATE`,
@@ -193,7 +193,7 @@ describe("permissioned-domain update", () => {
       expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "permissioned-domain", "update",
         "--domain-id", domainId,
         "--credential", `${credIssuer.address}:ACCT_UPDATE`,

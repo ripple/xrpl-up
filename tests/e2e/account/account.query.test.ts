@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { runCLI } from "../../helpers/cli";
+import { XRPL_WS } from "../helpers/fund";
 
 // All query tests use a well-known funded testnet address — no faucet call needed.
 const KNOWN_TESTNET_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
@@ -8,7 +9,7 @@ const KNOWN_TESTNET_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 
 describe("account info", () => {
   it.concurrent("returns account data with --node testnet flag", () => {
-    const result = runCLI(["--node", "testnet", "account", "info", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "info", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Address:");
     expect(result.stdout).toContain("Balance:");
@@ -28,7 +29,7 @@ describe("account info", () => {
   });
 
   it.concurrent("--json outputs Account and Balance fields", () => {
-    const result = runCLI(["--node", "testnet", "account", "info", "--json", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "info", "--json", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const data = JSON.parse(result.stdout) as { Account: string; Balance: string };
     expect(data.Account).toBe(KNOWN_TESTNET_ADDRESS);
@@ -36,7 +37,7 @@ describe("account info", () => {
   });
 
   it.concurrent("alias 'i' works", () => {
-    const result = runCLI(["--node", "testnet", "account", "i", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "i", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Address:");
   });
@@ -46,19 +47,19 @@ describe("account info", () => {
 
 describe("account balance", () => {
   it.concurrent("outputs balance in XRP format", () => {
-    const result = runCLI(["--node", "testnet", "account", "balance", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "balance", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toMatch(/^\d+(\.\d+)? XRP$/);
   });
 
   it.concurrent("alias 'bal' works", () => {
-    const result = runCLI(["--node", "testnet", "account", "bal", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "bal", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toMatch(/^\d+(\.\d+)? XRP$/);
   });
 
   it.concurrent("--drops outputs a plain integer string with no 'XRP' suffix", () => {
-    const result = runCLI(["--node", "testnet", "account", "balance", "--drops", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "balance", "--drops", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const output = result.stdout.trim();
     expect(output).toMatch(/^\d+$/);
@@ -66,7 +67,7 @@ describe("account balance", () => {
   });
 
   it.concurrent("--json outputs address, balanceXrp, and balanceDrops fields", () => {
-    const result = runCLI(["--node", "testnet", "account", "balance", "--json", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "balance", "--json", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const data = JSON.parse(result.stdout) as { address: string; balanceXrp: number; balanceDrops: string };
     expect(data.address).toBe(KNOWN_TESTNET_ADDRESS);
@@ -80,7 +81,7 @@ describe("account balance", () => {
 
 describe("account transactions", () => {
   it.concurrent("lists transactions for an account with history", () => {
-    const result = runCLI(["--node", "testnet", "account", "transactions", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "transactions", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const lines = result.stdout.trim().split("\n");
     expect(lines.length).toBeGreaterThan(0);
@@ -90,20 +91,20 @@ describe("account transactions", () => {
   });
 
   it.concurrent("alias 'txs' works", () => {
-    const result = runCLI(["--node", "testnet", "account", "txs", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "txs", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).not.toBe("");
   });
 
   it.concurrent("--limit restricts number of results", () => {
-    const result = runCLI(["--node", "testnet", "account", "transactions", "--limit", "3", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "transactions", "--limit", "3", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const lines = result.stdout.trim().split("\n").filter(Boolean);
     expect(lines.length).toBeLessThanOrEqual(3);
   });
 
   it.concurrent("--json outputs transactions array and optional marker", () => {
-    const result = runCLI(["--node", "testnet", "account", "transactions", "--json", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "transactions", "--json", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const data = JSON.parse(result.stdout) as { transactions: unknown[]; marker?: unknown };
     expect(Array.isArray(data.transactions)).toBe(true);
@@ -115,7 +116,7 @@ describe("account transactions", () => {
 
 describe("account trust-lines", () => {
   it.concurrent("shows (no trust lines) or a list for a testnet account", () => {
-    const result = runCLI(["--node", "testnet", "account", "trust-lines", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "trust-lines", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const stdout = result.stdout.trim();
     if (stdout === "(no trust lines)") {
@@ -130,12 +131,12 @@ describe("account trust-lines", () => {
   });
 
   it.concurrent("alias 'lines' works", () => {
-    const result = runCLI(["--node", "testnet", "account", "lines", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "lines", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
   });
 
   it.concurrent("--json outputs an array", () => {
-    const result = runCLI(["--node", "testnet", "account", "trust-lines", "--json", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "trust-lines", "--json", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const data = JSON.parse(result.stdout) as unknown[];
     expect(Array.isArray(data)).toBe(true);
@@ -146,7 +147,7 @@ describe("account trust-lines", () => {
 
 describe("account offers", () => {
   it.concurrent("shows (no open offers) or a list for a testnet account", () => {
-    const result = runCLI(["--node", "testnet", "account", "offers", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "offers", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const stdout = result.stdout.trim();
     if (stdout === "(no open offers)") {
@@ -158,12 +159,12 @@ describe("account offers", () => {
   });
 
   it.concurrent("alias 'of' works", () => {
-    const result = runCLI(["--node", "testnet", "account", "of", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "of", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
   });
 
   it.concurrent("--json outputs an array", () => {
-    const result = runCLI(["--node", "testnet", "account", "offers", "--json", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "offers", "--json", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const data = JSON.parse(result.stdout) as unknown[];
     expect(Array.isArray(data)).toBe(true);
@@ -174,7 +175,7 @@ describe("account offers", () => {
 
 describe("account channels", () => {
   it.concurrent("shows (no payment channels) or a list for a testnet account", () => {
-    const result = runCLI(["--node", "testnet", "account", "channels", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "channels", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const stdout = result.stdout.trim();
     if (stdout === "(no payment channels)") {
@@ -189,12 +190,12 @@ describe("account channels", () => {
   });
 
   it.concurrent("alias 'chan' works", () => {
-    const result = runCLI(["--node", "testnet", "account", "chan", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "chan", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
   });
 
   it.concurrent("--json outputs an array", () => {
-    const result = runCLI(["--node", "testnet", "account", "channels", "--json", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "channels", "--json", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const data = JSON.parse(result.stdout) as unknown[];
     expect(Array.isArray(data)).toBe(true);
@@ -205,7 +206,7 @@ describe("account channels", () => {
 
 describe("account nfts", () => {
   it.concurrent("shows (no NFTs) or a list for a testnet account", () => {
-    const result = runCLI(["--node", "testnet", "account", "nfts", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "nfts", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const stdout = result.stdout.trim();
     if (stdout === "(no NFTs)") {
@@ -220,12 +221,12 @@ describe("account nfts", () => {
   });
 
   it.concurrent("alias 'nft' works", () => {
-    const result = runCLI(["--node", "testnet", "account", "nft", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "nft", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
   });
 
   it.concurrent("--json outputs an array", () => {
-    const result = runCLI(["--node", "testnet", "account", "nfts", "--json", KNOWN_TESTNET_ADDRESS]);
+    const result = runCLI(["--node", XRPL_WS, "account", "nfts", "--json", KNOWN_TESTNET_ADDRESS]);
     expect(result.status).toBe(0);
     const data = JSON.parse(result.stdout) as unknown[];
     expect(Array.isArray(data)).toBe(true);

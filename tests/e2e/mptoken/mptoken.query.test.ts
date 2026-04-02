@@ -37,7 +37,7 @@ describe("mptoken issuance list and get", () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     // Create issuance via CLI
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--metadata", "query-list-token",
       "--seed", issuer.seed!,
@@ -48,7 +48,7 @@ describe("mptoken issuance list and get", () => {
     const issuanceId = idMatch![1]!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "list",
       issuer.address,
     ]);
@@ -60,7 +60,7 @@ describe("mptoken issuance list and get", () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     // Create issuance with known AssetScale
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--asset-scale", "2",
       "--seed", issuer.seed!,
@@ -68,7 +68,7 @@ describe("mptoken issuance list and get", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "list",
       issuer.address,
       "--json",
@@ -83,7 +83,7 @@ describe("mptoken issuance list and get", () => {
   it.concurrent("list shows 'No MPT issuances.' for an account with no issuances", async () => {
     const [emptyAccount] = await createFunded(client, master, 1, 3);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "list",
       emptyAccount.address,
     ]);
@@ -95,7 +95,7 @@ describe("mptoken issuance list and get", () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     // Create issuance with known properties
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--metadata", "query-test-token",
       "--max-amount", "999999",
@@ -110,7 +110,7 @@ describe("mptoken issuance list and get", () => {
     const issuanceId = idMatch![1]!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "get",
       issuanceId,
     ]);
@@ -132,7 +132,7 @@ describe("mptoken issuance list and get", () => {
     const [issuer] = await createFunded(client, master, 1, 3);
     // Create issuance with known properties
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "create",
       "--max-amount", "999999",
       "--asset-scale", "2",
@@ -146,7 +146,7 @@ describe("mptoken issuance list and get", () => {
     const issuanceId = idMatch![1]!;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "mptoken", "issuance", "get",
       issuanceId,
       "--json",

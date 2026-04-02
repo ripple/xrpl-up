@@ -46,7 +46,7 @@ describe("escrow finish", () => {
   it.concurrent("finishes a time-based escrow and prints tesSUCCESS", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -60,7 +60,7 @@ describe("escrow finish", () => {
     await new Promise((r) => setTimeout(r, 16_000));
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "finish",
       "--owner", sender.address,
       "--sequence", String(sequence),
@@ -73,7 +73,7 @@ describe("escrow finish", () => {
   it.concurrent("finishes a crypto-condition escrow with --condition and --fulfillment", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -86,7 +86,7 @@ describe("escrow finish", () => {
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "finish",
       "--owner", sender.address,
       "--sequence", String(sequence),
@@ -101,7 +101,7 @@ describe("escrow finish", () => {
   it.concurrent("--json output includes hash, result, fee, ledger", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -115,7 +115,7 @@ describe("escrow finish", () => {
     await new Promise((r) => setTimeout(r, 16_000));
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "finish",
       "--owner", sender.address,
       "--sequence", String(sequence),
@@ -134,7 +134,7 @@ describe("escrow finish", () => {
   it.concurrent("--no-wait exits 0 and output contains 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -148,7 +148,7 @@ describe("escrow finish", () => {
     await new Promise((r) => setTimeout(r, 16_000));
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "finish",
       "--owner", sender.address,
       "--sequence", String(sequence),
@@ -162,7 +162,7 @@ describe("escrow finish", () => {
   it.concurrent("--dry-run outputs JSON with TransactionType EscrowFinish and does not submit", async () => {
     const [sender] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "finish",
       "--owner", sender.address,
       "--sequence", "1",
@@ -179,7 +179,7 @@ describe("escrow finish", () => {
   it.concurrent("--dry-run with --condition and --fulfillment sets fields in tx", async () => {
     const [sender] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "finish",
       "--owner", sender.address,
       "--sequence", "1",
@@ -197,7 +197,7 @@ describe("escrow finish", () => {
   it.concurrent("--account/--keystore/--password key material finishes successfully", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -221,7 +221,7 @@ describe("escrow finish", () => {
       expect(importResult.status, `stdout: ${importResult.stdout} stderr: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "escrow", "finish",
         "--owner", sender.address,
         "--sequence", String(sequence),
@@ -244,7 +244,7 @@ describe("escrow cancel", () => {
   it.concurrent("cancels an expired escrow and prints tesSUCCESS", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -259,7 +259,7 @@ describe("escrow cancel", () => {
     await new Promise((r) => setTimeout(r, 16_000));
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "cancel",
       "--owner", sender.address,
       "--sequence", String(sequence),
@@ -272,7 +272,7 @@ describe("escrow cancel", () => {
   it.concurrent("--json output includes hash, result, fee, ledger", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -287,7 +287,7 @@ describe("escrow cancel", () => {
     await new Promise((r) => setTimeout(r, 16_000));
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "cancel",
       "--owner", sender.address,
       "--sequence", String(sequence),
@@ -306,7 +306,7 @@ describe("escrow cancel", () => {
   it.concurrent("--dry-run outputs JSON with TransactionType EscrowCancel and does not submit", async () => {
     const [sender] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "cancel",
       "--owner", sender.address,
       "--sequence", "1",
@@ -323,7 +323,7 @@ describe("escrow cancel", () => {
   it.concurrent("--no-wait exits 0 and output contains 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -338,7 +338,7 @@ describe("escrow cancel", () => {
     await new Promise((r) => setTimeout(r, 16_000));
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "cancel",
       "--owner", sender.address,
       "--sequence", String(sequence),
@@ -352,7 +352,7 @@ describe("escrow cancel", () => {
   it.concurrent("--account/--keystore/--password key material cancels successfully", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
@@ -377,7 +377,7 @@ describe("escrow cancel", () => {
       expect(importResult.status, `stdout: ${importResult.stdout} stderr: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", "testnet",
+        "--node", XRPL_WS,
         "escrow", "cancel",
         "--owner", sender.address,
         "--sequence", String(sequence),

@@ -33,7 +33,7 @@ describe("nft mint", () => {
   it.concurrent("mints an NFT with --taxon only and prints NFTokenID", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "42",
       "--seed", minter.seed!,
@@ -46,7 +46,7 @@ describe("nft mint", () => {
   it.concurrent("mints an NFT with --uri and verifies it appears in account nfts", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "1",
       "--uri", "https://example.com/nft-metadata.json",
@@ -59,7 +59,7 @@ describe("nft mint", () => {
     expect(out.nftokenId).toMatch(/^[0-9A-F]{64}$/i);
 
     const nftsResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "nfts",
       "--json",
       minter.address,
@@ -72,7 +72,7 @@ describe("nft mint", () => {
   it.concurrent("mints an NFT with --transfer-fee and --transferable", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--transferable",
@@ -89,7 +89,7 @@ describe("nft mint", () => {
   it.concurrent("--json outputs structured JSON with nftokenId", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--seed", minter.seed!,
@@ -106,7 +106,7 @@ describe("nft mint", () => {
   it.concurrent("--dry-run outputs tx_blob and tx without submitting", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--seed", minter.seed!,
@@ -122,7 +122,7 @@ describe("nft mint", () => {
   it.concurrent("--burnable flag sets tfBurnable in dry-run tx Flags", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--burnable",
@@ -139,7 +139,7 @@ describe("nft mint", () => {
   it.concurrent("--only-xrp flag sets tfOnlyXRP in dry-run tx Flags", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--only-xrp",
@@ -156,7 +156,7 @@ describe("nft mint", () => {
   it.concurrent("--mutable flag sets tfMutable in dry-run tx Flags", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--mutable",
@@ -173,7 +173,7 @@ describe("nft mint", () => {
   it.concurrent("--no-wait exits 0 and outputs a 64-char hex hash", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--seed", minter.seed!,

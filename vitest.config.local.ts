@@ -44,6 +44,9 @@ export default defineConfig({
       // These features target devnet specifically and import helpers/devnet.ts
       "tests/e2e/vault/**",
       "tests/e2e/permissioned-domain/**",
+      // Snapshot tests restart the node (stop+start rippled & faucet) — must run
+      // in isolation via: npm run test:e2e:snapshot
+      "tests/e2e/sandbox/snapshot.test.ts",
     ],
     globalSetup: ["tests/setup/local-node.ts"],
   },

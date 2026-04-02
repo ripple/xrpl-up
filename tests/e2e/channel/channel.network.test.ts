@@ -41,7 +41,7 @@ async function setupChannel(
 ): Promise<{ source: Wallet; destination: Wallet; channelId: string }> {
   const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
   const result = runCLI([
-    "--node", "testnet",
+    "--node", XRPL_WS,
     "channel", "create",
     "--to", destination.address,
     "--amount", "0.5",
@@ -63,7 +63,7 @@ describe("channel create", () => {
   it.concurrent("creates a channel and outputs channel ID", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "create",
       "--to", destination.address,
       "--amount", "0.5",
@@ -78,7 +78,7 @@ describe("channel create", () => {
   it.concurrent("--json outputs channelId in JSON", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "create",
       "--to", destination.address,
       "--amount", "0.5",
@@ -99,7 +99,7 @@ describe("channel create", () => {
   it.concurrent("--dry-run outputs TransactionType PaymentChannelCreate without submitting", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "create",
       "--to", destination.address,
       "--amount", "0.5",
@@ -122,7 +122,7 @@ describe("channel create", () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
     const futureDate = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "create",
       "--to", destination.address,
       "--amount", "0.5",
@@ -142,7 +142,7 @@ describe("channel create", () => {
   it.concurrent("--destination-tag sets DestinationTag in dry-run", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "create",
       "--to", destination.address,
       "--amount", "0.5",
@@ -160,7 +160,7 @@ describe("channel create", () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
     const pubKey = source.publicKey;
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "create",
       "--to", destination.address,
       "--amount", "0.5",
@@ -177,7 +177,7 @@ describe("channel create", () => {
   it.concurrent("--no-wait exits 0 and output contains a 64-char hex hash", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "create",
       "--to", destination.address,
       "--amount", "0.5",
@@ -197,7 +197,7 @@ describe("channel fund", () => {
   it.concurrent("funds an existing channel and verifies updated amount via account_channels", async () => {
     const { source, destination, channelId } = await setupChannel();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "fund",
       "--channel", channelId,
       "--amount", "0.2",
@@ -220,7 +220,7 @@ describe("channel fund", () => {
   it.concurrent("--json outputs result in JSON", async () => {
     const { source, channelId } = await setupChannel();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "fund",
       "--channel", channelId,
       "--amount", "0.2",
@@ -236,7 +236,7 @@ describe("channel fund", () => {
   it.concurrent("--dry-run outputs PaymentChannelFund tx without submitting", async () => {
     const [source] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "fund",
       "--channel", DUMMY_CHANNEL,
       "--amount", "0.2",
@@ -258,7 +258,7 @@ describe("channel fund", () => {
     const [source] = await createFunded(client, master, 2, FUND_AMOUNT);
     const futureDate = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "fund",
       "--channel", DUMMY_CHANNEL,
       "--amount", "0.2",
@@ -275,7 +275,7 @@ describe("channel fund", () => {
   it.concurrent("--no-wait exits 0 and outputs a 64-char hex hash", async () => {
     const { source, channelId } = await setupChannel();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "fund",
       "--channel", channelId,
       "--amount", "0.2",
@@ -294,7 +294,7 @@ describe("channel list", () => {
   it.concurrent("lists channels for an account and shows the created channel", async () => {
     const { source, channelId } = await setupChannel();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "list",
       source.address,
     ]);
@@ -313,7 +313,7 @@ describe("channel list", () => {
   it.concurrent("--json outputs a JSON array containing the channel", async () => {
     const { source, channelId } = await setupChannel();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "list",
       source.address,
       "--json",
@@ -328,7 +328,7 @@ describe("channel list", () => {
   it.concurrent("--destination filter returns channel when destination matches", async () => {
     const { source, destination, channelId } = await setupChannel();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "list",
       source.address,
       "--destination", destination.address,
@@ -346,7 +346,7 @@ describe("channel list", () => {
     const { source } = await setupChannel();
     const unrelated = Wallet.generate();
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "list",
       source.address,
       "--destination", unrelated.address,
@@ -377,7 +377,7 @@ describe("channel claim", () => {
 
     // Destination redeems the claim
     const claimResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "claim",
       "--channel", channelId,
       "--amount", "0.5",
@@ -404,7 +404,7 @@ describe("channel claim", () => {
     const signature = signResult.stdout.trim();
 
     const claimResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "claim",
       "--channel", channelId,
       "--amount", "0.5",
@@ -423,7 +423,7 @@ describe("channel claim", () => {
   it.concurrent("--dry-run outputs PaymentChannelClaim tx without submitting", async () => {
     const [source] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "claim",
       "--channel", DUMMY_CHANNEL,
       "--close",
@@ -446,7 +446,7 @@ describe("channel claim", () => {
   it.concurrent("--renew flag is set in dry-run", async () => {
     const [source] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "claim",
       "--channel", DUMMY_CHANNEL,
       "--renew",
@@ -466,7 +466,7 @@ describe("channel claim", () => {
     // settle-delay 0 allows immediate close by source
     const { source, channelId } = await setupChannel(0);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "claim",
       "--channel", channelId,
       "--close",
@@ -479,7 +479,7 @@ describe("channel claim", () => {
   it.concurrent("--no-wait exits 0 and outputs a 64-char hex hash", async () => {
     const { source, channelId } = await setupChannel(60);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "channel", "claim",
       "--channel", channelId,
       "--close",

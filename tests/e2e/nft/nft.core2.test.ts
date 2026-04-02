@@ -34,7 +34,7 @@ describe("nft burn", () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const mintResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--burnable",
@@ -48,7 +48,7 @@ describe("nft burn", () => {
     expect(nftokenId).toMatch(/^[0-9A-F]{64}$/i);
 
     const burnResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "burn",
       "--nft", nftokenId,
       "--seed", minter.seed!,
@@ -61,7 +61,7 @@ describe("nft burn", () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const mintResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--seed", minter.seed!,
@@ -72,7 +72,7 @@ describe("nft burn", () => {
     const nftokenId = mintOut.nftokenId;
 
     const burnResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "burn",
       "--nft", nftokenId,
       "--seed", minter.seed!,
@@ -90,7 +90,7 @@ describe("nft burn", () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const nftokenId = "0".repeat(64);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "burn",
       "--nft", nftokenId,
       "--seed", minter.seed!,
@@ -107,7 +107,7 @@ describe("nft burn", () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const mintResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--seed", minter.seed!,
@@ -118,7 +118,7 @@ describe("nft burn", () => {
     const nftokenId = mintOut.nftokenId;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "burn",
       "--nft", nftokenId,
       "--seed", minter.seed!,
@@ -136,7 +136,7 @@ describe("nft modify", () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const mintResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--mutable",
@@ -153,7 +153,7 @@ describe("nft modify", () => {
     const newUri = "https://example.com/updated.json";
 
     const modifyResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "modify",
       "--nft", nftokenId,
       "--uri", newUri,
@@ -163,7 +163,7 @@ describe("nft modify", () => {
     expect(modifyResult.stdout).toContain("tesSUCCESS");
 
     const nftsResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "account", "nfts",
       "--json",
       minter.address,
@@ -179,7 +179,7 @@ describe("nft modify", () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const mintResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--mutable",
@@ -191,7 +191,7 @@ describe("nft modify", () => {
     const nftokenId = mintOut.nftokenId;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "modify",
       "--nft", nftokenId,
       "--uri", "https://example.com/json-test.json",
@@ -210,7 +210,7 @@ describe("nft modify", () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
     const nftokenId = "0".repeat(64);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "modify",
       "--nft", nftokenId,
       "--uri", "https://example.com/dry-run.json",
@@ -229,7 +229,7 @@ describe("nft modify", () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const mintResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--mutable",
@@ -242,7 +242,7 @@ describe("nft modify", () => {
     const nftokenId = mintOut.nftokenId;
 
     const modifyResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "modify",
       "--nft", nftokenId,
       "--clear-uri",
@@ -256,7 +256,7 @@ describe("nft modify", () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const mintResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "mint",
       "--taxon", "0",
       "--mutable",
@@ -268,7 +268,7 @@ describe("nft modify", () => {
     const nftokenId = mintOut.nftokenId;
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "nft", "modify",
       "--nft", nftokenId,
       "--uri", "https://example.com/nowait.json",

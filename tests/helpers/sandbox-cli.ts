@@ -26,10 +26,12 @@ export function runXrplUp(
   args: string[],
   extraEnv: Record<string, string> = {},
   timeout = 30_000,
+  input?: string,
 ) {
   return spawnSync(TSX, [CLI, ...args], {
     encoding: "utf-8",
     env: { ...process.env, PATH: E2E_PATH, ...extraEnv },
     timeout,
+    ...(input !== undefined ? { input } : {}),
   });
 }

@@ -33,7 +33,7 @@ describe("oracle set", () => {
   it.concurrent("creates an oracle with --price and prints tesSUCCESS", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -52,7 +52,7 @@ describe("oracle set", () => {
       { BaseAsset: "BTC", QuoteAsset: "USD", AssetPrice: 60000000, Scale: 6 },
     ]);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price-data", priceData,
@@ -67,7 +67,7 @@ describe("oracle set", () => {
   it.concurrent("updates an oracle price (uses same document-id)", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "XRP/USD:5000:6",
@@ -78,7 +78,7 @@ describe("oracle set", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const updateResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "XRP/USD:5500:6",
@@ -92,7 +92,7 @@ describe("oracle set", () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const ts = Math.floor(Date.now() / 1000);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "SOL/USD:200000:6",
@@ -108,7 +108,7 @@ describe("oracle set", () => {
   it.concurrent("--json outputs structured JSON", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -128,7 +128,7 @@ describe("oracle set", () => {
   it.concurrent("--dry-run prints tx_blob and tx without submitting", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -147,7 +147,7 @@ describe("oracle set", () => {
   it.concurrent("--no-wait exits 0 and outputs a hash", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -164,7 +164,7 @@ describe("oracle set", () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const pythHex = Buffer.from("pyth").toString("hex");
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -182,7 +182,7 @@ describe("oracle set", () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const currencyHex = Buffer.from("currency").toString("hex");
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -199,7 +199,7 @@ describe("oracle set", () => {
   it.concurrent("price pair without scale defaults to Scale 0 in dry-run", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000",
@@ -222,7 +222,7 @@ describe("oracle get", () => {
   it.concurrent("returns human-readable price pairs with decoded provider and asset class", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const setupResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -234,7 +234,7 @@ describe("oracle get", () => {
     expect(setupResult.status, `setup: ${setupResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "get",
       oracle.address,
       "1",
@@ -250,7 +250,7 @@ describe("oracle get", () => {
   it.concurrent("--json outputs raw ledger entry as JSON", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const setupResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -261,7 +261,7 @@ describe("oracle get", () => {
     expect(setupResult.status, `setup: ${setupResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "get",
       oracle.address,
       "1",
@@ -283,7 +283,7 @@ describe("oracle get", () => {
   it.concurrent("returns error for non-existent oracle", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "get",
       oracle.address,
       "9999",
@@ -295,7 +295,7 @@ describe("oracle get", () => {
   it.concurrent("--node option is accepted on oracle get", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const setupResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -322,7 +322,7 @@ describe("oracle delete", () => {
   it.concurrent("creates then deletes an oracle; get returns not-found", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "BTC/USD:155000:6",
@@ -334,7 +334,7 @@ describe("oracle delete", () => {
     expect(createResult.stdout).toContain("tesSUCCESS");
 
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "delete",
       "--document-id", "1",
       "--seed", oracle.seed!,
@@ -343,7 +343,7 @@ describe("oracle delete", () => {
     expect(deleteResult.stdout).toContain("tesSUCCESS");
 
     const getResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "get",
       oracle.address,
       "1",
@@ -355,7 +355,7 @@ describe("oracle delete", () => {
   it.concurrent("--json outputs structured JSON on delete", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "ETH/USD:3000:3",
@@ -366,7 +366,7 @@ describe("oracle delete", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "delete",
       "--document-id", "1",
       "--json",
@@ -383,7 +383,7 @@ describe("oracle delete", () => {
   it.concurrent("--dry-run on delete prints tx_blob without submitting", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "delete",
       "--document-id", "99",
       "--dry-run",
@@ -399,7 +399,7 @@ describe("oracle delete", () => {
   it.concurrent("--no-wait on delete exits 0 and outputs hash", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
     const createResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "set",
       "--document-id", "1",
       "--price", "XRP/USD:5000:6",
@@ -410,7 +410,7 @@ describe("oracle delete", () => {
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
 
     const deleteResult = runCLI([
-      "--node", "testnet",
+      "--node", XRPL_WS,
       "oracle", "delete",
       "--document-id", "1",
       "--no-wait",

@@ -62,15 +62,28 @@ async function withGenesisLock<T>(fn: () => Promise<T>): Promise<T> {
 async function masterPayment(client: Client, destination: string): Promise<void> {
   await withGenesisLock(async () => {
     const master = getWorkerWallet();
-    const tx = await client.autofill({
-      TransactionType: "Payment",
-      Account: master.address,
-      Amount: xrpToDrops(String(FUND_AMOUNT_XRP)),
-      Destination: destination,
-    });
-    const { tx_blob } = master.sign(tx);
-    await client.submit(tx_blob);
-    // No ledger_accept — the 1-second periodic timer validates pending txs.
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 1_000));
+      try {
+        // Re-autofill on every attempt: if the previous submit timed out but
+        // the tx was actually accepted, the sequence will have advanced.
+        const tx = await client.autofill({
+          TransactionType: "Payment",
+          Account: master.address,
+          Amount: xrpToDrops(String(FUND_AMOUNT_XRP)),
+          Destination: destination,
+        });
+        const { tx_blob } = master.sign(tx);
+        await client.submit(tx_blob);
+        return; // success
+      } catch (err) {
+        lastErr = err;
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!msg.includes("Timeout")) throw err; // non-timeout errors re-thrown immediately
+      }
+    }
+    throw lastErr;
   });
 }
 

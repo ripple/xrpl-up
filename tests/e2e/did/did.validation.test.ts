@@ -4,7 +4,7 @@ import { runCLI } from "../../helpers/cli";
 // Static dummy values — no network calls in this file
 const DUMMY_SEED = "snoPBrXtMeMyMHUVTgbuqAfg1SUTb";
 
-describe("did set validation (no network)", () => {
+describe("did set validation", () => {
   it("no fields provided exits 1 with error", () => {
     const result = runCLI(["did", "set", "--seed", DUMMY_SEED]);
     expect(result.status).toBe(1);
