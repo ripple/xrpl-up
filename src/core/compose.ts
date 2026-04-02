@@ -326,15 +326,21 @@ export function writeComposeFile(image = DEFAULT_IMAGE, persist = false, debug =
 
   // In persist mode rippled must NOT receive --start on restart — that flag
   // always creates a fresh genesis even when the NuDB volume has data.
-  // Use a shell entrypoint that passes --start only on first boot (empty NuDB)
-  // and --load on subsequent boots so rippled resumes from the existing ledger.
+  //
+  // rippled standalone mode does not write a SQLite ledger index, so we cannot
+  // use "-a" alone to resume from NuDB (rippled queries SQLite and finds nothing).
+  // Instead, snapshot restore writes the last validated ledger hash to a sentinel
+  // file in the volume. The entrypoint reads it and passes "--ledger <hash>" so
+  // rippled can find the ledger directly in NuDB. The file is kept so that Docker
+  // crash-restarts also resume from the same ledger.
   const RIPPLED_BIN = '/opt/ripple/bin/rippled';
   const RIPPLED_CFG = '--conf /config/rippled.cfg';
   const NUDB_DIR    = '/var/lib/rippled/db/nudb';
+  const HASH_FILE   = '/var/lib/rippled/db/.restore-hash';
   const entrypointLine = noRestart
     ? `\n    entrypoint: ["/bin/sh", "-c", "${RIPPLED_BIN} ${RIPPLED_CFG} -a --start 2>/tmp/rip.err & RPID=$! ; wait $RPID ; EC=$? ; cat /tmp/rip.err >&2 ; grep -qF Logic\\ error: /tmp/rip.err 2>/dev/null && exit 134 ; exit $EC"]`
     : persist
-      ? `\n    entrypoint: ["/bin/sh", "-c", "if [ -d ${NUDB_DIR} ] && ls ${NUDB_DIR}/ | grep -q .; then exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a; else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`
+      ? `\n    entrypoint: ["/bin/sh", "-c", "if [ -f ${HASH_FILE} ]; then exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $(cat ${HASH_FILE}); elif [ -d ${NUDB_DIR} ] && ls ${NUDB_DIR}/ | grep -q .; then exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a; else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`
       : '';
   const commandLine = (noRestart || persist)
     ? ''  // entrypoint already contains the full rippled invocation
@@ -390,6 +396,28 @@ ${volumesSection}
 
   fs.writeFileSync(COMPOSE_FILE, yaml, 'utf-8');
   return COMPOSE_FILE;
+}
+
+/** Read the rippled image from the current compose file (for use in restore). */
+export function readComposeImage(): string {
+  try {
+    const content = fs.readFileSync(COMPOSE_FILE, 'utf-8');
+    const match = content.match(/^\s+image:\s+(.+)$/m);
+    return match?.[1]?.trim() ?? DEFAULT_IMAGE;
+  } catch {
+    return DEFAULT_IMAGE;
+  }
+}
+
+/** Read the faucet ledger interval from the current compose file. */
+export function readComposeLedgerInterval(): number {
+  try {
+    const content = fs.readFileSync(COMPOSE_FILE, 'utf-8');
+    const match = content.match(/LEDGER_INTERVAL_MS=(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  } catch {
+    return 0;
+  }
 }
 
 /** Stop a single service without removing containers or volumes. */

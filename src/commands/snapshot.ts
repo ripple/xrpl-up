@@ -5,7 +5,11 @@ import os from 'node:os';
 import chalk from 'chalk';
 import ora from 'ora';
 import { Client } from 'xrpl';
-import { stopService, startService, waitForPort, LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT } from '../core/compose';
+import {
+  stopService, startService, waitForPort,
+  LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT,
+  readComposeImage, readComposeLedgerInterval, writeComposeFile,
+} from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
 
@@ -31,6 +35,11 @@ function snapshotPath(name: string): string {
 /** Absolute path to the WalletStore sidecar for a snapshot. */
 function walletSidecarPath(name: string): string {
   return path.join(SNAPSHOTS_DIR, `${name}-accounts.json`);
+}
+
+/** Absolute path to the ledger-hash metadata for a snapshot. */
+function metaSidecarPath(name: string): string {
+  return path.join(SNAPSHOTS_DIR, `${name}-meta.json`);
 }
 
 /** Ensure the snapshots directory exists. */
@@ -74,6 +83,9 @@ export async function snapshotSave(name: string): Promise<void> {
       : 'Flushing pending transactions…'),
     prefixText: ' ',
   }).start();
+
+  let ledgerHash: string | null = null;
+
   try {
     const client = new Client(LOCAL_WS_URL);
     await client.connect();
@@ -100,13 +112,20 @@ export async function snapshotSave(name: string): Promise<void> {
       await new Promise(r => setTimeout(r, POLL_MS));
     }
 
+    // Capture the current validated ledger hash so restore can load it directly
+    // from NuDB via --ledger <hash>. rippled standalone mode does not populate
+    // a SQLite ledger index, so this hash is the only way to resume from NuDB.
+    try {
+      const lc = await (client as any).request({ command: 'ledger_closed' });
+      ledgerHash = lc.result.ledger_hash ?? null;
+    } catch { /* not fatal — restore will warn if hash is missing */ }
+
     await client.disconnect();
 
     if (allConfirmed) {
       flushSpinner.succeed(chalk.dim('All accounts confirmed on-chain'));
     } else {
       flushSpinner.fail(chalk.red('Timed out waiting for accounts to confirm on-chain'));
-      await client.disconnect();
       throw new Error(
         `Snapshot aborted: ${walletAccounts.length} wallet-store account(s) are not confirmed on the validated ledger.\n` +
         `  Wait for the faucet to finish funding, then retry:\n` +
@@ -123,12 +142,10 @@ export async function snapshotSave(name: string): Promise<void> {
     );
   }
 
-  // Stop faucet only — rippled keeps running so its data stays consistent.
-  // NuDB is append-only: tarring a live NuDB directory is safe because all
-  // validated ledger objects are written before a ledger is closed.
-  // SQLite WAL files are included in the tar so restore can recover from them.
-  // We never stop rippled during save because restarting it in standalone mode
-  // requires a ledger hash (SQLite ledger index is not populated in standalone).
+  // Stop faucet only — rippled keeps running so its NuDB data stays consistent.
+  // NuDB is append-only: tarring a live NuDB directory is safe. We never stop
+  // rippled during save because restarting requires a ledger hash (rippled
+  // standalone mode does not write a SQLite ledger index).
   const stopSpinner = ora({ text: chalk.dim('Pausing faucet…'), prefixText: ' ' }).start();
   try {
     stopService('faucet');
@@ -164,6 +181,11 @@ export async function snapshotSave(name: string): Promise<void> {
     fs.copyFileSync(WALLET_STORE_PATH, sidecar);
   } else {
     fs.writeFileSync(sidecar, '[]');
+  }
+
+  // Save ledger hash metadata so restore can start rippled with --ledger <hash>
+  if (ledgerHash) {
+    fs.writeFileSync(metaSidecarPath(name), JSON.stringify({ ledger_hash: ledgerHash }));
   }
 
   // Restart faucet only
@@ -202,6 +224,24 @@ export async function snapshotRestore(name: string): Promise<void> {
     );
   }
 
+  // Read the ledger hash saved during snapshot save. Without this hash, rippled
+  // cannot locate the ledger in NuDB (standalone mode has no SQLite ledger index).
+  const metaPath = metaSidecarPath(name);
+  let ledgerHash: string | null = null;
+  if (fs.existsSync(metaPath)) {
+    try {
+      const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+      ledgerHash = meta.ledger_hash ?? null;
+    } catch { /* treat as missing */ }
+  }
+
+  if (!ledgerHash) {
+    logger.warning(
+      `No ledger hash found for snapshot "${name}" — restore may not work.\n` +
+      `  Re-save the snapshot to capture the hash: xrpl-up snapshot save ${name}`
+    );
+  }
+
   logger.blank();
 
   // Stop faucet then rippled (faucet must stop first to avoid crashing on disconnect)
@@ -219,24 +259,23 @@ export async function snapshotRestore(name: string): Promise<void> {
   }
 
   // Wipe and restore the volume via alpine sidecar.
-  // The snapshot was taken as an online backup (rippled running), so the
-  // archive includes SQLite .db-wal files with the ledger index. We keep the
-  // WAL so rippled can find its last ledger on startup. We delete only .db-shm
-  // (shared-memory index, tied to the old process) — SQLite auto-rebuilds it
-  // from the WAL on first open.
+  // After extraction, write the ledger hash to .restore-hash so the rippled
+  // entrypoint can start with --ledger <hash> and load directly from NuDB.
   const restoreSpinner = ora({ text: chalk.dim(`Restoring snapshot "${name}"…`), prefixText: ' ' }).start();
   try {
+    const hashStep = ledgerHash
+      ? `; echo '${ledgerHash}' > /data/.restore-hash`
+      : '';
     execSync(
       `docker run --rm ` +
       `-v ${VOLUME_NAME}:/data ` +
       `-v "${SNAPSHOTS_DIR}":/snapshots ` +
-      `alpine sh -c "rm -rf /data/* /data/..?* /data/.[!.]* 2>/dev/null; tar xzf /snapshots/${name}.tar.gz -C /data; rm -f /data/*.db-shm"`,
+      `alpine sh -c "rm -rf /data/* /data/..?* /data/.[!.]* 2>/dev/null; tar xzf /snapshots/${name}.tar.gz -C /data; rm -f /data/*.db-shm${hashStep}"`,
       { stdio: 'ignore' }
     );
     restoreSpinner.succeed(chalk.green(`Snapshot "${name}" restored`));
   } catch (err) {
     restoreSpinner.fail(`Failed to restore snapshot "${name}"`);
-    // Try to restart both services even on failure
     startService('rippled');
     startService('faucet');
     throw err;
@@ -247,14 +286,16 @@ export async function snapshotRestore(name: string): Promise<void> {
   if (fs.existsSync(sidecar)) {
     fs.copyFileSync(sidecar, WALLET_STORE_PATH);
   } else {
-    // Old snapshot created before this fix — clear stale accounts to avoid mismatch
     if (fs.existsSync(WALLET_STORE_PATH)) fs.unlinkSync(WALLET_STORE_PATH);
   }
 
-  // Restart rippled then faucet, and wait for both to be ready
-  // Start rippled first and wait for it to be ready before starting the faucet.
-  // The faucet depends_on rippled being healthy; starting them in parallel would
-  // race the healthcheck gate.
+  // Regenerate the compose file so the entrypoint includes the .restore-hash
+  // check even if the user's compose was written by an older version of xrpl-up.
+  const image = readComposeImage();
+  const ledgerIntervalMs = readComposeLedgerInterval();
+  writeComposeFile(image, true /* persist */, false, ledgerIntervalMs);
+
+  // Restart rippled first and wait for it to be ready before starting the faucet.
   const startSpinner = ora({ text: chalk.dim('Resuming sandbox…'), prefixText: ' ' }).start();
   startService('rippled');
   await waitForPort(LOCAL_WS_PORT, 30_000, 'rippled WebSocket');
