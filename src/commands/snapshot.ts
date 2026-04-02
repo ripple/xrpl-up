@@ -7,8 +7,7 @@ import ora from 'ora';
 import { Client } from 'xrpl';
 import {
   stopService, startService, waitForPort,
-  LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT,
-  readComposeImage, readComposeLedgerInterval, writeComposeFile,
+  LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT, COMPOSE_FILE,
 } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
@@ -40,6 +39,34 @@ function walletSidecarPath(name: string): string {
 /** Absolute path to the ledger-hash metadata for a snapshot. */
 function metaSidecarPath(name: string): string {
   return path.join(SNAPSHOTS_DIR, `${name}-meta.json`);
+}
+
+/**
+ * Patch the rippled entrypoint line in the existing compose file so it includes
+ * the .restore-hash check, without touching any other settings (debug mode,
+ * custom config paths, ledger interval, image, etc.).
+ *
+ * Replaces only the `entrypoint:` line. If the compose file has no entrypoint
+ * line (older non-persist format) the patch is skipped — the node will start
+ * with --start instead, which is safe for that case.
+ */
+function patchComposeEntrypoint(): void {
+  if (!fs.existsSync(COMPOSE_FILE)) return;
+
+  const RIPPLED_BIN = '/opt/ripple/bin/rippled';
+  const RIPPLED_CFG = '--conf /config/rippled.cfg';
+  const HASH_FILE   = '/var/lib/rippled/db/.restore-hash';
+  const newEntrypoint =
+    `    entrypoint: ["/bin/sh", "-c", ` +
+    `"if [ -f ${HASH_FILE} ]; then HASH=$(cat ${HASH_FILE}); rm -f ${HASH_FILE}; ` +
+    `exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $HASH; ` +
+    `else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`;
+
+  const content = fs.readFileSync(COMPOSE_FILE, 'utf-8');
+  const patched = content.replace(/^\s+entrypoint:.*$/m, newEntrypoint);
+  if (patched !== content) {
+    fs.writeFileSync(COMPOSE_FILE, patched, 'utf-8');
+  }
 }
 
 /** Ensure the snapshots directory exists. */
@@ -236,9 +263,10 @@ export async function snapshotRestore(name: string): Promise<void> {
   }
 
   if (!ledgerHash) {
-    logger.warning(
-      `No ledger hash found for snapshot "${name}" — restore may not work.\n` +
-      `  Re-save the snapshot to capture the hash: xrpl-up snapshot save ${name}`
+    throw new Error(
+      `Snapshot "${name}" has no ledger hash and cannot be restored.\n` +
+      `  This snapshot was saved before hash capture was introduced.\n` +
+      `  Re-save it with the running sandbox: xrpl-up snapshot save ${name}`
     );
   }
 
@@ -290,11 +318,10 @@ export async function snapshotRestore(name: string): Promise<void> {
     if (fs.existsSync(WALLET_STORE_PATH)) fs.unlinkSync(WALLET_STORE_PATH);
   }
 
-  // Regenerate the compose file so the entrypoint includes the .restore-hash
-  // check even if the user's compose was written by an older version of xrpl-up.
-  const image = readComposeImage();
-  const ledgerIntervalMs = readComposeLedgerInterval();
-  writeComposeFile(image, true /* persist */, false, ledgerIntervalMs);
+  // Patch only the entrypoint line in the existing compose file so the
+  // .restore-hash check is present, without disturbing any other settings
+  // (debug mode, custom config paths, ledger interval, etc.).
+  patchComposeEntrypoint();
 
   // Restart rippled first and wait for it to be ready before starting the faucet.
   const startSpinner = ora({ text: chalk.dim('Resuming sandbox…'), prefixText: ' ' }).start();
