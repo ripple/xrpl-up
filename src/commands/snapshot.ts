@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { Client } from 'xrpl';
 import { stopService, startService, waitForPort, LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT } from '../core/compose';
+import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
 
 const VOLUME_NAME = 'xrpl-up-local-db';
@@ -62,17 +63,52 @@ export async function snapshotSave(name: string): Promise<void> {
 
   logger.blank();
 
-  // Force a ledger close so any pending transactions (e.g. initial account
-  // funding) are confirmed before we snapshot the volume.
-  const flushSpinner = ora({ text: chalk.dim('Flushing pending transactions…'), prefixText: ' ' }).start();
+  // Wait until all wallet store accounts are confirmed on-chain before
+  // stopping rippled. With --detach, the faucet funds accounts asynchronously
+  // after node start, so a single ledger_accept is not enough — we poll until
+  // every address in the wallet store responds to account_info.
+  const walletAccounts = new WalletStore('local').all();
+  const flushSpinner = ora({
+    text: chalk.dim(walletAccounts.length > 0
+      ? `Waiting for ${walletAccounts.length} account(s) to confirm on-chain…`
+      : 'Flushing pending transactions…'),
+    prefixText: ' ',
+  }).start();
   try {
     const client = new Client(LOCAL_WS_URL);
     await client.connect();
-    await (client as any).request({ command: 'ledger_accept' });
+
+    const TIMEOUT_MS = 60_000;
+    const POLL_MS    = 500;
+    const deadline   = Date.now() + TIMEOUT_MS;
+    let allConfirmed = false;
+
+    while (Date.now() < deadline) {
+      await (client as any).request({ command: 'ledger_accept' });
+
+      let missing = 0;
+      for (const acct of walletAccounts) {
+        try {
+          await client.request({ command: 'account_info', account: acct.address, ledger_index: 'validated' });
+        } catch {
+          missing++;
+        }
+      }
+
+      if (missing === 0) { allConfirmed = true; break; }
+      flushSpinner.text = chalk.dim(`Waiting for ${missing} account(s) to confirm…`);
+      await new Promise(r => setTimeout(r, POLL_MS));
+    }
+
     await client.disconnect();
-    flushSpinner.succeed(chalk.dim('Ledger flushed'));
+
+    if (allConfirmed) {
+      flushSpinner.succeed(chalk.dim('All accounts confirmed on-chain'));
+    } else {
+      flushSpinner.warn(chalk.yellow('Timed out — some accounts may not be on-chain yet'));
+    }
   } catch {
-    flushSpinner.warn(chalk.dim('Could not flush ledger — continuing anyway'));
+    flushSpinner.warn(chalk.dim('Could not verify accounts — continuing anyway'));
   }
 
   // Stop faucet then rippled to quiesce NuDB file locks before copying.
