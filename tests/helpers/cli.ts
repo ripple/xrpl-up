@@ -31,9 +31,14 @@ function applyNodeOverride(args: string[], override: string): string[] {
 export function runCLI(args: string[], extraEnv: Record<string, string> = {}, timeout = 120_000) {
   const nodeOverride = process.env.XRPL_NODE_OVERRIDE;
   const effectiveArgs = nodeOverride ? applyNodeOverride(args, nodeOverride) : args;
+  // Also override XRPL_NODE env var so tests that pass { XRPL_NODE: "testnet" }
+  // via extraEnv are redirected to the local node in local test runs.
+  const effectiveEnv = nodeOverride
+    ? { ...process.env, PATH: E2E_PATH, ...extraEnv, XRPL_NODE: nodeOverride }
+    : { ...process.env, PATH: E2E_PATH, ...extraEnv };
   return spawnSync(TSX, [CLI, ...effectiveArgs], {
     encoding: "utf-8",
-    env: { ...process.env, PATH: E2E_PATH, ...extraEnv },
+    env: effectiveEnv,
     timeout,
   });
 }
