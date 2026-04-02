@@ -245,10 +245,13 @@ export async function snapshotRestore(name: string): Promise<void> {
   }
 
   // Restart rippled then faucet, and wait for both to be ready
+  // Start rippled first and wait for it to be ready before starting the faucet.
+  // The faucet depends_on rippled being healthy; starting them in parallel would
+  // race the healthcheck gate.
   const startSpinner = ora({ text: chalk.dim('Resuming sandbox…'), prefixText: ' ' }).start();
   startService('rippled');
-  startService('faucet');
   await waitForPort(LOCAL_WS_PORT, 30_000, 'rippled WebSocket');
+  startService('faucet');
   await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
   startSpinner.succeed(chalk.dim('Sandbox resumed'));
 
