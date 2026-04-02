@@ -4,7 +4,7 @@ CLI for XRPL local development and scripting. Spin up a local sandbox with pre-f
 
 ## Prerequisites
 
-- **Node.js** v18 or later
+- **Node.js** v20 or later
 - **Docker** (required for `--local` mode only)
 
 ## Installation
