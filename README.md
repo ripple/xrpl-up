@@ -1022,9 +1022,9 @@ xrpl-up vault --help
 
 ### `xrpl-up amendment`
 
-Inspect and manage XRPL amendments in the local sandbox. The local sandbox starts with a set of amendments baked into its genesis config; use `sync` to pull in anything added to mainnet since the last release.
+Inspect and manage XRPL amendments in the local sandbox. The local sandbox starts with a set of amendments baked into its genesis config; use `enable` to queue additional amendments (takes effect after `xrpl-up reset && xrpl-up node`).
 
-> **Local only for mutations:** `enable`, `disable`, and `sync` use the rippled admin WebSocket and only work with `--local`. `list` and `info` work on any network.
+> **Local only for mutations:** `enable` and `disable` write to the genesis config and only apply to the local sandbox. `list` and `info` work on any network.
 
 #### `xrpl-up amendment list`
 
