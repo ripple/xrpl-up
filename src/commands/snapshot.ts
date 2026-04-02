@@ -105,10 +105,22 @@ export async function snapshotSave(name: string): Promise<void> {
     if (allConfirmed) {
       flushSpinner.succeed(chalk.dim('All accounts confirmed on-chain'));
     } else {
-      flushSpinner.warn(chalk.yellow('Timed out — some accounts may not be on-chain yet'));
+      flushSpinner.fail(chalk.red('Timed out waiting for accounts to confirm on-chain'));
+      await client.disconnect();
+      throw new Error(
+        `Snapshot aborted: ${walletAccounts.length} wallet-store account(s) are not confirmed on the validated ledger.\n` +
+        `  Wait for the faucet to finish funding, then retry:\n` +
+        `  xrpl-up accounts   (all rows must show a live balance, not "(cached)")\n` +
+        `  xrpl-up snapshot save <name>`
+      );
     }
-  } catch {
-    flushSpinner.warn(chalk.dim('Could not verify accounts — continuing anyway'));
+  } catch (err) {
+    if ((err as Error).message?.startsWith('Snapshot aborted')) throw err;
+    flushSpinner.fail(chalk.red('Could not verify accounts — snapshot aborted'));
+    throw new Error(
+      `Snapshot aborted: failed to connect to local rippled at ${LOCAL_WS_URL}.\n` +
+      `  Is the sandbox running?  xrpl-up status`
+    );
   }
 
   // Stop faucet then rippled to quiesce NuDB file locks before copying.
