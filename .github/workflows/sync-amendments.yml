@@ -1,0 +1,125 @@
+name: Sync genesis amendments
+
+# Runs on the 1st of each month. Queries mainnet for newly-enabled amendments,
+# filters to those supported by the pinned rippled Docker image, and opens a PR
+# to append them to the [amendments] genesis list in src/core/compose.ts.
+#
+# Nothing auto-merges — a human reviews the diff and the linked amendment pages
+# before merging.
+
+on:
+  schedule:
+    - cron: '0 9 1 * *'   # 1st of month, 09:00 UTC
+  workflow_dispatch:       # allow manual trigger
+
+concurrency:
+  group: sync-amendments
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Sync genesis amendment list
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Start a local rippled node so we can query which amendments the
+      # pinned Docker image (xrpllabsofficial/xrpld:latest) supports.
+      # The node --local --persist --detach command blocks until rippled
+      # is accepting connections, then exits 0.
+      - name: Start local rippled
+        run: npx tsx src/cli.ts node --local --persist --detach
+        timeout-minutes: 5
+
+      # The faucet container starts after rippled; wait for its health endpoint
+      # before running the script (the script only needs rippled on :6006,
+      # but this confirms the full stack is stable).
+      - name: Wait for stack health
+        run: |
+          timeout 60 bash -c \
+            'until curl -sf http://localhost:3001/health > /dev/null 2>&1; do sleep 2; done'
+
+      # Query mainnet (wss://xrplcluster.com) and local rippled (:6006).
+      # Appends any new amendments to src/core/compose.ts.
+      # Exits 0 regardless of whether changes were made; git diff detects the diff.
+      - name: Update genesis amendment list
+        run: npx tsx scripts/update-genesis-amendments.ts
+        env:
+          MAINNET_WS: wss://xrplcluster.com
+          LOCAL_WS: ws://localhost:6006
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet src/core/compose.ts; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No new amendments — compose.ts is already up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "New amendments found:"
+            git diff src/core/compose.ts
+          fi
+
+      - name: Open pull request
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          BRANCH="chore/sync-amendments-${DATE}"
+
+          # Count newly added amendment hashes (lines starting with 64-char hex)
+          NEW_COUNT=$(git diff src/core/compose.ts \
+            | grep -E '^\+[0-9A-F]{64} ' \
+            | wc -l | tr -d ' ')
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add src/core/compose.ts
+          git commit -m "chore: sync [amendments] genesis list from mainnet (${DATE})"
+          git push --force origin "$BRANCH"
+
+          # Avoid duplicate PRs: check if one is already open for this branch
+          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            echo "PR #${EXISTING} already open for branch ${BRANCH} — skipping creation."
+            exit 0
+          fi
+
+          gh pr create \
+            --title "chore: sync [amendments] genesis list from mainnet (${DATE})" \
+            --base main \
+            --head "$BRANCH" \
+            --body "## Summary
+
+Automated monthly sync of the \`[amendments]\` genesis list in \`src/core/compose.ts\`.
+
+- **Source:** mainnet via \`feature\` RPC (\`wss://xrplcluster.com\`)
+- **Filter:** amendments enabled on mainnet AND supported by \`xrpllabsofficial/xrpld:latest\`
+- **New entries:** ${NEW_COUNT}
+
+Amendments that are enabled on mainnet but _not yet supported_ by the local rippled binary are listed in the workflow log and skipped — they will appear automatically on the next run after the Docker image is upgraded.
+
+## Review checklist
+
+- [ ] Cross-check each new hash against [XRPL Known Amendments](https://xrpl.org/resources/known-amendments) or the rippled changelog
+- [ ] Confirm the amendment name in the diff matches the hash (names in the RPC response can alias; hash is canonical)
+- [ ] Start a fresh local node (\`xrpl-up reset && xrpl-up node\`) and verify \`xrpl-up amendment list\` shows all new amendments as enabled
+- [ ] Run \`npm run test:e2e:local\` to confirm the sandbox starts cleanly with the updated genesis list
+
+> ⚠️ Do not auto-merge. Human review required before this lands in \`main\`."
