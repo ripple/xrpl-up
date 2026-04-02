@@ -258,9 +258,10 @@ export async function snapshotRestore(name: string): Promise<void> {
     );
   }
 
-  // Wipe and restore the volume via alpine sidecar.
-  // After extraction, write the ledger hash to .restore-hash so the rippled
-  // entrypoint can start with --ledger <hash> and load directly from NuDB.
+  // Wipe and restore the volume via alpine sidecar, then write the ledger hash
+  // to .restore-hash. The rippled entrypoint reads this file and starts with
+  // --ledger <hash> to load directly from NuDB (the only resume path in
+  // standalone mode — rippled does not maintain a SQLite ledger index).
   const restoreSpinner = ora({ text: chalk.dim(`Restoring snapshot "${name}"…`), prefixText: ' ' }).start();
   try {
     const hashStep = ledgerHash
@@ -270,7 +271,7 @@ export async function snapshotRestore(name: string): Promise<void> {
       `docker run --rm ` +
       `-v ${VOLUME_NAME}:/data ` +
       `-v "${SNAPSHOTS_DIR}":/snapshots ` +
-      `alpine sh -c "rm -rf /data/* /data/..?* /data/.[!.]* 2>/dev/null; tar xzf /snapshots/${name}.tar.gz -C /data; rm -f /data/*.db-shm${hashStep}"`,
+      `alpine sh -c "rm -rf /data/* /data/..?* /data/.[!.]* 2>/dev/null; tar xzf /snapshots/${name}.tar.gz -C /data${hashStep}"`,
       { stdio: 'ignore' }
     );
     restoreSpinner.succeed(chalk.green(`Snapshot "${name}" restored`));

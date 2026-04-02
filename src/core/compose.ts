@@ -324,23 +324,22 @@ export function writeComposeFile(image = DEFAULT_IMAGE, persist = false, debug =
   // `restart: "no"` prevents Docker from recycling the exited container.
   const restartLine = noRestart ? '\n    restart: "no"' : '';
 
-  // In persist mode rippled must NOT receive --start on restart — that flag
-  // always creates a fresh genesis even when the NuDB volume has data.
+  // rippled standalone mode does not write a SQLite ledger index (only NuDB and
+  // peerfinder.sqlite are created). Starting with "-a" alone always fails with
+  // "Ledger not found". The ONLY way to resume from an existing NuDB snapshot
+  // is "--ledger <hash>".
   //
-  // rippled standalone mode does not write a SQLite ledger index, so we cannot
-  // use "-a" alone to resume from NuDB (rippled queries SQLite and finds nothing).
-  // Instead, snapshot restore writes the last validated ledger hash to a sentinel
-  // file in the volume. The entrypoint reads it and passes "--ledger <hash>" so
-  // rippled can find the ledger directly in NuDB. The file is kept so that Docker
-  // crash-restarts also resume from the same ledger.
-  const RIPPLED_BIN = '/opt/ripple/bin/rippled';
-  const RIPPLED_CFG = '--conf /config/rippled.cfg';
-  const NUDB_DIR    = '/var/lib/rippled/db/nudb';
-  const HASH_FILE   = '/var/lib/rippled/db/.restore-hash';
+  // Strategy:
+  //   - snapshot restore writes the validated ledger hash to .restore-hash
+  //   - entrypoint reads it and passes --ledger <hash>, then deletes the file
+  //   - if no hash file (first boot or after reset): use --start for genesis
+  const RIPPLED_BIN  = '/opt/ripple/bin/rippled';
+  const RIPPLED_CFG  = '--conf /config/rippled.cfg';
+  const HASH_FILE    = '/var/lib/rippled/db/.restore-hash';
   const entrypointLine = noRestart
     ? `\n    entrypoint: ["/bin/sh", "-c", "${RIPPLED_BIN} ${RIPPLED_CFG} -a --start 2>/tmp/rip.err & RPID=$! ; wait $RPID ; EC=$? ; cat /tmp/rip.err >&2 ; grep -qF Logic\\ error: /tmp/rip.err 2>/dev/null && exit 134 ; exit $EC"]`
     : persist
-      ? `\n    entrypoint: ["/bin/sh", "-c", "if [ -f ${HASH_FILE} ]; then exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $(cat ${HASH_FILE}); elif [ -d ${NUDB_DIR} ] && ls ${NUDB_DIR}/ | grep -q .; then exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a; else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`
+      ? `\n    entrypoint: ["/bin/sh", "-c", "if [ -f ${HASH_FILE} ]; then HASH=$(cat ${HASH_FILE}); rm -f ${HASH_FILE}; exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $HASH; else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`
       : '';
   const commandLine = (noRestart || persist)
     ? ''  // entrypoint already contains the full rippled invocation
