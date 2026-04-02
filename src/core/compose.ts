@@ -403,15 +403,16 @@ export function stopService(service: string): void {
 
 /** Start a previously stopped service.
  *
- * Uses `up -d` (not `start`) so Docker re-reads the current compose file and
- * recreates the container if its configuration has changed (e.g. entrypoint
- * updated after a code upgrade). This ensures the persist-mode smart
- * entrypoint is always used even when the container was created by an older
- * version of xrpl-up.
+ * Uses `up --force-recreate -d` so Docker always recreates the container from
+ * the current compose file. This guarantees the persist-mode smart entrypoint
+ * is applied on every restart — even if the container was created by an older
+ * version of xrpl-up that hardcoded `--start`.
+ *
+ * Named volumes are never touched by --force-recreate so ledger data is safe.
  */
 export function startService(service: string): void {
   execSync(
-    `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d ${service}`,
+    `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up --force-recreate -d ${service}`,
     { stdio: 'ignore' }
   );
 }
