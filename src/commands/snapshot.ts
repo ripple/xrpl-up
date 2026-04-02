@@ -46,12 +46,16 @@ function metaSidecarPath(name: string): string {
  * the .restore-hash check, without touching any other settings (debug mode,
  * custom config paths, ledger interval, image, etc.).
  *
- * Replaces only the `entrypoint:` line. If the compose file has no entrypoint
- * line (older non-persist format) the patch is skipped — the node will start
- * with --start instead, which is safe for that case.
+ * Throws if the compose file is missing or has no entrypoint line — restore
+ * cannot proceed without a working entrypoint that reads .restore-hash.
  */
 function patchComposeEntrypoint(): void {
-  if (!fs.existsSync(COMPOSE_FILE)) return;
+  if (!fs.existsSync(COMPOSE_FILE)) {
+    throw new Error(
+      `Compose file not found at ${COMPOSE_FILE}.\n` +
+      `  Start the sandbox first: xrpl-up node --local --persist --detach`
+    );
+  }
 
   const RIPPLED_BIN = '/opt/ripple/bin/rippled';
   const RIPPLED_CFG = '--conf /config/rippled.cfg';
@@ -64,9 +68,14 @@ function patchComposeEntrypoint(): void {
 
   const content = fs.readFileSync(COMPOSE_FILE, 'utf-8');
   const patched = content.replace(/^\s+entrypoint:.*$/m, newEntrypoint);
-  if (patched !== content) {
-    fs.writeFileSync(COMPOSE_FILE, patched, 'utf-8');
+  if (patched === content) {
+    throw new Error(
+      `Could not patch compose entrypoint — no entrypoint line found.\n` +
+      `  The sandbox was not started with --persist. Restart with:\n` +
+      `  xrpl-up node --local --persist --detach`
+    );
   }
+  fs.writeFileSync(COMPOSE_FILE, patched, 'utf-8');
 }
 
 /** Ensure the snapshots directory exists. */
@@ -94,7 +103,11 @@ export async function snapshotSave(name: string): Promise<void> {
 
   if (fs.existsSync(dest)) {
     logger.warning(`Snapshot "${name}" already exists — overwriting.`);
-    fs.unlinkSync(dest);
+    // Remove all artifacts atomically so a partial save cannot leave a new
+    // tarball paired with stale metadata or account sidecar from the old save.
+    for (const f of [dest, walletSidecarPath(name), metaSidecarPath(name)]) {
+      if (fs.existsSync(f)) fs.unlinkSync(f);
+    }
   }
 
   logger.blank();
