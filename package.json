@@ -16,8 +16,7 @@
     "sandbox"
   ],
   "bin": {
-    "xrpl-up": "./dist/cli.js",
-    "xrpl": "./dist/cli/index.js"
+    "xrpl-up": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -26,7 +25,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "postbuild": "cp src/faucet-server/package.json dist/faucet-server/package.json && cp src/faucet-server/Dockerfile dist/faucet-server/Dockerfile && chmod +x dist/cli.js dist/cli/index.js",
+    "postbuild": "cp src/faucet-server/package.json dist/faucet-server/package.json && cp src/faucet-server/Dockerfile dist/faucet-server/Dockerfile && chmod +x dist/cli.js",
     "dev": "tsx src/cli.ts",
     "clean": "rm -rf dist",
     "prepare": "npm run build",

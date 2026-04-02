@@ -3,7 +3,7 @@ import { resolve } from "path";
 import { dirname } from "path";
 import { delimiter } from "path";
 
-const CLI = resolve(process.cwd(), "src/cli/index.ts");
+const CLI = resolve(process.cwd(), "src/cli.ts");
 const TSX = resolve(process.cwd(), "node_modules/.bin/tsx");
 
 /**
