@@ -32,20 +32,47 @@ import {
 
 import { logger } from './utils/logger';
 
+// ── XRPL interaction commands ─────────────────────────────────────────────────
+import { walletCommand } from './cli/commands/wallet/index';
+import { accountCommand } from './cli/commands/account/index';
+import { paymentCommand } from './cli/commands/payment';
+import { trustCommand } from './cli/commands/trust';
+import { credentialCommand } from './cli/commands/credential';
+import { didCommand } from './cli/commands/did';
+import { multisigCommand } from './cli/commands/multisig';
+import { oracleCommand } from './cli/commands/oracle';
+import { mptokenCommand } from './cli/commands/mptoken';
+import { depositPreauthCommand as depositPreauthCliCommand } from './cli/commands/deposit-preauth';
+import { permissionedDomainCommand } from './cli/commands/permissioned-domain';
+import { vaultCommand } from './cli/commands/vault';
+import { ammCommand } from './cli/commands/amm';
+import { nftCommand } from './cli/commands/nft';
+import { channelCommand } from './cli/commands/channel';
+import { offerCommand } from './cli/commands/offer';
+import { escrowCommand } from './cli/commands/escrow';
+import { checkCommand } from './cli/commands/check';
+import { ticketCommand } from './cli/commands/ticket';
+import { clawbackCommand } from './cli/commands/clawback';
+
 const pkg = require('../package.json') as { version: string };
 const program = new Command();
 
 program
   .name('xrpl-up')
   .description('XRPL sandbox for local development')
-  .version(pkg.version, '-v, --version');
+  .version(pkg.version, '-v, --version')
+  .option(
+    '-n, --node <url>',
+    'XRPL node URL or network name (local|testnet|devnet|mainnet)',
+    process.env.XRPL_NODE ?? 'local'
+  );
 
 // ── node ─────────────────────────────────────────────────────────────────────
 program
   .command('node')
   .description('Start an XRPL sandbox with pre-funded accounts')
   .option(
-    '-n, --network <network>',
+    '--network <network>',
     'Network to connect to (testnet | devnet)',
     'testnet'
   )
@@ -160,7 +187,7 @@ program
 program
   .command('accounts')
   .description('List sandbox accounts and their live XRP balances')
-  .option('-n, --network <network>', 'Network', 'testnet')
+  .option('--network <network>', 'Network', 'testnet')
   .option('--local', 'Show accounts for the local Docker sandbox')
   .option('--address <address>', 'Query a specific address directly (bypasses wallet store)')
   .action((opts: { network: string; local?: boolean; address?: string }) => {
@@ -171,7 +198,7 @@ program
 program
   .command('faucet')
   .description('Fund an account using the faucet')
-  .option('-n, --network <network>', 'Network: local | testnet | devnet', 'testnet')
+  .option('--network <network>', 'Network: local | testnet | devnet', 'testnet')
   .option('--local', '[deprecated] Alias for --network local')
   .option('-s, --seed <seed>', 'Wallet seed to fund (omit to generate a new wallet)')
   .action((opts: { network: string; local?: boolean; seed?: string }) => {
@@ -183,7 +210,7 @@ program
 program
   .command('run <script> [scriptArgs...]')
   .description('Run a TypeScript/JavaScript script against an XRPL network')
-  .option('-n, --network <network>', 'Network: local | testnet | devnet | mainnet', 'testnet')
+  .option('--network <network>', 'Network: local | testnet | devnet | mainnet', 'testnet')
   .option('--local', 'Alias for --network local')
   .action((script: string, scriptArgs: string[], opts: { network: string; local?: boolean }) => {
     const network = opts.local ? 'local' : opts.network;
@@ -202,10 +229,10 @@ program
 program
   .command('status')
   .description('Show rippled server info and faucet health (defaults to local sandbox)')
-  .option('-n, --network <network>', 'Remote network to query: testnet | devnet | mainnet')
+  .option('--network <network>', 'Remote network to query: testnet | devnet | mainnet')
   .option('--local', 'Show status for the local Docker sandbox')
   .action((opts: { network?: string; local?: boolean }) => {
-    const local = opts.local ?? !opts.network;   // default to local when no --network given
+    const local = opts.local ?? !opts.network;
     statusCommand({ network: opts.network, local }).catch(handleError);
   });
 
@@ -291,7 +318,7 @@ amendment
   .command('list')
   .description('List all amendments and their status')
   .option('--local', 'Use the local Docker sandbox')
-  .option('-n, --network <network>', 'Network to query', 'testnet')
+  .option('--network <network>', 'Network to query', 'testnet')
   .option('--diff <network>', 'Compare against another network (e.g. --diff mainnet)')
   .option('--disabled', 'Show only disabled amendments')
   .action((opts: { local?: boolean; network: string; diff?: string; disabled?: boolean }) => {
@@ -303,7 +330,7 @@ amendment
   .command('info <nameOrHash>')
   .description('Show details for a single amendment (look up by name or hash prefix)')
   .option('--local', 'Use the local Docker sandbox')
-  .option('-n, --network <network>', 'Network to query', 'testnet')
+  .option('--network <network>', 'Network to query', 'testnet')
   .action((nameOrHash: string, opts: { local?: boolean; network: string }) => {
     amendmentInfoCommand(nameOrHash, { local: opts.local, network: opts.network })
       .catch(handleError);
@@ -329,6 +356,27 @@ amendment
       .catch(handleError);
   });
 
+// ── XRPL interaction commands ──────────────────────────────────────────────────
+program.addCommand(walletCommand);
+program.addCommand(accountCommand);
+program.addCommand(paymentCommand);
+program.addCommand(trustCommand);
+program.addCommand(credentialCommand);
+program.addCommand(didCommand);
+program.addCommand(multisigCommand);
+program.addCommand(oracleCommand);
+program.addCommand(mptokenCommand);
+program.addCommand(depositPreauthCliCommand);
+program.addCommand(permissionedDomainCommand);
+program.addCommand(vaultCommand);
+program.addCommand(ammCommand);
+program.addCommand(nftCommand);
+program.addCommand(channelCommand);
+program.addCommand(offerCommand);
+program.addCommand(escrowCommand);
+program.addCommand(checkCommand);
+program.addCommand(ticketCommand);
+program.addCommand(clawbackCommand);
 
 /* ── Error handling ─────────────────────────────────────────────────────────── */
 function handleError(err: unknown): void {
