@@ -25,12 +25,6 @@ import { composeDown } from './core/compose';
 import { snapshotSave, snapshotRestore, snapshotList } from './commands/snapshot';
 import { configExport, configValidate } from './commands/config';
 import { resetCommand } from './commands/reset';
-import { channelCommand } from './cli/commands/channel';
-import { offerCommand } from './cli/commands/offer';
-import { escrowCommand } from './cli/commands/escrow';
-import { checkCommand } from './cli/commands/check';
-import { ticketCommand } from './cli/commands/ticket';
-import { clawbackCommand } from './cli/commands/clawback';
 import {
   amendmentListCommand, amendmentInfoCommand,
   amendmentEnableCommand, amendmentDisableCommand,
@@ -38,33 +32,13 @@ import {
 
 import { logger } from './utils/logger';
 
-// ── xrpl-cli commands (merged from xrpl-cli) ──────────────────────────────────
-import { walletCommand } from './cli/commands/wallet/index';
-import { accountCommand } from './cli/commands/account/index';
-import { paymentCommand } from './cli/commands/payment';
-import { trustCommand } from './cli/commands/trust';
-import { credentialCommand } from './cli/commands/credential';
-import { didCommand } from './cli/commands/did';
-import { multisigCommand } from './cli/commands/multisig';
-import { oracleCommand } from './cli/commands/oracle';
-import { mptokenCommand } from './cli/commands/mptoken';
-import { depositPreauthCommand as depositPreauthCliCommand } from './cli/commands/deposit-preauth';
-import { permissionedDomainCommand } from './cli/commands/permissioned-domain';
-import { vaultCommand } from './cli/commands/vault';
-import { ammCommand } from './cli/commands/amm';
-
 const pkg = require('../package.json') as { version: string };
 const program = new Command();
 
 program
   .name('xrpl-up')
   .description('XRPL sandbox for local development')
-  .version(pkg.version, '-v, --version')
-  .option(
-    '--node <url>',
-    'XRPL node URL or network name (mainnet|testnet|devnet) — used by wallet/account/payment commands',
-    process.env.XRPL_NODE ?? 'testnet'
-  );
+  .version(pkg.version, '-v, --version');
 
 // ── node ─────────────────────────────────────────────────────────────────────
 program
@@ -355,27 +329,6 @@ amendment
       .catch(handleError);
   });
 
-
-// ── XRPL interaction commands ──────────────────────────────────────────────────
-program.addCommand(walletCommand);
-program.addCommand(accountCommand);
-program.addCommand(paymentCommand);
-program.addCommand(trustCommand);
-program.addCommand(credentialCommand);
-program.addCommand(didCommand);
-program.addCommand(multisigCommand);
-program.addCommand(oracleCommand);
-program.addCommand(mptokenCommand);
-program.addCommand(depositPreauthCliCommand);
-program.addCommand(permissionedDomainCommand);
-program.addCommand(vaultCommand);
-program.addCommand(ammCommand);
-program.addCommand(channelCommand);
-program.addCommand(offerCommand);
-program.addCommand(escrowCommand);
-program.addCommand(checkCommand);
-program.addCommand(ticketCommand);
-program.addCommand(clawbackCommand);
 
 /* ── Error handling ─────────────────────────────────────────────────────────── */
 function handleError(err: unknown): void {
