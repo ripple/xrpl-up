@@ -19,17 +19,13 @@ export default defineConfig({
     // Patch Date.now() to account for standalone rippled startup ledger drift.
     // See tests/setup/patch-clock.ts for details.
     setupFiles: ["tests/setup/patch-clock.ts"],
-    // Local node is much faster than testnet
+    // Standalone mode: fast, instant ledger close
     testTimeout: 10_000,
     hookTimeout: 30_000,
     maxConcurrency: 10,
     pool: "forks",
     poolOptions: {
       forks: {
-        // Keep to 1 fork so test-file beforeAll hooks (fundMaster) are never
-        // concurrent. The local faucet uses a single genesis account; two
-        // simultaneous faucet calls collide on the same sequence number,
-        // causing one payment to fail silently.
         minForks: 1,
         maxForks: 4,
       },

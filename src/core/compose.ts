@@ -16,6 +16,17 @@ const COMPOSE_FILE = path.join(XRPL_UP_DIR, 'docker-compose.yml');
 
 export { COMPOSE_FILE };
 
+// ── Hardcoded validator keys for local 2-node consensus (dev-only) ───────────
+// These are NOT secret — they're for local sandbox use only, just like the
+// genesis account seed snoPBrXtMeMyMHUVTgbuqAfg1SUTb.
+const VALIDATOR_1_SEED   = 'ssUi9ifdKYGKs16Auvjv8UKcqDwMz';
+const VALIDATOR_1_PUBKEY = 'n9K1v5WwXvBCDL2CKFFGUkMEFuHcjzgwCm19hQ5sMkTKMkLqbnVP';
+const VALIDATOR_2_SEED   = 'ss5xTzsXe9gFPjYFnvkko4EUqzHs1';
+const VALIDATOR_2_PUBKEY = 'n94BNfvffQG4Q1VWbRVGmjsgQoKrPqmDZSUFBJyqQ6ieZcco2yeX';
+
+export const VOLUME_NAME      = 'xrpl-up-local-db';
+export const PEER_VOLUME_NAME = 'xrpl-up-local-peer-db';
+
 /** Throws if Docker daemon is not running or not installed. */
 export function checkDockerAvailable(): void {
   try {
@@ -47,8 +58,10 @@ function getFaucetBuildContext(): string {
   return fromDist;
 }
 
-const RIPPLED_CFG_FILE = path.join(XRPL_UP_DIR, 'rippled.cfg');
-const VALIDATORS_CFG_FILE = path.join(XRPL_UP_DIR, 'validators.txt');
+const RIPPLED_CFG_FILE       = path.join(XRPL_UP_DIR, 'rippled.cfg');
+const RIPPLED_CFG_FILE_NODE1 = path.join(XRPL_UP_DIR, 'rippled-node1.cfg');
+const RIPPLED_CFG_FILE_NODE2 = path.join(XRPL_UP_DIR, 'rippled-node2.cfg');
+const VALIDATORS_CFG_FILE    = path.join(XRPL_UP_DIR, 'validators.txt');
 /** Extra amendments written by `amendment enable --local`; merged at genesis. */
 export const EXTRA_AMENDMENTS_FILE = path.join(XRPL_UP_DIR, 'genesis-amendments.txt');
 export { RIPPLED_CFG_FILE };
@@ -224,61 +237,119 @@ B4E4F5D2D6FB84DF7399960A732309C9FD530EAE5941838160042833625A6076 NegativeUNL
 }
 
 /**
- * Write a minimal standalone rippled.cfg that exposes the WebSocket admin port
- * on 0.0.0.0 so the faucet container can reach it via host.docker.internal.
- * Also writes a companion validators.txt required by the [amendments] section.
+ * Generate a consensus-mode config for one of the two private-network nodes.
+ * Takes the base config and appends [validation_seed] + [ips_fixed].
  */
-export function writeRippledConfig(debug = false): void {
+function generateConsensusNodeConfig(nodeIndex: 1 | 2, debug = false): string {
+  const base = generateRippledConfig(debug);
+  const seed      = nodeIndex === 1 ? VALIDATOR_1_SEED   : VALIDATOR_2_SEED;
+  const peerName  = nodeIndex === 1 ? 'rippled-peer'     : 'rippled';
+  return base + `
+
+[validation_seed]
+${seed}
+
+[ips_fixed]
+${peerName} 51235`;
+}
+
+/**
+ * Merge extra amendments from genesis-amendments.txt into a config string.
+ */
+function mergeExtraAmendments(cfg: string): string {
+  if (!fs.existsSync(EXTRA_AMENDMENTS_FILE)) return cfg;
+  const extra = fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8').trim();
+  if (!extra) return cfg;
+  const merged = cfg.replace('# sync:end', extra + '\n# sync:end');
+  if (merged === cfg) {
+    throw new Error(
+      'writeRippledConfig: "# sync:end" sentinel not found in generated config — ' +
+      'extra amendments could not be merged. Check the generateRippledConfig template.'
+    );
+  }
+  return merged;
+}
+
+/**
+ * Write rippled config(s) and validators.txt to ~/.xrpl-up/.
+ *
+ * In consensus mode (default): writes rippled-node1.cfg + rippled-node2.cfg
+ * with validator seeds and mutual [ips_fixed] references.
+ *
+ * In standalone mode (default): writes a single rippled.cfg.
+ */
+export function writeRippledConfig(debug = false, noConsensus = false): void {
   if (!fs.existsSync(XRPL_UP_DIR)) {
     fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
   }
-  let cfg = generateRippledConfig(debug);
 
-  // Merge any amendments added via `xrpl-up amendment enable --local`
-  if (fs.existsSync(EXTRA_AMENDMENTS_FILE)) {
-    const extra = fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8').trim();
-    if (extra) {
-      const merged = cfg.replace('# sync:end', extra + '\n# sync:end');
-      if (merged === cfg) {
-        throw new Error(
-          'writeRippledConfig: "# sync:end" sentinel not found in generated config — ' +
-          'extra amendments could not be merged. Check the generateRippledConfig template.'
-        );
-      }
-      cfg = merged;
+  if (noConsensus) {
+    // Standalone mode: single config, no validator keys
+    const cfg = mergeExtraAmendments(generateRippledConfig(debug));
+    fs.writeFileSync(RIPPLED_CFG_FILE, cfg, 'utf-8');
+    // Standalone mode needs a validators.txt for the [amendments] section
+    if (!fs.existsSync(VALIDATORS_CFG_FILE)) {
+      fs.writeFileSync(VALIDATORS_CFG_FILE, '[validators]\n', 'utf-8');
     }
-  }
-
-  fs.writeFileSync(RIPPLED_CFG_FILE, cfg, 'utf-8');
-  // The [amendments] section in rippled.cfg requires a validators_file with a
-  // [validators] section (even empty). Write a minimal one alongside rippled.cfg.
-  if (!fs.existsSync(VALIDATORS_CFG_FILE)) {
-    fs.writeFileSync(VALIDATORS_CFG_FILE, '[validators]\n', 'utf-8');
+  } else {
+    // Consensus mode: two configs with validator keys + ips_fixed
+    for (const idx of [1, 2] as const) {
+      const cfg = mergeExtraAmendments(generateConsensusNodeConfig(idx, debug));
+      const target = idx === 1 ? RIPPLED_CFG_FILE_NODE1 : RIPPLED_CFG_FILE_NODE2;
+      fs.writeFileSync(target, cfg, 'utf-8');
+    }
+    // Validators.txt with both public keys (shared by both nodes)
+    fs.writeFileSync(
+      VALIDATORS_CFG_FILE,
+      `[validators]\n    ${VALIDATOR_1_PUBKEY}\n    ${VALIDATOR_2_PUBKEY}\n`,
+      'utf-8',
+    );
   }
 }
 
 /**
  * Generate and write docker-compose.yml to ~/.xrpl-up/.
- * @param configPath - optional path to a custom rippled.cfg; if omitted, the
- *   default config is auto-generated and written to RIPPLED_CFG_FILE.
+ *
+ * Default (noConsensus=true): single rippled with -a --start, no
+ * persistence, instant ledger_accept.
+ *
+ * With --local-network (noConsensus=false): 2-node private consensus network
+ * with persistent volumes, SQLite index, and automatic ledger close (~4s).
+ *
+ * @param configPath - optional path to a custom rippled.cfg; implies
+ *   standalone mode (custom configs can't carry validator seeds).
  */
-export function writeComposeFile(image = DEFAULT_IMAGE, persist = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false): string {
+export function writeComposeFile(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false): string {
   if (!fs.existsSync(XRPL_UP_DIR)) {
     fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
   }
 
-  // Use custom config if provided, otherwise auto-generate the default
-  const resolvedConfigPath = configPath
-    ? path.resolve(configPath)
-    : RIPPLED_CFG_FILE;
+  // Custom config always forces standalone mode
+  if (configPath) noConsensus = true;
 
-  if (!configPath) {
-    writeRippledConfig(debug);
-  }
+  // Only force linux/amd64 on ARM hosts (e.g. Apple Silicon) where the
+  // official xrpld image ships amd64-only and needs Rosetta 2 emulation.
+  const platformLine = os.arch() === 'arm64' ? '\n    platform: linux/amd64' : '';
+  const faucetContext = getFaucetBuildContext();
 
-  // Determine validators.txt to mount alongside the rippled.cfg.
-  // For auto-generated configs, use the companion file in ~/.xrpl-up/.
-  // For custom configs, look for validators.txt next to the config file.
+  const yaml = noConsensus
+    ? generateStandaloneYaml(image, debug, ledgerIntervalMs, configPath, noRestart, platformLine, faucetContext)
+    : generateConsensusYaml(image, debug, ledgerIntervalMs, platformLine, faucetContext);
+
+  fs.writeFileSync(COMPOSE_FILE, yaml, 'utf-8');
+  return COMPOSE_FILE;
+}
+
+// ── Standalone YAML (default) ────────────────────────────────────────────────
+
+function generateStandaloneYaml(
+  image: string, debug: boolean, ledgerIntervalMs: number,
+  configPath: string | undefined, noRestart: boolean,
+  platformLine: string, faucetContext: string,
+): string {
+  const resolvedConfigPath = configPath ? path.resolve(configPath) : RIPPLED_CFG_FILE;
+  if (!configPath) writeRippledConfig(debug, true);
+
   const customValidatorsPath = configPath
     ? path.join(path.dirname(path.resolve(configPath)), 'validators.txt')
     : null;
@@ -287,66 +358,17 @@ export function writeComposeFile(image = DEFAULT_IMAGE, persist = false, debug =
       ? customValidatorsPath
       : VALIDATORS_CFG_FILE;
 
-  const faucetContext = getFaucetBuildContext();
-
-  // In persist mode, mount a named volume for the NuDB database so ledger
-  // state survives container restarts. In ephemeral mode, no volume is declared
-  // and the database lives only in the container's writable layer.
-  const dbVolume = persist
-    ? `      - rippled-db:/var/lib/rippled/db`
-    : '';
-  const volumesSection = persist
-    ? `\nvolumes:\n  rippled-db:\n    name: xrpl-up-local-db`
-    : '';
-
-  // Only force linux/amd64 on ARM hosts (e.g. Apple Silicon) where the
-  // official xrpld image ships amd64-only and needs Rosetta 2 emulation.
-  // On native x86_64 hosts the field is unnecessary and omitted.
-  const platformLine = os.arch() === 'arm64' ? '\n    platform: linux/amd64' : '';
-
-  // In --exit-on-crash mode we need the container to exit with code 134
-  // (SIGABRT) when rippled crashes.
-  //
-  // Root-cause chain:
-  //   1. The stock entrypoint uses `exec rippled`, making rippled PID 1.
-  //      Linux silently drops unhandled signals for PID 1, so std::abort()
-  //      logs the "Logic error:" but the process keeps running.
-  //   2. Overriding the entrypoint with a /bin/sh wrapper (no exec) makes
-  //      rippled a non-PID-1 child, so signals are delivered.  But the
-  //      release build of rippled 3.1.1 appears to exit 0 after abort()
-  //      rather than terminating via SIGABRT (possibly an atexit handler
-  //      or a custom terminate handler that calls exit(0)).
-  //
-  // Fix: the shell wrapper redirects rippled's stderr to /tmp/rip.err, then
-  // after rippled exits checks that file for "Logic error:".  If found it
-  // flushes stderr to docker logs and exits 134.  This gives `docker wait`
-  // the correct exit code regardless of how rippled's abort() manifests.
-  // `restart: "no"` prevents Docker from recycling the exited container.
   const restartLine = noRestart ? '\n    restart: "no"' : '';
 
-  // rippled standalone mode does not write a SQLite ledger index (only NuDB and
-  // peerfinder.sqlite are created). Starting with "-a" alone always fails with
-  // "Ledger not found". The ONLY way to resume from an existing NuDB snapshot
-  // is "--ledger <hash>".
-  //
-  // Strategy:
-  //   - snapshot restore writes the validated ledger hash to .restore-hash
-  //   - entrypoint reads it and passes --ledger <hash>, then deletes the file
-  //   - if no hash file (first boot or after reset): use --start for genesis
-  const RIPPLED_BIN  = '/opt/ripple/bin/rippled';
-  const RIPPLED_CFG  = '--conf /config/rippled.cfg';
-  const HASH_FILE    = '/var/lib/rippled/db/.restore-hash';
+  const RIPPLED_BIN = '/opt/ripple/bin/rippled';
+  const RIPPLED_CFG = '--conf /config/rippled.cfg';
   const entrypointLine = noRestart
     ? `\n    entrypoint: ["/bin/sh", "-c", "${RIPPLED_BIN} ${RIPPLED_CFG} -a --start 2>/tmp/rip.err & RPID=$! ; wait $RPID ; EC=$? ; cat /tmp/rip.err >&2 ; grep -qF Logic\\ error: /tmp/rip.err 2>/dev/null && exit 134 ; exit $EC"]`
-    : persist
-      ? `\n    entrypoint: ["/bin/sh", "-c", "if [ -f ${HASH_FILE} ]; then exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $$(cat ${HASH_FILE}); else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`
-      : '';
-  const commandLine = (noRestart || persist)
-    ? ''  // entrypoint already contains the full rippled invocation
-    : '\n    command: ["-a", "--start"]';
+    : '';
+  const commandLine = noRestart ? '' : '\n    command: ["-a", "--start"]';
 
-  const yaml = `# Generated by xrpl-up — do not edit manually
-# Regenerated on every 'xrpl-up node --local' run
+  return `# Generated by xrpl-up — do not edit manually
+# Standalone mode (default): no persistence, instant ledger_accept
 
 name: ${COMPOSE_PROJECT}
 
@@ -358,7 +380,6 @@ services:
     volumes:
       - "${resolvedConfigPath}:/config/rippled.cfg:ro"
       - "${resolvedValidatorsPath}:/config/validators.txt:ro"
-${dbVolume}
     networks:
       - xrpl-net
     healthcheck:
@@ -390,11 +411,98 @@ ${dbVolume}
 networks:
   xrpl-net:
     driver: bridge
-${volumesSection}
 `;
+}
 
-  fs.writeFileSync(COMPOSE_FILE, yaml, 'utf-8');
-  return COMPOSE_FILE;
+// ── Consensus YAML (default 2-node network) ──────────────────────────────────
+
+function generateConsensusYaml(
+  image: string, debug: boolean, ledgerIntervalMs: number,
+  platformLine: string, faucetContext: string,
+): string {
+  writeRippledConfig(debug, false);
+
+  // Node1 (primary): creates genesis with --start on first boot, --load on resume.
+  // Node2 (peer): syncs from node1 on first boot (no flags), --load on resume.
+  // Uses the image's native /entrypoint.sh which copies configs and runs rippled.
+  const entrypointPrimary =
+    `["/bin/bash", "-c", "if [ -f /var/lib/rippled/db/ledger.db ]; then exec /entrypoint.sh --load; else exec /entrypoint.sh --start; fi"]`;
+  const entrypointPeer =
+    `["/bin/bash", "-c", "if [ -f /var/lib/rippled/db/ledger.db ]; then exec /entrypoint.sh --load; else exec /entrypoint.sh; fi"]`;
+
+  return `# Generated by xrpl-up — do not edit manually
+# 2-node private consensus network (default mode)
+# Ledger state persists across restarts. Snapshots are supported.
+
+name: ${COMPOSE_PROJECT}
+
+services:
+  rippled:
+    image: ${image}${platformLine}
+    entrypoint: ${entrypointPrimary}
+    ports:
+      - "${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
+    volumes:
+      - "${RIPPLED_CFG_FILE_NODE1}:/config/rippled.cfg:ro"
+      - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
+      - rippled-db:/var/lib/rippled/db
+    networks:
+      - xrpl-net
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/${LOCAL_WS_PORT}"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 10s
+
+  rippled-peer:
+    image: ${image}${platformLine}
+    entrypoint: ${entrypointPeer}
+    volumes:
+      - "${RIPPLED_CFG_FILE_NODE2}:/config/rippled.cfg:ro"
+      - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
+      - rippled-peer-db:/var/lib/rippled/db
+    networks:
+      - xrpl-net
+    depends_on:
+      rippled:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/${LOCAL_WS_PORT}"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 10s
+
+  faucet:
+    build:
+      context: ${faucetContext}
+      dockerfile: Dockerfile
+    environment:
+      - RIPPLED_WS_URL=ws://host.docker.internal:${LOCAL_WS_PORT}
+      - FAUCET_PORT=${FAUCET_PORT}
+      - FUND_AMOUNT_XRP=1000
+      - LEDGER_INTERVAL_MS=${ledgerIntervalMs}
+    ports:
+      - "${FAUCET_PORT}:${FAUCET_PORT}"
+    networks:
+      - xrpl-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      rippled:
+        condition: service_healthy
+
+networks:
+  xrpl-net:
+    driver: bridge
+
+volumes:
+  rippled-db:
+    name: ${VOLUME_NAME}
+  rippled-peer-db:
+    name: ${PEER_VOLUME_NAME}
+`;
 }
 
 /** Read the rippled image from the current compose file (for use in restore). */
@@ -453,25 +561,72 @@ export function composeDown(): void {
 
 /**
  * Start the compose stack (`docker compose up --build -d`),
- * wait for both ports to be reachable, and return the WebSocket URL.
+ * wait for ports and (in consensus mode) for the first validated ledger.
  *
- * When `persist` is true, the rippled NuDB volume is preserved across restarts.
- * When false (default), containers are torn down clean before starting.
+ * Default (noConsensus=true): standalone rippled, torn down clean each start.
+ * With --local-network (noConsensus=false): 2-node consensus network. Volumes preserved.
  */
-export async function composeUp(image = DEFAULT_IMAGE, persist = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false): Promise<string> {
-  writeComposeFile(image, persist, debug, ledgerIntervalMs, configPath, noRestart);
-  if (!persist) composeDown(); // clean slate only in ephemeral mode
+export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false): Promise<string> {
+  writeComposeFile(image, noConsensus, debug, ledgerIntervalMs, configPath, noRestart);
+  if (noConsensus) composeDown(); // clean slate only in standalone mode
 
   execSync(
     `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up --build -d`,
     { stdio: 'ignore' }
   );
 
-  // Wait for rippled WebSocket port then faucet HTTP port
+  // Wait for rippled WebSocket port
   await waitForPort(LOCAL_WS_PORT, 30_000, 'rippled WebSocket');
+
+  // In consensus mode, wait for the network to reach validated state.
+  // This takes ~20-30s on first boot, ~10-15s on restart with --load.
+  if (!noConsensus) {
+    await waitForConsensus(60_000);
+  }
+
   await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
 
   return LOCAL_WS_URL;
+}
+
+/**
+ * Returns true if the current compose file describes a 2-node consensus
+ * network (has a rippled-peer service). False for standalone mode.
+ */
+export function isConsensusMode(): boolean {
+  try {
+    const content = fs.readFileSync(COMPOSE_FILE, 'utf-8');
+    return content.includes('rippled-peer:');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Poll rippled server_info until a validated ledger exists, indicating the
+ * 2-node consensus network has started closing ledgers.
+ */
+async function waitForConsensus(timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  const { Client } = await import('xrpl');
+
+  while (Date.now() < deadline) {
+    try {
+      const client = new Client(LOCAL_WS_URL, { timeout: 60_000 });
+      await client.connect();
+      const res = await client.request({ command: 'server_info' } as any);
+      const seq = (res.result as any)?.info?.validated_ledger?.seq ?? 0;
+      await client.disconnect();
+      if (seq > 0) return;
+    } catch {
+      // not ready yet
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error(
+    `Consensus network did not produce a validated ledger within ${timeoutMs / 1000}s.\n` +
+    `  Check: docker compose -p ${COMPOSE_PROJECT} logs rippled`
+  );
 }
 
 /**

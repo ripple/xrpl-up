@@ -4,11 +4,10 @@ import path from 'node:path';
 import os from 'node:os';
 import chalk from 'chalk';
 import ora from 'ora';
-import { composeDown } from '../core/compose';
+import { composeDown, VOLUME_NAME, PEER_VOLUME_NAME } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
 
-const VOLUME_NAME = 'xrpl-up-local-db';
 const SNAPSHOTS_DIR = path.join(os.homedir(), '.xrpl-up', 'snapshots');
 
 export interface ResetOptions {
@@ -25,19 +24,28 @@ export interface ResetOptions {
 export function resetCommand(options: ResetOptions = {}): void {
   logger.blank();
 
-  // Stop containers
-  const stopSpinner = ora({ text: chalk.dim('Stopping sandbox…'), prefixText: ' ' }).start();
-  composeDown();
-  stopSpinner.succeed(chalk.dim('Sandbox stopped'));
-
-  // Remove Docker persist volume
-  const volumeSpinner = ora({ text: chalk.dim('Removing ledger volume…'), prefixText: ' ' }).start();
+  // Stop containers and remove volumes in one step (docker compose down -v)
+  const stopSpinner = ora({ text: chalk.dim('Stopping sandbox and removing volumes…'), prefixText: ' ' }).start();
   try {
-    execSync(`docker volume rm ${VOLUME_NAME}`, { stdio: 'ignore' });
-    volumeSpinner.succeed(chalk.dim('Ledger volume removed'));
+    execSync(
+      `docker compose -p xrpl-up-local -f "${path.join(os.homedir(), '.xrpl-up', 'docker-compose.yml')}" down -v`,
+      { stdio: 'ignore' }
+    );
   } catch {
-    volumeSpinner.succeed(chalk.dim('No ledger volume found'));
+    // already gone or never started — try removing volumes individually
+    composeDown();
   }
+  // Also remove any orphaned volumes not attached to compose
+  let removedAny = false;
+  for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
+    try {
+      execSync(`docker volume rm -f ${vol}`, { stdio: 'ignore' });
+      removedAny = true;
+    } catch {
+      // volume not found — ok
+    }
+  }
+  stopSpinner.succeed(chalk.dim('Sandbox stopped and volumes removed'));
 
   // Clear WalletStore
   new WalletStore('local').clear();
@@ -55,6 +63,6 @@ export function resetCommand(options: ResetOptions = {}): void {
 
   logger.blank();
   logger.success('Local sandbox reset to factory state.');
-  logger.dim('  Run xrpl-up node --local to start fresh.');
+  logger.dim('  Run xrpl-up start --local to start fresh.');
   logger.blank();
 }

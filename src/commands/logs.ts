@@ -10,7 +10,7 @@ export interface LogsOptions {
 export async function logsCommand(options: LogsOptions = {}): Promise<void> {
   if (!fs.existsSync(COMPOSE_FILE)) {
     logger.error(
-      'No local stack found. Run `xrpl-up node --local` first to start the stack.'
+      'No local stack found. Run `xrpl-up start --local` first to start the stack.'
     );
     process.exit(1);
   }

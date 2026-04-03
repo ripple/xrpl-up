@@ -26,7 +26,7 @@ const RETRY_SLEEP_MS = 2_000;
 const RETRY_MAX = 5;
 
 async function withClientOnce<T>(nodeUrl: string, fn: (client: Client) => Promise<T>): Promise<T> {
-  const client = new Client(nodeUrl);
+  const client = new Client(nodeUrl, { timeout: 60_000 });
   await client.connect();
   try {
     return await fn(client);

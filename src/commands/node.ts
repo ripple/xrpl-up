@@ -27,7 +27,7 @@ export interface NodeOptions {
   network?: string;
   accountCount?: number;
   local?: boolean;
-  persist?: boolean;
+  localNetwork?: boolean;
   image?: string;
   ledgerInterval?: number;
   fork?: boolean;
@@ -165,7 +165,9 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   }
 
   // ── Start Docker Compose stack (local mode only) ───────────────────────────
-  const persist = isLocal && (options.persist ?? false);
+  const localNetwork = isLocal && (options.localNetwork ?? false);
+  const noConsensus = isLocal && !localNetwork;
+  const persist = isLocal && localNetwork; // --local-network always persists
 
   if (isLocal) {
     const image = options.image ?? DEFAULT_IMAGE;
@@ -187,8 +189,12 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
         }
       }
 
-      const ledgerIntervalMs = options.detach ? (options.ledgerInterval ?? 1000) : 0;
-      await composeUp(image, persist, options.debug ?? false, ledgerIntervalMs, options.config, options.noRestart ?? false);
+      // In --local-network mode, ledgers close via consensus (~4s) — no ledger_accept needed.
+      // In standalone mode (default), faucet auto-advances ledgers when detached.
+      const ledgerIntervalMs = noConsensus
+        ? (options.detach ? (options.ledgerInterval ?? 1000) : 0)
+        : 0;
+      await composeUp(image, noConsensus, options.debug ?? false, ledgerIntervalMs, options.config, options.noRestart ?? false);
       dockerSpinner.succeed(
         `Local stack started  ${chalk.dim('rippled ws://localhost:6006')}  ${chalk.dim('faucet http://localhost:3001')}`
       );
@@ -293,7 +299,11 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     logger.log(`${chalk.dim('Genesis:')}    ${chalk.dim(GENESIS_ADDRESS)}`);
     logger.log(`${chalk.dim('Faucet:')}     ${chalk.dim('http://localhost:3001')}`);
     const ledgerInterval = options.ledgerInterval ?? 1000;
-    logger.log(`${chalk.dim('Ledger:')}     ${chalk.dim(`auto-advance every ${ledgerInterval}ms`)}`);
+    if (noConsensus) {
+      logger.log(`${chalk.dim('Ledger:')}     ${chalk.dim(`auto-advance every ${ledgerInterval}ms (standalone)`)}`);
+    } else {
+      logger.log(`${chalk.dim('Ledger:')}     ${chalk.dim('consensus close ~4s (persistent)')}`);
+    }
     if (options.debug) {
       logger.log(`${chalk.dim('Logs:')}       ${chalk.dim('debug level — run: xrpl-up logs rippled')}`);
     }
@@ -316,7 +326,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   // In persist mode with existing accounts, skip funding and reload from store.
   if (persist && existingAccounts.length > 0) {
     logger.info(
-      `Resuming with ${chalk.cyan(String(existingAccounts.length))} persisted accounts  ${chalk.dim('(use without --persist to reset)')}`
+      `Resuming with ${chalk.cyan(String(existingAccounts.length))} persisted accounts  ${chalk.dim('(use xrpl-up reset to start fresh)')}`
     );
     logger.blank();
   }
@@ -536,7 +546,11 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   // ── Detach mode (CI/CD) ────────────────────────────────────────────────────
   if (isLocal && options.detach) {
     logger.log(`  ${chalk.green('✔')} Sandbox ready  ${chalk.dim('→')}  ${chalk.cyan(LOCAL_WS_URL)}`);
-    logger.dim(`  Auto-advancing ledger every ${options.ledgerInterval ?? 1000}ms via faucet server`);
+    if (noConsensus) {
+      logger.dim(`  Auto-advancing ledger every ${options.ledgerInterval ?? 1000}ms via faucet server`);
+    } else {
+      logger.dim(`  Consensus network — ledgers close automatically every ~4s`);
+    }
     logger.dim(`  Run ${chalk.white('xrpl-up stop')} to tear down`);
     logger.blank();
     await manager.disconnect();
@@ -557,10 +571,28 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   }
   logger.blank();
 
-  // ── Auto-ledger-advance (local mode only) ──────────────────────────────────
+  // ── Auto-ledger-advance (standalone local mode only) ────────────────────────
   let advanceHandle: ReturnType<typeof setTimeout> | undefined;
 
-  if (isLocal && !options.noAutoAdvance) {
+  if (isLocal && !noConsensus && !options.noAutoAdvance) {
+    // Consensus mode: ledgers close automatically via consensus.
+    // Subscribe to transactions for live display (no ledger_accept needed).
+    await manager.subscribeToTransactions((tx) => {
+      const t       = (tx.transaction ?? tx) as Record<string, unknown>;
+      const meta    = tx.meta as Record<string, unknown> | undefined;
+      const result  = (meta?.TransactionResult as string) ?? 'unknown';
+      const ok      = result === 'tesSUCCESS';
+      const icon    = ok ? chalk.green('✓') : chalk.red('✗');
+      const type    = chalk.white(String(t.TransactionType ?? '').padEnd(18));
+      const from    = chalk.dim(labelAddress(String(t.Account ?? '')));
+      const to      = t.Destination
+        ? chalk.dim(' → ') + chalk.dim(labelAddress(String(t.Destination)))
+        : '';
+      const fee     = chalk.dim(`fee: ${t.Fee ?? '?'} drops`);
+      const outcome = ok ? '' : chalk.red(`  ${tecMessage(result)}`);
+      console.log(`\n  ${icon} ${type} ${from}${to}  ${fee}${outcome}`);
+    });
+  } else if (isLocal && !options.noAutoAdvance) {
     const ledgerInterval = options.ledgerInterval ?? 1000;
 
     const scheduleAdvance = () => {

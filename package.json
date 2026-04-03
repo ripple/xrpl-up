@@ -33,6 +33,7 @@
     "test:watch": "vitest",
     "test:e2e": "vitest run tests/e2e",
     "test:e2e:local": "vitest run --config vitest.config.local.ts tests/e2e",
+    "test:e2e:local-network": "vitest run --config vitest.config.local-network.ts tests/e2e",
     "test:e2e:snapshot": "vitest run --config vitest.config.snapshot.ts",
     "typecheck": "tsc --noEmit"
   },

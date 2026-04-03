@@ -36,7 +36,7 @@ function resolveSourceUrl(from: string): string {
 }
 
 async function fetchFeatures(url: string): Promise<AmendmentInfo[]> {
-  const client = new Client(url);
+  const client = new Client(url, { timeout: 60_000 });
   await client.connect();
   try {
     const resp = await client.request({ command: 'feature' } as any);
@@ -240,7 +240,7 @@ export async function amendmentInfoCommand(nameOrHash: string, options: Amendmen
     if (!found.supported) {
       logger.dim('  Upgrade the local rippled image to support this amendment:');
       logger.dim('    Edit the rippled-image field in your xrpl-up config (xrpl-up config export to view path)');
-      logger.dim('    xrpl-up reset --local && xrpl-up node');
+      logger.dim('    xrpl-up reset --local && xrpl-up start');
       logger.blank();
     }
   } catch (err: unknown) {
@@ -269,7 +269,7 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
     indent: 2,
   }).start();
 
-  const client = new Client(LOCAL_WS_URL);
+  const client = new Client(LOCAL_WS_URL, { timeout: 60_000 });
   try {
     await client.connect();
 
@@ -316,7 +316,7 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
       fs.writeFileSync(EXTRA_AMENDMENTS_FILE, existing + line + '\n', 'utf-8');
     }
 
-    // Regenerate rippled.cfg so the next `xrpl-up node` picks it up automatically.
+    // Regenerate rippled.cfg so the next `xrpl-up start` picks it up automatically.
     writeRippledConfig();
 
     spinner.succeed(chalk.green(`Amendment queued for next genesis: ${found.name}`));
@@ -337,13 +337,13 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
       resetCommand();
       printQueuedAmendments();
       logger.dim('  Run the following to start with the new amendment active:');
-      logger.dim('    xrpl-up node --local');
+      logger.dim('    xrpl-up start --local');
       logger.blank();
     } else {
       logger.blank();
       logger.dim('  To activate later, run:');
       logger.dim('    xrpl-up reset');
-      logger.dim('    xrpl-up node --local');
+      logger.dim('    xrpl-up start --local');
       logger.blank();
     }
   } catch (err: unknown) {
@@ -432,13 +432,13 @@ export async function amendmentDisableCommand(nameOrHash: string, options: Amend
       resetCommand();
       printQueuedAmendments();
       logger.dim('  Run the following to start without the removed amendment:');
-      logger.dim('    xrpl-up node --local');
+      logger.dim('    xrpl-up start --local');
       logger.blank();
     } else {
       logger.blank();
       logger.dim('  To deactivate later, run:');
       logger.dim('    xrpl-up reset');
-      logger.dim('    xrpl-up node --local');
+      logger.dim('    xrpl-up start --local');
       logger.blank();
     }
   } catch (err: unknown) {

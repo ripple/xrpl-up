@@ -53,7 +53,7 @@ export type { Network } from './cli/utils/client';
  * const client = new Client(networkUrl);
  * await client.connect();
  *
- * // Access accounts created by `xrpl-up node`
+ * // Access accounts created by `xrpl-up start`
  * const store = new WalletStore(networkKey);
  * const accounts = store.all();
  * ```

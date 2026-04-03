@@ -6,20 +6,21 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { Client } from 'xrpl';
 import {
-  stopService, startService, waitForPort,
-  LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT, COMPOSE_FILE,
+  stopService, startService, waitForPort, composeDown, isConsensusMode,
+  LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT, COMPOSE_FILE, COMPOSE_PROJECT,
+  VOLUME_NAME, PEER_VOLUME_NAME,
 } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
 
-const VOLUME_NAME = 'xrpl-up-local-db';
 const SNAPSHOTS_DIR = path.join(os.homedir(), '.xrpl-up', 'snapshots');
 const WALLET_STORE_PATH = path.join(os.homedir(), '.xrpl-up', 'local-accounts.json');
+const SNAPSHOT_RESTORE_START_TIMEOUT_MS = 90_000;
 
 /** Returns true if the named Docker volume exists. */
-function volumeExists(): boolean {
+function volumeExists(name: string = VOLUME_NAME): boolean {
   try {
-    execSync(`docker volume inspect ${VOLUME_NAME}`, { stdio: 'ignore' });
+    execSync(`docker volume inspect ${name}`, { stdio: 'ignore' });
     return true;
   } catch {
     return false;
@@ -36,52 +37,23 @@ function walletSidecarPath(name: string): string {
   return path.join(SNAPSHOTS_DIR, `${name}-accounts.json`);
 }
 
-/** Absolute path to the ledger-hash metadata for a snapshot. */
+/** Absolute path to metadata sidecar for a snapshot. */
 function metaSidecarPath(name: string): string {
   return path.join(SNAPSHOTS_DIR, `${name}-meta.json`);
 }
 
-/**
- * Verify that the compose file exists and contains an entrypoint line that can
- * be patched. Called before any destructive operations so restore fails early
- * rather than leaving the sandbox in a half-restored state.
- */
-function assertComposeHasEntrypoint(): void {
-  if (!fs.existsSync(COMPOSE_FILE)) {
-    throw new Error(
-      `Compose file not found at ${COMPOSE_FILE}.\n` +
-      `  Start the sandbox first: xrpl-up node --local --persist --detach`
-    );
-  }
-  const content = fs.readFileSync(COMPOSE_FILE, 'utf-8');
-  if (!/^\s+entrypoint:/m.test(content)) {
-    throw new Error(
-      `Compose file has no entrypoint line — was the sandbox started with --persist?\n` +
-      `  Restart with: xrpl-up node --local --persist --detach`
-    );
-  }
+function backupPath(filePath: string): string {
+  return `${filePath}.bak`;
 }
 
-/**
- * Patch the rippled entrypoint line in the existing compose file so it includes
- * the .restore-hash check, without touching any other settings (debug mode,
- * custom config paths, ledger interval, image, etc.).
- *
- * Caller must run assertComposeHasEntrypoint() first to guarantee this succeeds.
- */
-function patchComposeEntrypoint(): void {
-  const RIPPLED_BIN = '/opt/ripple/bin/rippled';
-  const RIPPLED_CFG = '--conf /config/rippled.cfg';
-  const HASH_FILE   = '/var/lib/rippled/db/.restore-hash';
-  const newEntrypoint =
-    `    entrypoint: ["/bin/sh", "-c", ` +
-    `"if [ -f ${HASH_FILE} ]; then HASH=$$(cat ${HASH_FILE}); ` +
-    `exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --ledger $$HASH; ` +
-    `else exec ${RIPPLED_BIN} ${RIPPLED_CFG} -a --start; fi"]`;
-
-  const content = fs.readFileSync(COMPOSE_FILE, 'utf-8');
-  const patched = content.replace(/^\s+entrypoint:.*$/m, newEntrypoint);
-  fs.writeFileSync(COMPOSE_FILE, patched, 'utf-8');
+function safeCommandOutput(command: string): string {
+  try {
+    return execSync(command, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  } catch (err) {
+    const stdout = (err as { stdout?: string | Buffer }).stdout?.toString() ?? '';
+    const stderr = (err as { stderr?: string | Buffer }).stderr?.toString() ?? '';
+    return [stdout, stderr].filter(Boolean).join('\n').trim() || '(no output)';
+  }
 }
 
 /** Ensure the snapshots directory exists. */
@@ -92,15 +64,35 @@ function ensureSnapshotsDir(): void {
 }
 
 /**
+ * Guard: snapshots require the 2-node consensus network (--local-network).
+ * In standalone mode (the default), rippled doesn't create SQLite and can't resume state.
+ */
+function assertConsensusMode(action: 'save' | 'restore'): void {
+  if (!isConsensusMode()) {
+    throw new Error(
+      `Cannot ${action} snapshots in standalone mode.\n` +
+      `  Standalone mode does not persist ledger state across restarts.\n` +
+      `  Snapshots require the --local-network flag. Restart with:\n` +
+      `\n` +
+      `    xrpl-up start --local --local-network --detach\n`
+    );
+  }
+}
+
+/**
  * Save the current ledger state as a named snapshot.
- * Requires the sandbox to have been started with --persist.
+ *
+ * In consensus mode the volume contains NuDB + SQLite. We stop all services,
+ * tar the primary node's volume, then restart. The peer node's data is
+ * identical and doesn't need to be captured separately.
  */
 export async function snapshotSave(name: string): Promise<void> {
+  assertConsensusMode('save');
+
   if (!volumeExists()) {
     throw new Error(
-      `No persist volume found (${VOLUME_NAME}).\n` +
-      `  Snapshots require --persist mode. Start with:\n` +
-      `  xrpl-up node --local --persist`
+      `No ledger volume found (${VOLUME_NAME}).\n` +
+      `  Start the sandbox first: xrpl-up start --local --detach`
     );
   }
 
@@ -109,19 +101,11 @@ export async function snapshotSave(name: string): Promise<void> {
 
   if (fs.existsSync(dest)) {
     logger.warning(`Snapshot "${name}" already exists — overwriting.`);
-    // Remove all artifacts so a partial save cannot leave a new tarball
-    // paired with stale metadata or account sidecar from the old save.
-    for (const f of [dest, walletSidecarPath(name), metaSidecarPath(name)]) {
-      if (fs.existsSync(f)) fs.unlinkSync(f);
-    }
   }
 
   logger.blank();
 
-  // Wait until all wallet store accounts are confirmed on-chain before
-  // snapshotting. With --detach, the faucet funds accounts asynchronously
-  // after node start, so a single ledger_accept is not enough — we poll until
-  // every address in the wallet store responds to account_info.
+  // ── Flush: wait until all wallet-store accounts are confirmed on-chain ─────
   const walletAccounts = new WalletStore('local').all();
   const flushSpinner = ora({
     text: chalk.dim(walletAccounts.length > 0
@@ -130,24 +114,24 @@ export async function snapshotSave(name: string): Promise<void> {
     prefixText: ' ',
   }).start();
 
-  let ledgerHash: string | null = null;
-
   try {
-    const client = new Client(LOCAL_WS_URL);
+    const client = new Client(LOCAL_WS_URL, { timeout: 60_000 });
     await client.connect();
 
     const TIMEOUT_MS = 60_000;
-    const POLL_MS    = 500;
+    const POLL_MS    = 1000;
     const deadline   = Date.now() + TIMEOUT_MS;
     let allConfirmed = false;
 
     while (Date.now() < deadline) {
-      await (client as any).request({ command: 'ledger_accept' });
-
       let missing = 0;
       for (const acct of walletAccounts) {
         try {
-          await client.request({ command: 'account_info', account: acct.address, ledger_index: 'validated' });
+          await client.request({
+            command: 'account_info',
+            account: acct.address,
+            ledger_index: 'validated',
+          });
         } catch {
           missing++;
         }
@@ -158,14 +142,6 @@ export async function snapshotSave(name: string): Promise<void> {
       await new Promise(r => setTimeout(r, POLL_MS));
     }
 
-    // Capture the current validated ledger hash so restore can load it directly
-    // from NuDB via --ledger <hash>. rippled standalone mode does not populate
-    // a SQLite ledger index, so this hash is the only way to resume from NuDB.
-    try {
-      const lc = await (client as any).request({ command: 'ledger_closed' });
-      ledgerHash = lc.result.ledger_hash ?? null;
-    } catch { /* not fatal — restore will reject if hash is missing */ }
-
     await client.disconnect();
 
     if (allConfirmed) {
@@ -173,10 +149,10 @@ export async function snapshotSave(name: string): Promise<void> {
     } else {
       flushSpinner.fail(chalk.red('Timed out waiting for accounts to confirm on-chain'));
       throw new Error(
-        `Snapshot aborted: ${walletAccounts.length} wallet-store account(s) are not confirmed on the validated ledger.\n` +
-        `  Wait for the faucet to finish funding, then retry:\n` +
-        `  xrpl-up accounts   (all rows must show a live balance, not "(cached)")\n` +
-        `  xrpl-up snapshot save <name>`
+        `Snapshot aborted: not all accounts confirmed on the validated ledger.\n` +
+        `  Wait for ledger closes, then retry:\n` +
+        `  xrpl-up accounts --local\n` +
+        `  xrpl-up snapshot save ${name}`
       );
     }
   } catch (err) {
@@ -188,25 +164,20 @@ export async function snapshotSave(name: string): Promise<void> {
     );
   }
 
-  // Stop faucet only — rippled keeps running so its NuDB data stays consistent.
-  // NuDB is append-only: tarring a live NuDB directory is safe. We never stop
-  // rippled during save because restarting requires a ledger hash (rippled
-  // standalone mode does not write a SQLite ledger index).
-  const stopSpinner = ora({ text: chalk.dim('Pausing faucet…'), prefixText: ' ' }).start();
+  // ── Stop services, tar volume, restart ─────────────────────────────────────
+  const stopSpinner = ora({ text: chalk.dim('Stopping sandbox for snapshot…'), prefixText: ' ' }).start();
   try {
-    stopService('faucet');
-    stopSpinner.succeed(chalk.dim('Faucet paused'));
-  } catch {
-    stopSpinner.fail('Failed to stop faucet — is the sandbox running?');
-    throw new Error(
-      'Could not stop faucet. Is the sandbox running?\n' +
-      '  Start with: xrpl-up node --local --persist'
+    // Stop all services — ensures clean SQLite state (WAL checkpointed)
+    execSync(
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" stop`,
+      { stdio: 'ignore' },
     );
+    stopSpinner.succeed(chalk.dim('Sandbox stopped'));
+  } catch {
+    stopSpinner.fail('Failed to stop sandbox');
+    throw new Error('Could not stop sandbox. Is it running?');
   }
 
-  // Write tar to a temp name, write sidecars, then rename. This way a partial
-  // save (e.g. crash during tar) never leaves a dest tarball without matching
-  // metadata — the old snapshot set remains intact until the rename succeeds.
   const tmpDest = dest + '.tmp';
   const saveSpinner = ora({ text: chalk.dim(`Saving snapshot "${name}"…`), prefixText: ' ' }).start();
   try {
@@ -215,38 +186,79 @@ export async function snapshotSave(name: string): Promise<void> {
       `-v ${VOLUME_NAME}:/data ` +
       `-v "${SNAPSHOTS_DIR}":/snapshots ` +
       `alpine tar czf /snapshots/${path.basename(tmpDest)} -C /data .`,
-      { stdio: 'ignore' }
+      { stdio: 'ignore' },
     );
   } catch (err) {
     saveSpinner.fail(`Failed to save snapshot "${name}"`);
     if (fs.existsSync(tmpDest)) fs.unlinkSync(tmpDest);
-    startService('faucet');
+    // Restart services even on failure
+    execSync(
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" start`,
+      { stdio: 'ignore' },
+    );
     throw err;
   }
 
-  // Write sidecars before renaming tar so the set is complete when dest appears.
-  const sidecar = walletSidecarPath(name);
+  // ── Write sidecar files and atomically swap ────────────────────────────────
+  const tmpSidecar = walletSidecarPath(name) + '.tmp';
+  const tmpMeta = metaSidecarPath(name) + '.tmp';
+
   if (fs.existsSync(WALLET_STORE_PATH)) {
-    fs.copyFileSync(WALLET_STORE_PATH, sidecar);
+    fs.copyFileSync(WALLET_STORE_PATH, tmpSidecar);
   } else {
-    fs.writeFileSync(sidecar, '[]');
+    fs.writeFileSync(tmpSidecar, '[]');
   }
-  if (ledgerHash) {
-    fs.writeFileSync(metaSidecarPath(name), JSON.stringify({ ledger_hash: ledgerHash }));
+  fs.writeFileSync(tmpMeta, JSON.stringify({ format: 'consensus-v1' }));
+
+  const finalSidecar = walletSidecarPath(name);
+  const finalMeta = metaSidecarPath(name);
+  const backups = [
+    { file: finalSidecar, backup: backupPath(finalSidecar) },
+    { file: finalMeta, backup: backupPath(finalMeta) },
+    { file: dest, backup: backupPath(dest) },
+  ];
+
+  try {
+    for (const { file, backup } of backups) {
+      if (fs.existsSync(backup)) fs.unlinkSync(backup);
+      if (fs.existsSync(file)) fs.renameSync(file, backup);
+    }
+    fs.renameSync(tmpSidecar, finalSidecar);
+    fs.renameSync(tmpMeta, finalMeta);
+    fs.renameSync(tmpDest, dest);
+    for (const { backup } of backups) {
+      if (fs.existsSync(backup)) fs.unlinkSync(backup);
+    }
+    saveSpinner.succeed(chalk.green(`Snapshot "${name}" saved`));
+  } catch (err) {
+    for (const file of [finalSidecar, finalMeta, dest]) {
+      if (fs.existsSync(file)) fs.unlinkSync(file);
+    }
+    for (const { file, backup } of backups) {
+      if (fs.existsSync(backup)) fs.renameSync(backup, file);
+    }
+    for (const tmp of [tmpSidecar, tmpMeta, tmpDest]) {
+      if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    }
+    saveSpinner.fail(`Failed to finalize snapshot "${name}"`);
+    throw err;
   }
 
-  // Atomic rename — if this fails the sidecars exist but no tar at dest,
-  // so listSnapshotNames() will not list it (it filters on .tar.gz).
-  fs.renameSync(tmpDest, dest);
-  saveSpinner.succeed(chalk.green(`Snapshot "${name}" saved`));
+  // ── Restart all services ───────────────────────────────────────────────────
+  const startSpinner = ora({ text: chalk.dim('Resuming sandbox…'), prefixText: ' ' }).start();
+  try {
+    execSync(
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" start`,
+      { stdio: 'ignore' },
+    );
+    await waitForPort(LOCAL_WS_PORT, 60_000, 'rippled WebSocket');
+    await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
+    startSpinner.succeed(chalk.dim('Sandbox resumed'));
+  } catch (err) {
+    startSpinner.fail(chalk.red('Sandbox failed to resume'));
+    throw err;
+  }
 
-  // Restart faucet only
-  const startSpinner = ora({ text: chalk.dim('Resuming faucet…'), prefixText: ' ' }).start();
-  startService('faucet');
-  await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
-  startSpinner.succeed(chalk.dim('Faucet resumed'));
-
-  // Show file size
   const stats = fs.statSync(dest);
   const sizeMb = (stats.size / (1024 * 1024)).toFixed(1);
   logger.dim(`  Saved to ${dest} (${sizeMb} MB)`);
@@ -255,9 +267,13 @@ export async function snapshotSave(name: string): Promise<void> {
 
 /**
  * Restore ledger state from a named snapshot.
- * Requires the sandbox to have been started with --persist.
+ *
+ * Extracts the tarball to BOTH node volumes (primary + peer), then restarts
+ * the stack. The entrypoint detects ledger.db and uses --load to resume.
  */
 export async function snapshotRestore(name: string): Promise<void> {
+  assertConsensusMode('restore');
+
   const src = snapshotPath(name);
 
   if (!fs.existsSync(src)) {
@@ -270,96 +286,128 @@ export async function snapshotRestore(name: string): Promise<void> {
 
   if (!volumeExists()) {
     throw new Error(
-      `No persist volume found (${VOLUME_NAME}).\n` +
-      `  Snapshots require --persist mode. Start with:\n` +
-      `  xrpl-up node --local --persist`
+      `No ledger volume found (${VOLUME_NAME}).\n` +
+      `  Start the sandbox first: xrpl-up start --local --detach`
     );
   }
-
-  // ── Pre-flight checks (all before any destructive operations) ────────────
-  // 1. Ledger hash required — without it rippled cannot find the ledger in NuDB.
-  const metaPath = metaSidecarPath(name);
-  let ledgerHash: string | null = null;
-  if (fs.existsSync(metaPath)) {
-    try {
-      const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-      ledgerHash = meta.ledger_hash ?? null;
-    } catch { /* treat as missing */ }
-  }
-  if (!ledgerHash) {
-    throw new Error(
-      `Snapshot "${name}" has no ledger hash and cannot be restored.\n` +
-      `  This snapshot was saved before hash capture was introduced.\n` +
-      `  Re-save it with the running sandbox: xrpl-up snapshot save ${name}`
-    );
-  }
-
-  // 2. Compose file must have an entrypoint line we can patch.
-  assertComposeHasEntrypoint();
 
   logger.blank();
 
-  // ── Destructive operations start here ────────────────────────────────────
-  // Stop faucet then rippled (faucet must stop first to avoid crashing on disconnect)
-  const stopSpinner = ora({ text: chalk.dim('Pausing sandbox…'), prefixText: ' ' }).start();
+  // ── Stop all services ──────────────────────────────────────────────────────
+  const stopSpinner = ora({ text: chalk.dim('Stopping sandbox…'), prefixText: ' ' }).start();
   try {
-    stopService('faucet');
-    stopService('rippled');
-    stopSpinner.succeed(chalk.dim('Sandbox paused'));
+    execSync(
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" stop`,
+      { stdio: 'ignore' },
+    );
+    stopSpinner.succeed(chalk.dim('Sandbox stopped'));
   } catch {
     stopSpinner.fail('Failed to stop sandbox — is it running?');
     throw new Error(
       'Could not stop sandbox. Is it running?\n' +
-      '  Start with: xrpl-up node --local --persist'
+      '  Start with: xrpl-up start --local --detach'
     );
   }
 
-  // Wipe and restore the volume via alpine sidecar, then write the ledger hash
-  // to .restore-hash. The entrypoint reads this file and starts rippled with
-  // --ledger <hash> to load directly from NuDB. The file is kept (not deleted
-  // by the entrypoint) so that Docker crash-restarts also resume from the
-  // snapshot rather than falling back to --start (fresh genesis).
+  // ── Wipe and extract to BOTH volumes ───────────────────────────────────────
   const restoreSpinner = ora({ text: chalk.dim(`Restoring snapshot "${name}"…`), prefixText: ' ' }).start();
   try {
-    execSync(
-      `docker run --rm ` +
-      `-v ${VOLUME_NAME}:/data ` +
-      `-v "${SNAPSHOTS_DIR}":/snapshots ` +
-      `alpine sh -c "rm -rf /data/* /data/..?* /data/.[!.]* 2>/dev/null; tar xzf /snapshots/${name}.tar.gz -C /data; echo '${ledgerHash}' > /data/.restore-hash"`,
-      { stdio: 'ignore' }
-    );
-    restoreSpinner.succeed(chalk.green(`Snapshot "${name}" restored`));
+    for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
+      execSync(
+        `docker run --rm ` +
+        `-v ${vol}:/data ` +
+        `-v "${SNAPSHOTS_DIR}":/snapshots ` +
+        `alpine sh -c "rm -rf /data/* /data/..?* /data/.[!.]* 2>/dev/null; tar xzf /snapshots/${name}.tar.gz -C /data"`,
+        { stdio: 'ignore' },
+      );
+    }
+    restoreSpinner.succeed(chalk.green(`Snapshot "${name}" restored to both nodes`));
   } catch (err) {
     restoreSpinner.fail(`Failed to restore snapshot "${name}"`);
-    startService('rippled');
-    startService('faucet');
     throw err;
   }
 
-  // Restore WalletStore sidecar so account list matches the rolled-back ledger
+  // ── Restore WalletStore sidecar ────────────────────────────────────────────
   const sidecar = walletSidecarPath(name);
   if (fs.existsSync(sidecar)) {
     fs.copyFileSync(sidecar, WALLET_STORE_PATH);
-  } else {
-    if (fs.existsSync(WALLET_STORE_PATH)) fs.unlinkSync(WALLET_STORE_PATH);
+  } else if (fs.existsSync(WALLET_STORE_PATH)) {
+    fs.unlinkSync(WALLET_STORE_PATH);
   }
 
-  // Patch only the entrypoint line in the existing compose file so the
-  // .restore-hash check is present. assertComposeHasEntrypoint() already
-  // verified the line exists, so this is guaranteed to apply.
-  patchComposeEntrypoint();
-
-  // Restart rippled first and wait for it to be ready before starting the faucet.
+  // ── Restart all services ───────────────────────────────────────────────────
+  // The entrypoint detects ledger.db → uses --load to resume from SQLite.
   const startSpinner = ora({ text: chalk.dim('Resuming sandbox…'), prefixText: ' ' }).start();
-  startService('rippled');
-  await waitForPort(LOCAL_WS_PORT, 30_000, 'rippled WebSocket');
-  startService('faucet');
-  await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
-  startSpinner.succeed(chalk.dim('Sandbox resumed'));
+  try {
+    execSync(
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" start`,
+      { stdio: 'ignore' },
+    );
+    await waitForPort(LOCAL_WS_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'rippled WebSocket');
+    await waitForPort(FAUCET_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'faucet HTTP');
+    startSpinner.succeed(chalk.dim('Sandbox resumed'));
+  } catch (err) {
+    startSpinner.fail(chalk.red('Sandbox failed to resume'));
+    const rippledLogs = safeCommandOutput(
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" logs --no-color --tail 30 rippled`
+    );
+    throw new Error(
+      `${(err as Error).message}\n\n` +
+      `rippled logs (last 30 lines):\n${rippledLogs}`
+    );
+  }
+
+  // ── Post-restore verification ──────────────────────────────────────────────
+  const restoredAccounts = (() => {
+    try {
+      const raw = fs.readFileSync(walletSidecarPath(name), 'utf-8');
+      return JSON.parse(raw) as { address: string }[];
+    } catch { return []; }
+  })();
+
+  if (restoredAccounts.length > 0) {
+    const verifySpinner = ora({ text: chalk.dim('Verifying restored ledger state…'), prefixText: ' ' }).start();
+    const probe = restoredAccounts[0].address;
+    try {
+      const client = new Client(LOCAL_WS_URL, { timeout: 60_000 });
+      await client.connect();
+      // Wait a moment for consensus to produce a validated ledger after restart
+      const deadline = Date.now() + 30_000;
+      let found = false;
+      while (Date.now() < deadline) {
+        try {
+          await client.request({
+            command: 'account_info',
+            account: probe,
+            ledger_index: 'validated',
+          });
+          found = true;
+          break;
+        } catch {
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+      await client.disconnect();
+      if (found) {
+        verifySpinner.succeed(chalk.dim(`Verified account ${probe.slice(0, 8)}… exists on restored ledger`));
+      } else {
+        throw new Error('Account not found after waiting');
+      }
+    } catch (err) {
+      verifySpinner.fail(chalk.red('Post-restore verification failed'));
+      throw new Error(
+        `Account ${probe} from the snapshot sidecar was not found on the restored ledger.\n` +
+        `  The restore may not have applied correctly. Check:\n` +
+        `  - docker compose -p ${COMPOSE_PROJECT} logs rippled\n` +
+        `  - xrpl-up accounts --local\n` +
+        `  - Re-save the snapshot from a running sandbox and try again.`
+      );
+    }
+  }
 
   logger.blank();
   logger.success(`Ledger state restored to snapshot "${name}"`);
-  logger.dim('  Run xrpl-up status --local to confirm the ledger index.');
+  logger.dim('  Run xrpl-up accounts --local to verify balances.');
   logger.blank();
 }
 

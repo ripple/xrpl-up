@@ -275,7 +275,7 @@ export function configExport(options: { output?: string; debug?: boolean } = {})
     logger.blank();
     logger.success(`Config written to ${dest}`);
     logger.dim(`  Edit it, then validate:  xrpl-up config validate ${options.output}`);
-    logger.dim(`  Use with local node:     xrpl-up node --local --config ${options.output}`);
+    logger.dim(`  Use with local node:     xrpl-up start --local --config ${options.output}`);
     logger.blank();
   } else {
     // Print to stdout — pipeable

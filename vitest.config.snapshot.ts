@@ -8,7 +8,7 @@
  * Usage:
  *   npm run test:e2e:snapshot
  *
- * The globalSetup starts the local node with --persist so the Docker volume
+ * The globalSetup starts the local node with --local-network so the Docker volume
  * (xrpl-up-local-db) exists and snapshot save/restore can operate on it.
  */
 import { defineConfig } from "vitest/config";

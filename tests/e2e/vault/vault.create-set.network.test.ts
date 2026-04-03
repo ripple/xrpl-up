@@ -15,7 +15,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(DEVNET_WS);
+  client = new Client(DEVNET_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMasterDevnet(client);
   await initTicketPoolDevnet(client, master, 15);

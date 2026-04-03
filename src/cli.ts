@@ -67,9 +67,9 @@ program
     process.env.XRPL_NODE ?? 'local'
   );
 
-// ── node ─────────────────────────────────────────────────────────────────────
+// ── start ────────────────────────────────────────────────────────────────────
 program
-  .command('node')
+  .command('start')
   .description('Start an XRPL sandbox with pre-funded accounts')
   .option(
     '--network <network>',
@@ -94,8 +94,8 @@ program
     '1000'
   )
   .option(
-    '--persist',
-    'Persist ledger state and accounts across restarts (local mode only)'
+    '--local-network',
+    'Start a 2-node consensus network (persistent state, snapshot support)'
   )
   .option(
     '--fork',
@@ -146,7 +146,7 @@ program
     network?: string;
     accounts?: string;
     local?: boolean;
-    persist?: boolean;
+    localNetwork?: boolean;
     image?: string;
     ledgerInterval: string;
     fork?: boolean;
@@ -166,7 +166,7 @@ program
       network: isLocal ? undefined : opts.network,
       accountCount: opts.accounts !== undefined ? parseInt(opts.accounts, 10) : undefined,
       local: isLocal,
-      persist: opts.persist,
+      localNetwork: opts.localNetwork ?? false,
       image: opts.image,
       ledgerInterval: parseInt(opts.ledgerInterval, 10),
       fork: opts.fork,
@@ -266,7 +266,7 @@ program
 // ── snapshot ──────────────────────────────────────────────────────────────────
 const snapshot = program
   .command('snapshot')
-  .description('Manage ledger state snapshots (requires --persist mode)');
+  .description('Manage ledger state snapshots (requires --local-network)');
 
 snapshot
   .command('save <name>')
@@ -389,7 +389,7 @@ function handleError(err: unknown): void {
     && /(localhost|127\.0\.0\.1|:6006)/.test(msg);
   if (isLocalFail) {
     console.error('\n  Local XRPL node is not running.');
-    console.error('  Start it:              xrpl-up node --detach');
+    console.error('  Start it:              xrpl-up start --detach');
     console.error('  Or target a network:   xrpl-up <sandbox-cmd> --network testnet');
     console.error('                         xrpl-up <xrpl-cmd> -n testnet');
   }

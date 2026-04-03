@@ -35,7 +35,7 @@ async function holderDeposit(holder: Wallet, amountStr: string): Promise<void> {
 }
 
 beforeAll(async () => {
-  client = new Client(DEVNET_WS);
+  client = new Client(DEVNET_WS, { timeout: 60_000 });
   await client.connect();
 
   master = await fundMasterDevnet(client); // 1 faucet call

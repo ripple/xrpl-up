@@ -46,7 +46,7 @@ const packageJsonTemplate = (name: string) =>
       version: '0.1.0',
       description: 'An XRPL project using xrpl-up',
       scripts: {
-        node: 'xrpl-up node',
+        start: 'xrpl-up start',
         accounts: 'xrpl-up accounts',
       },
       dependencies: {
@@ -94,7 +94,7 @@ async function main() {
   const networkUrl = process.env.XRPL_NETWORK_URL ?? 'wss://s.altnet.rippletest.net:51233';
   const networkName = process.env.XRPL_NETWORK_NAME ?? 'testnet';
 
-  const client = new Client(networkUrl);
+  const client = new Client(networkUrl, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to', networkName);
 
@@ -161,7 +161,7 @@ import { Client, AccountSetAsfFlags } from 'xrpl';
 
 async function main() {
   const networkUrl = process.env.XRPL_NETWORK_URL ?? 'wss://s.altnet.rippletest.net:51233';
-  const client = new Client(networkUrl);
+  const client = new Client(networkUrl, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to testnet\\n');
 
@@ -236,7 +236,7 @@ import { Client, AccountSetAsfFlags } from 'xrpl';
 
 async function main() {
   const networkUrl = process.env.XRPL_NETWORK_URL ?? 'wss://s.altnet.rippletest.net:51233';
-  const client = new Client(networkUrl);
+  const client = new Client(networkUrl, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to testnet\\n');
 
@@ -331,7 +331,7 @@ import { Client } from 'xrpl';
 
 async function main() {
   const networkUrl = process.env.XRPL_NETWORK_URL ?? 'wss://s.altnet.rippletest.net:51233';
-  const client = new Client(networkUrl);
+  const client = new Client(networkUrl, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to testnet\\n');
 
@@ -416,7 +416,7 @@ import { Client, MPTokenIssuanceCreateFlags } from 'xrpl';
 
 async function main() {
   const networkUrl = process.env.XRPL_NETWORK_URL ?? 'wss://s.altnet.rippletest.net:51233';
-  const client = new Client(networkUrl);
+  const client = new Client(networkUrl, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to testnet\\n');
 
@@ -492,7 +492,7 @@ main().catch((err) => {
 const EXAMPLE_PAYMENT_LOCAL = `// scripts/example-payment.ts
 // Send XRP between two wallets on the local xrpl-up sandbox and verify balances.
 // Run with: xrpl-up run scripts/example-payment.ts
-// Requires: xrpl-up node --local  (running in another terminal)
+// Requires: xrpl-up start --local  (running in another terminal)
 import { Client, Wallet, xrpToDrops } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -507,7 +507,7 @@ async function fundAccount(): Promise<Wallet> {
 }
 
 async function main() {
-  const client = new Client(NETWORK_URL);
+  const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to local rippled');
 
@@ -569,7 +569,7 @@ main().catch((err) => {
 const EXAMPLE_TOKEN_LOCAL = `// scripts/example-token.ts
 // Issue a custom token (IOU) on the local xrpl-up sandbox.
 // Run with: xrpl-up run scripts/example-token.ts
-// Requires: xrpl-up node --local  (running in another terminal)
+// Requires: xrpl-up start --local  (running in another terminal)
 import { Client, Wallet, AccountSetAsfFlags } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -584,7 +584,7 @@ async function fundAccount(): Promise<Wallet> {
 }
 
 async function main() {
-  const client = new Client(NETWORK_URL);
+  const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to local rippled\\n');
 
@@ -651,7 +651,7 @@ const EXAMPLE_DEX_LOCAL = `// scripts/example-dex.ts
 // when the buyer submits a matching offer.
 //
 // Run with: xrpl-up run scripts/example-dex.ts
-// Requires: xrpl-up node --local  (running in another terminal)
+// Requires: xrpl-up start --local  (running in another terminal)
 import { Client, Wallet, AccountSetAsfFlags } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -666,7 +666,7 @@ async function fundAccount(): Promise<Wallet> {
 }
 
 async function main() {
-  const client = new Client(NETWORK_URL);
+  const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to local rippled\\n');
 
@@ -757,7 +757,7 @@ main().catch((err) => {
 const EXAMPLE_NFT_LOCAL = `// scripts/example-nft.ts
 // Full NFT lifecycle on the local xrpl-up sandbox: mint → sell → buy → burn.
 // Run with: xrpl-up run scripts/example-nft.ts
-// Requires: xrpl-up node --local  (running in another terminal)
+// Requires: xrpl-up start --local  (running in another terminal)
 import { Client, Wallet } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -772,7 +772,7 @@ async function fundAccount(): Promise<Wallet> {
 }
 
 async function main() {
-  const client = new Client(NETWORK_URL);
+  const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to local rippled\\n');
 
@@ -853,7 +853,7 @@ main().catch((err) => {
 const EXAMPLE_MPT_LOCAL = `// scripts/example-mpt.ts
 // Issue and transfer a Multi-Purpose Token (MPT) on the local xrpl-up sandbox.
 // Run with: xrpl-up run scripts/example-mpt.ts
-// Requires: xrpl-up node --local  (running in another terminal)
+// Requires: xrpl-up start --local  (running in another terminal)
 import { Client, Wallet, MPTokenIssuanceCreateFlags } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -868,7 +868,7 @@ async function fundAccount(): Promise<Wallet> {
 }
 
 async function main() {
-  const client = new Client(NETWORK_URL);
+  const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to local rippled\\n');
 
@@ -939,7 +939,7 @@ main().catch((err) => {
 const EXAMPLE_AMM_LOCAL = `// scripts/example-amm.ts
 // Create an XRP/USD AMM pool and execute a trade on the local xrpl-up sandbox.
 // Run with: xrpl-up run scripts/example-amm.ts
-// Requires: xrpl-up node --local  (running in another terminal)
+// Requires: xrpl-up start --local  (running in another terminal)
 import { Client, Wallet, xrpToDrops, AccountSetAsfFlags } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -954,7 +954,7 @@ async function fundAccount(): Promise<Wallet> {
 }
 
 async function main() {
-  const client = new Client(NETWORK_URL);
+  const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
   console.log('Connected to local rippled\\n');
 
@@ -1118,7 +1118,7 @@ export async function initCommand(options: InitOptions = {}): Promise<void> {
       name: 'defaultNetwork',
       message: 'Default network:',
       choices: [
-        { name: 'local    — local rippled via Docker (xrpl-up node --local)', value: 'local'   },
+        { name: 'local    — local rippled via Docker (xrpl-up start --local)', value: 'local'   },
         { name: 'testnet  — XRPL Testnet',                                    value: 'testnet' },
         { name: 'devnet   — XRPL Devnet',                                     value: 'devnet'  },
         { name: 'mainnet  — XRPL Mainnet',                                    value: 'mainnet' },
@@ -1163,8 +1163,8 @@ export async function initCommand(options: InitOptions = {}): Promise<void> {
 
   const cd = options.directory ? `cd ${options.directory} && ` : '';
   const nodeCmd = isLocal
-    ? `xrpl-up node --local     ${chalk.dim('# start local Docker sandbox')}`
-    : `xrpl-up node             ${chalk.dim('# start sandbox with funded accounts')}`;
+    ? `xrpl-up start --local     ${chalk.dim('# start local Docker sandbox')}`
+    : `xrpl-up start             ${chalk.dim('# start sandbox with funded accounts')}`;
 
   const steps = [
     `${cd}npm install`,

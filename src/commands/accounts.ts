@@ -87,7 +87,7 @@ export async function accountsCommand(options: AccountsOptions = {}): Promise<vo
 
   if (accounts.length === 0) {
     logger.warning(
-      `No sandbox accounts found for "${networkName}". Run \`xrpl-up node\` first.`
+      `No sandbox accounts found for "${networkName}". Run \`xrpl-up start\` first.`
     );
     return;
   }

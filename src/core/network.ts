@@ -16,7 +16,7 @@ export class NetworkManager {
   constructor(networkName: string, networkConfig: NetworkConfig) {
     this._networkName = networkName;
     this._networkConfig = networkConfig;
-    this._client = new Client(networkConfig.url);
+    this._client = new Client(networkConfig.url, { timeout: 60_000 });
   }
 
   get client(): Client {
