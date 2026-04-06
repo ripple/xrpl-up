@@ -57,8 +57,8 @@ afterAll(() => {
 
 describe("snapshot save", () => {
   it("exits 0", () => {
-    // snapshot save connects to the running node to verify accounts,
-    // then stops services, tars the volume, and restarts.
+    // snapshot save verifies accounts on-chain, stops services, tars the
+    // volume, then resumes the sandbox. The next test checks the resume worked.
     const result = runXrplUp(["snapshot", "save", SNAP_NAME], {}, 120_000);
     expect(result.status, cliOutput(result)).toBe(0);
   });
@@ -76,9 +76,9 @@ describe("snapshot save", () => {
     expect(fs.existsSync(sidecarPath(SNAP_NAME))).toBe(true);
   });
 
-  it("node WebSocket is healthy after save", async () => {
-    const start = runXrplUp(["start", "--local", "--local-network", "--detach"], {}, 120_000);
-    expect(start.status, cliOutput(start)).toBe(0);
+  it("node WebSocket is healthy after save (verifies save resumed the sandbox)", async () => {
+    // Do NOT start the sandbox here — snapshot save is supposed to resume
+    // it automatically. An extra start would mask a broken resume flow.
     const result = runXrplUp(["status", "--local"], {}, 15_000);
     expect(result.status, cliOutput(result)).toBe(0);
     expect(result.stdout).toContain("healthy");
