@@ -558,14 +558,13 @@ Manages vault objects.
 
 #### `xrpl-up amendment`
 
-Subcommands: `list`, `info <nameOrHash>`, `enable <nameOrHash>`, `disable <nameOrHash>`, `sync`.
+Subcommands: `list`, `info <nameOrHash>`, `enable <nameOrHash>`, `sync`.
 
 | Subcommand | Key Flags | Local only? |
 |---|---|---|
 | `list` | `--diff <network>`, `--disabled` | No |
 | `info <nameOrHash>` | — | No |
-| `enable <nameOrHash>` | — | Yes |
-| `disable <nameOrHash>` | — | Yes |
+| `enable <nameOrHash>` | `--auto-reset` | Yes |
 
 ---
 
@@ -692,11 +691,7 @@ Forked accounts have `forked: true` in the WalletStore and no known seed. The ge
 - Prompts to reset and restart (a full node reset is required for the genesis config to take effect)
 - `--auto-reset`: skips the prompt and resets immediately
 
-**`amendment disable <nameOrHash>`** (local only):
-- Removes the amendment hash from `~/.xrpl-up/genesis-amendments.txt`
-- Regenerates `rippled.cfg`
-- Only works for amendments added via `amendment enable`; built-in genesis amendments cannot be removed
-- Prompts to reset and restart (same requirement as enable)
+To undo an `enable`, run `xrpl-up reset` without re-enabling the amendment — the next start will use the default genesis config.
 
 ### 5.8 AMM (XLS-30)
 
@@ -902,7 +897,7 @@ When `--exit-on-crash` is active and the foreground process is running, a `docke
 
 ### 8.3 Local-Only Restrictions
 
-- `amendment enable/disable/sync` — admin WebSocket access (port 6006 with `admin = 0.0.0.0`) — only meaningful on the local sandbox
+- `amendment enable/sync` — admin WebSocket access (port 6006 with `admin = 0.0.0.0`) — only meaningful on the local sandbox
 - `snapshot save/restore` — requires Docker named volume `xrpl-up-local-db`; remote networks have no Docker volume
 - `logs` — streams from Docker Compose; remote networks have no Docker stack
 

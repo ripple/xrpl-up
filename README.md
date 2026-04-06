@@ -1074,16 +1074,7 @@ xrpl-up amendment enable PermissionedDomains --local
 xrpl-up amendment enable PermissionedDomains --local --auto-reset
 ```
 
-> **Local only.** Only works with `--local`; the genesis config approach requires direct filesystem access.
-
-#### `xrpl-up amendment disable <nameOrHash>`
-
-Removes a previously user-enabled amendment from `~/.xrpl-up/genesis-amendments.txt`. Only amendments added via `amendment enable` can be disabled — built-in genesis amendments cannot be removed. Prompts to reset and restart (same requirement as enable).
-
-```bash
-xrpl-up amendment disable PermissionedDomains --local
-xrpl-up amendment disable PermissionedDomains --local --auto-reset
-```
+> **Standalone mode only.** `enable` modifies the genesis config and only takes effect after a reset — it requires standalone mode (`xrpl-up start` without `--local-network`). In `--local-network` (consensus) mode, all mainnet amendments are pre-activated in the genesis ledger and cannot be changed — just like mainnet, activated amendments are permanent. To undo an `enable`, simply run `xrpl-up reset` without re-enabling the amendment.
 
 ---
 

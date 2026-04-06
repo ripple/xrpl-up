@@ -27,7 +27,7 @@ import { configExport, configValidate } from './commands/config';
 import { resetCommand } from './commands/reset';
 import {
   amendmentListCommand, amendmentInfoCommand,
-  amendmentEnableCommand, amendmentDisableCommand,
+  amendmentEnableCommand,
 } from './commands/amendment';
 
 import { logger } from './utils/logger';
@@ -313,7 +313,7 @@ configCmd
 // ── amendment ─────────────────────────────────────────────────────────────────
 const amendment = program
   .command('amendment')
-  .description('Inspect and manage XRPL amendments (list, info, enable, disable)');
+  .description('Inspect and manage XRPL amendments (list, info, enable)');
 
 amendment
   .command('list')
@@ -346,16 +346,6 @@ amendment
   .option('--auto-reset', 'Automatically reset and restart the node without prompting')
   .action((nameOrHash: string, opts: { local?: boolean; autoReset?: boolean }) => {
     amendmentEnableCommand(nameOrHash, { local: opts.local, autoReset: opts.autoReset })
-      .catch(handleError);
-  });
-
-amendment
-  .command('disable <nameOrHash>')
-  .description('Remove a user-enabled amendment from the local sandbox genesis config')
-  .option('--local', 'Use the local Docker sandbox')
-  .option('--auto-reset', 'Automatically reset and restart the node without prompting')
-  .action((nameOrHash: string, opts: { local?: boolean; autoReset?: boolean }) => {
-    amendmentDisableCommand(nameOrHash, { local: opts.local, autoReset: opts.autoReset })
       .catch(handleError);
   });
 
