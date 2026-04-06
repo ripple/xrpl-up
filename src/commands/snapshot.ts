@@ -83,8 +83,15 @@ function assertConsensusMode(action: 'save' | 'restore'): void {
  * Save the current ledger state as a named snapshot.
  *
  * In consensus mode the volume contains NuDB + SQLite. We stop all services,
- * tar the primary node's volume, then restart. The peer node's data is
- * identical and doesn't need to be captured separately.
+ * tar the primary node's volume, then restart.
+ *
+ * Only the primary node's volume is captured. On restore, the same tarball is
+ * extracted into both the primary and peer volumes. This works because both
+ * nodes in the private 2-node network validate the same transactions and
+ * produce identical ledger state (same NuDB entries and SQLite rows). The
+ * peer node starts with --load from the restored data and re-syncs from the
+ * primary. If nodes could diverge (e.g., different NuDB compaction), the
+ * post-restore verification step would catch it.
  */
 export async function snapshotSave(name: string): Promise<void> {
   assertConsensusMode('save');
@@ -92,7 +99,7 @@ export async function snapshotSave(name: string): Promise<void> {
   if (!volumeExists()) {
     throw new Error(
       `No ledger volume found (${VOLUME_NAME}).\n` +
-      `  Start the sandbox first: xrpl-up start --local --detach`
+      `  Start the sandbox first: xrpl-up start --local --local-network --detach`
     );
   }
 
@@ -255,11 +262,13 @@ export async function snapshotSave(name: string): Promise<void> {
   }
 
   // ── Restart all services ───────────────────────────────────────────────────
+  // Use `up -d` instead of `start` — containers may have been removed by
+  // `xrpl-up stop` (which runs compose down). `up -d` recreates them.
   const resumeStartMs = Date.now();
   const startSpinner = ora({ text: chalk.dim('Resuming sandbox…'), prefixText: ' ' }).start();
   try {
     execSync(
-      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" start`,
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d`,
       { stdio: 'ignore' },
     );
     await waitForPort(LOCAL_WS_PORT, 60_000, 'rippled WebSocket');
@@ -299,18 +308,21 @@ export async function snapshotRestore(name: string): Promise<void> {
   if (!volumeExists()) {
     throw new Error(
       `No ledger volume found (${VOLUME_NAME}).\n` +
-      `  Start the sandbox first: xrpl-up start --local --detach`
+      `  Start the sandbox first: xrpl-up start --local --local-network --detach`
     );
   }
 
   logger.blank();
 
   // ── Stop all services ──────────────────────────────────────────────────────
+  // Use `down` instead of `stop` — works whether containers are running,
+  // stopped, or already removed (e.g. after `xrpl-up stop`). We use `up -d`
+  // to recreate them after restoring the volume data.
   const restoreStopMs = Date.now();
   const stopSpinner = ora({ text: chalk.dim('Stopping sandbox…'), prefixText: ' ' }).start();
   try {
     execSync(
-      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" stop`,
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" down`,
       { stdio: 'ignore' },
     );
     const restoreStopElapsed = ((Date.now() - restoreStopMs) / 1000).toFixed(1);
@@ -318,9 +330,9 @@ export async function snapshotRestore(name: string): Promise<void> {
   } catch {
     stopSpinner.fail('Failed to stop sandbox');
     throw new Error(
-      'Could not stop sandbox. Is it running?\n' +
+      'Could not stop sandbox.\n' +
       '  Check:  docker ps | grep xrpl-up\n' +
-      '  Start:  xrpl-up start --local --local-network --detach'
+      '  Logs:   docker compose -p xrpl-up-local logs --tail 20'
     );
   }
 
@@ -354,11 +366,13 @@ export async function snapshotRestore(name: string): Promise<void> {
 
   // ── Restart all services ───────────────────────────────────────────────────
   // The entrypoint detects ledger.db → uses --load to resume from SQLite.
+  // Use `up -d` instead of `start` — containers may have been removed by
+  // `xrpl-up stop` (which runs compose down). `up -d` recreates them.
   const restoreResumeMs = Date.now();
   const startSpinner = ora({ text: chalk.dim('Resuming sandbox…'), prefixText: ' ' }).start();
   try {
     execSync(
-      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" start`,
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d`,
       { stdio: 'ignore' },
     );
     await waitForPort(LOCAL_WS_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'rippled WebSocket');
