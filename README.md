@@ -1132,7 +1132,7 @@ Each snapshot saves both the ledger volume **and** the account store (`local-acc
 **Typical workflow:**
 
 ```bash
-xrpl-up start --local --local-network --detach
+xrpl-up start --local-network --detach
 
 # Run expensive setup (fund accounts, create AMM pool, set trust lines...)
 xrpl-up faucet --network local
@@ -1149,7 +1149,7 @@ xrpl-up accounts --local    # shows accounts as of snapshot time
 
 ```bash
 xrpl-up reset                                    # wipe everything
-xrpl-up start --local --local-network --detach          # start sandbox (creates new volume)
+xrpl-up start --local-network --detach          # start sandbox (creates new volume)
 xrpl-up snapshot restore after-setup             # restore saved state
 xrpl-up accounts --local                         # snapshot accounts restored
 ```

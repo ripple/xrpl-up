@@ -161,7 +161,7 @@ program
     exitOnCrash?: boolean;
     config?: string;
   }) => {
-    const isLocal = opts.local || !opts.network || opts.network === 'local';
+    const isLocal = opts.local || opts.localNetwork || !opts.network || opts.network === 'local';
     nodeCommand({
       network: isLocal ? undefined : opts.network,
       accountCount: opts.accounts !== undefined ? parseInt(opts.accounts, 10) : undefined,

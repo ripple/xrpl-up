@@ -81,7 +81,7 @@ async function startNode(): Promise<void> {
     timeout: 30_000,
     env: { ...process.env },
   });
-  const result = spawnSync(TSX, [CLI, "start", "--local", "--local-network", "--detach"], {
+  const result = spawnSync(TSX, [CLI, "start", "--local-network", "--detach"], {
     encoding: "utf-8",
     timeout: 180_000,   // consensus bootstrap: ~60s for consensus + faucet
     env: { ...process.env },
@@ -173,7 +173,7 @@ export async function setup(): Promise<void> {
     if (process.env.XRPL_LOCAL_NO_AUTOSTART === "1") {
       throw new Error(
         "Local rippled is not running on port 6006.\n" +
-          "Start it manually with: xrpl-up start --local --local-network --detach\n" +
+          "Start it manually with: xrpl-up start --local-network --detach\n" +
           "Or unset XRPL_LOCAL_NO_AUTOSTART to allow auto-start.",
       );
     }
