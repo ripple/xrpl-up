@@ -1243,14 +1243,13 @@ Standalone mode (the default) is recommended for CI — it starts in seconds, ha
 ```yaml
 # .github/workflows/test.yml
 steps:
-  - run: docker pull xrpllabsofficial/xrpld:latest
   - run: xrpl-up start --local --detach
   - run: npm test
   - run: xrpl-up stop
     if: always()
 ```
 
-> **Tip:** Pre-pull the Docker image as a separate step. The first `xrpl-up start` on a fresh machine pulls ~1 GB — an explicit `docker pull` keeps this visible and out of the sandbox startup time.
+> **First run:** `xrpl-up start` automatically pulls the rippled Docker image (~1 GB) on first run and shows download progress. Subsequent runs reuse the cached image.
 
 ---
 
