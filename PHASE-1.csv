@@ -1,0 +1,21 @@
+Section,Feature,Implemented,Notes
+Sandbox Operations,Local node lifecycle (node/stop/reset/status/logs),Yes,Start/stop local Docker sandbox and view status/logs
+Sandbox Operations,Accounts and faucet (accounts/faucet),Yes,Pre-funded accounts and faucet funding on local/testnet/devnet
+Sandbox Operations,Config export/validate (config),Yes,Generate or validate rippled.cfg
+Sandbox Operations,Snapshots (snapshot save/restore/list),Yes,Save and restore local ledger state (requires --persist)
+Sandbox Operations,Script runner (run),Yes,Run TS/JS scripts with XRPL_NETWORK env injected
+Sandbox Operations,Project scaffolding (init),Yes,Generate starter project and scripts
+Protocol Wrappers,AMM (amm create/info),Yes,Create AMM pools and query state
+Protocol Wrappers,NFT (nft mint/list/offers/sell/accept/burn),Yes,Full NFT lifecycle helpers
+Protocol Wrappers,MPT (mpt create/destroy/authorize/set/info/pay/list),Yes,Full MPT issuance and transfer flow
+Protocol Wrappers,DEX offers (offer create/cancel/list),Yes,Create/cancel/list offers
+Protocol Wrappers,Trustlines (trustline set/freeze/list/issuer-defaults),Yes,Trustline and issuer defaults helpers
+Protocol Wrappers,Escrow (escrow create/finish/cancel/list),Yes,Escrow lifecycle helpers
+Protocol Wrappers,Checks (check create/cash/cancel/list),Yes,Check lifecycle helpers
+Protocol Wrappers,Payment channels (channel create/fund/claim/sign/verify/list),Yes,Channel lifecycle + signing/verification
+Protocol Wrappers,AccountSet (accountset set/clear/signer-list/info),Yes,Account flags and signer lists
+Protocol Wrappers,Tickets (ticket create/list),Yes,Reserve sequences and list tickets
+Protocol Wrappers,DepositPreauth (depositpreauth authorize/unauthorize/list),Yes,DepositPreauth helpers
+Protocol Wrappers,Clawback (clawback iou/mpt),Yes,Issuer clawback helpers
+Protocol Wrappers,Transaction history (tx list),Yes,Account transaction listing
+Protocol Wrappers,Amendment management (amendment list/info/enable/disable/sync),Yes,Local amendment control and diff/sync

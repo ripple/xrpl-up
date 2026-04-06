@@ -1,0 +1,541 @@
+<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+<Worksheet ss:Name="Team Wants">
+<Table>
+<Row>
+<Cell><Data ss:Type="String">No.</Data></Cell>
+<Cell><Data ss:Type="String">Feature</Data></Cell>
+<Cell><Data ss:Type="String">Source</Data></Cell>
+<Cell><Data ss:Type="String">Overlap with xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Phase</Data></Cell>
+<Cell><Data ss:Type="String">Reason</Data></Cell>
+<Cell><Data ss:Type="String">Notes</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">1</Data></Cell>
+<Cell><Data ss:Type="String">Local sandbox lifecycle</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Foundational local and CI workflow for sandbox control and troubleshooting.</Data></Cell>
+<Cell><Data ss:Type="String">node / stop / reset / logs / status / accounts</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">2</Data></Cell>
+<Cell><Data ss:Type="String">Local amendment controls</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Needed to test amendment-dependent behavior in a reproducible local environment.</Data></Cell>
+<Cell><Data ss:Type="String">amendment list / info / enable / disable / sync</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">3</Data></Cell>
+<Cell><Data ss:Type="String">Custom Docker image and tag</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Lets teams pin or swap xrpld builds for local development and CI validation.</Data></Cell>
+<Cell><Data ss:Type="String">--image xrpllabsofficial/xrpld:&lt;tag&gt; for local sandbox runs</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">4</Data></Cell>
+<Cell><Data ss:Type="String">Faucet funding</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Quick account funding is a core onboarding and testing requirement.</Data></Cell>
+<Cell><Data ss:Type="String">fund accounts on local / testnet / devnet</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">5</Data></Cell>
+<Cell><Data ss:Type="String">Snapshots</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Supports repeatable state setup and fast rollback during tests and demos.</Data></Cell>
+<Cell><Data ss:Type="String">snapshot save / restore / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">6</Data></Cell>
+<Cell><Data ss:Type="String">Script runner</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Lets custom automation share the same XRPL environment without manual client wiring.</Data></Cell>
+<Cell><Data ss:Type="String">run with injected XRPL_* environment</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">7</Data></Cell>
+<Cell><Data ss:Type="String">Project bootstrap</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Reduces setup friction by giving users a working starter project immediately.</Data></Cell>
+<Cell><Data ss:Type="String">init [directory] scaffolds a starter project</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">8</Data></Cell>
+<Cell><Data ss:Type="String">Useful examples</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Examples accelerate onboarding and help users adapt working flows into their own code.</Data></Cell>
+<Cell><Data ss:Type="String">README examples and starter flows</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">9</Data></Cell>
+<Cell><Data ss:Type="String">AMM wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">AMM workflows are a high-value XRPL developer use case for demos and testing.</Data></Cell>
+<Cell><Data ss:Type="String">amm create / info</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">10</Data></Cell>
+<Cell><Data ss:Type="String">NFT wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">NFT flows are common onboarding and integration scenarios.</Data></Cell>
+<Cell><Data ss:Type="String">nft mint / list / offers / sell / accept / burn</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">11</Data></Cell>
+<Cell><Data ss:Type="String">MPT wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Covers newer token workflows that developers need to exercise locally.</Data></Cell>
+<Cell><Data ss:Type="String">mpt create / destroy / authorize / set / info / pay / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">12</Data></Cell>
+<Cell><Data ss:Type="String">DEX offers wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Basic trading and offer-book interactions are useful developer primitives.</Data></Cell>
+<Cell><Data ss:Type="String">offer create / cancel / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">13</Data></Cell>
+<Cell><Data ss:Type="String">Trustline wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Trust lines are essential for issued-currency and issuer setup workflows.</Data></Cell>
+<Cell><Data ss:Type="String">trustline set / freeze / list / issuer-defaults</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">14</Data></Cell>
+<Cell><Data ss:Type="String">Escrow wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Escrow is a practical advanced transaction type for testing and education.</Data></Cell>
+<Cell><Data ss:Type="String">escrow create / finish / cancel / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">15</Data></Cell>
+<Cell><Data ss:Type="String">Checks wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Rounds out common payment-related transaction helpers.</Data></Cell>
+<Cell><Data ss:Type="String">check create / cash / cancel / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">16</Data></Cell>
+<Cell><Data ss:Type="String">Payment channels wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Provides access to streaming-payment style workflows in the same tool.</Data></Cell>
+<Cell><Data ss:Type="String">channel create / fund / claim / sign / verify / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">17</Data></Cell>
+<Cell><Data ss:Type="String">AccountSet wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Needed for account flags, signer lists, and account configuration flows.</Data></Cell>
+<Cell><Data ss:Type="String">accountset set / clear / signer-list / info</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">18</Data></Cell>
+<Cell><Data ss:Type="String">Tickets wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Supports newer transaction sequencing patterns developers may need to test.</Data></Cell>
+<Cell><Data ss:Type="String">ticket create / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">19</Data></Cell>
+<Cell><Data ss:Type="String">DepositPreauth wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Useful for authorization-based account interaction scenarios.</Data></Cell>
+<Cell><Data ss:Type="String">depositpreauth authorize / unauthorize / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">20</Data></Cell>
+<Cell><Data ss:Type="String">Clawback wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Covers modern asset-control flows for IOU and MPT testing.</Data></Cell>
+<Cell><Data ss:Type="String">clawback IOU and MPT support</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">21</Data></Cell>
+<Cell><Data ss:Type="String">Transaction history wrapper</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Gives users a built-in way to inspect account transaction history.</Data></Cell>
+<Cell><Data ss:Type="String">tx list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">22</Data></Cell>
+<Cell><Data ss:Type="String">Multiple network targets</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Makes the same workflows usable across local and shared XRPL test environments.</Data></Cell>
+<Cell><Data ss:Type="String">local / testnet / devnet</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">23</Data></Cell>
+<Cell><Data ss:Type="String">CLI: run server</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project because load generation and workload control have a different runtime model and scope than the sandbox tool's developer CLI.</Data></Cell>
+<Cell><Data ss:Type="String">Starts the workload API server for traffic generation.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">24</Data></Cell>
+<Cell><Data ss:Type="String">CLI: run local multi-node network</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful after the Phase 1 local sandbox baseline, when the focus expands to local multi-node network workflows.</Data></Cell>
+<Cell><Data ss:Type="String">Generates and runs config for a local multi-node network from config.toml.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">25</Data></Cell>
+<Cell><Data ss:Type="String">Transaction types (31) traffic generator</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project because transaction load generation has a different runtime model and scope than the sandbox tool's developer CLI.</Data></Cell>
+<Cell><Data ss:Type="String">Sends weighted XRPL transaction mixes for real-usage simulation and load tests.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">26</Data></Cell>
+<Cell><Data ss:Type="String">Lifecycle states + retry logic</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project because transaction lifecycle tracking and live workload management make the sandbox heavier and less developer-focused.</Data></Cell>
+<Cell><Data ss:Type="String">Tracks CREATED -&gt; SUBMITTED -&gt; VALIDATED/REJECTED/EXPIRED/FAILED_NET and retries retryable submissions.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">27</Data></Cell>
+<Cell><Data ss:Type="String">Dashboard (live charts, diagnostics)</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful after the lightweight sandbox baseline, when the focus expands to richer visibility and diagnostics for more advanced workflows.</Data></Cell>
+<Cell><Data ss:Type="String">Live metrics UI with counts by state/type, success rates, diagnostics, and drill-down tables.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">28</Data></Cell>
+<Cell><Data ss:Type="String">WebSocket streams + RPC fallback</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project because workload validation infrastructure adds runtime complexity beyond a lightweight developer sandbox.</Data></Cell>
+<Cell><Data ss:Type="String">Subscribes to ledger/accounts_proposed/transactions, uses event queue + reconnect, and falls back to RPC polling.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">29</Data></Cell>
+<Cell><Data ss:Type="String">SQLite persistence</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project because persistent workload state and resume behavior are not part of a lightweight sandbox's core role.</Data></Cell>
+<Cell><Data ss:Type="String">Persists wallets, transactions, validations, and balances for restart/resume.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">30</Data></Cell>
+<Cell><Data ss:Type="String">Assertions (Antithesis SDK)</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project because assertion/event instrumentation belongs with workload execution rather than the base sandbox CLI.</Data></Cell>
+<Cell><Data ss:Type="String">Optional assertion and event-tracing hooks with local fallback behavior.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">31</Data></Cell>
+<Cell><Data ss:Type="String">Self-healing</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project because automated recovery logic is part of workload orchestration, not lightweight sandbox management.</Data></Cell>
+<Cell><Data ss:Type="String">Expires stale transactions, invalidates fee cache on telINSUF_FEE_P, and auto-creates accounts during workload.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">32</Data></Cell>
+<Cell><Data ss:Type="String">Env vars (RPC_URL, WS_URL, etc.)</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project because these settings mainly configure workload generation and runtime behavior rather than the lightweight sandbox tool itself.</Data></Cell>
+<Cell><Data ss:Type="String">Runtime configuration via RPC_URL, WS_URL, RIPPLED_IP, WORKLOAD_PERSIST, TESTNET_DIR, GEN_BIN, TESTNET_VALIDATORS, LOG_LEVEL.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">33</Data></Cell>
+<Cell><Data ss:Type="String">config.toml modeling</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project because transaction load generation has a different runtime model and scope than the sandbox tool's developer CLI.</Data></Cell>
+<Cell><Data ss:Type="String">Structured config for funding, gateways, users, AMM, currencies, transactions, timeouts, genesis, and rippled settings.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">34</Data></Cell>
+<Cell><Data ss:Type="String">CLI: gen auto</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful in a later phase when the sandbox tool expands from a lightweight sandbox into fuller local network generation, because this command creates an end-to-end runnable environment rather than only the ledger data.</Data></Cell>
+<Cell><Data ss:Type="String">Full environment generation: ledger.json, accounts.json, per-validator xrpld.cfg, and docker-compose.yml.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">35</Data></Cell>
+<Cell><Data ss:Type="String">CLI: gen ledger</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful in a later phase when ledger-generation workflows become part of the sandbox tool, because this command focuses on producing genesis ledger data without the rest of the runnable network setup.</Data></Cell>
+<Cell><Data ss:Type="String">Ledger-only generation for ledger.json and accounts.json with trustline, AMM, MPT, and amendment controls.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">36</Data></Cell>
+<Cell><Data ss:Type="String">CLI: rippled write</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful in a later phase when the sandbox tool expands into guided multi-node network setup, because validator config generation is more advanced and harder for typical users to navigate in a lightweight Phase 1 CLI.</Data></Cell>
+<Cell><Data ss:Type="String">Generates validator and hub xrpld.cfg files from a template.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">37</Data></Cell>
+<Cell><Data ss:Type="String">CLI: compose write</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful in a later phase when the sandbox tool expands into guided multi-node network setup, because compose generation for several nodes introduces more infrastructure detail than a lightweight Phase 1 sandbox should expose directly.</Data></Cell>
+<Cell><Data ss:Type="String">Generates docker-compose.yml for validators and hub nodes.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">38</Data></Cell>
+<Cell><Data ss:Type="String">Amendment profiles</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful in a later phase when the sandbox tool expands into fuller generated-network configuration, because profile-driven amendment setup is more advanced than the lightweight Phase 1 sandbox baseline.</Data></Cell>
+<Cell><Data ss:Type="String">Supports mainnet, develop, and custom amendment profiles plus per-amendment overrides.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">39</Data></Cell>
+<Cell><Data ss:Type="String">CLI spec formats</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful in a later phase if the sandbox tool adds more advanced genesis or local network generation flows, because these compact specs are mainly shorthand inputs for generated starting-state configuration.</Data></Cell>
+<Cell><Data ss:Type="String">Trustline, AMM pool, and MPT issuance compact string specs for generation input.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">40</Data></Cell>
+<Cell><Data ss:Type="String">Library API</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">TBD</Data></Cell>
+<Cell><Data ss:Type="String">Likely better as a separate project or advanced module because a programmable generation API is broader than the lightweight sandbox tool's core CLI scope.</Data></Cell>
+<Cell><Data ss:Type="String">Importable generator API with LedgerConfig, AccountConfig, FeeConfig, and related config classes.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">41</Data></Cell>
+<Cell><Data ss:Type="String">Crypto backends</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful in a later phase when larger network generation and faster account/key creation become important, but not necessary for the lightweight Phase 1 sandbox baseline.</Data></Cell>
+<Cell><Data ss:Type="String">CPU, fast native, and GPU-accelerated account/key generation paths.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">42</Data></Cell>
+<Cell><Data ss:Type="String">GL_* env var config</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Phase 2</Data></Cell>
+<Cell><Data ss:Type="String">Useful in a later phase for CI and advanced generator automation, because it lets generation settings be supplied through GL_* environment variables instead of only CLI flags or config files.</Data></Cell>
+<Cell><Data ss:Type="String">All config fields support GL_* environment variables and .env loading.</Data></Cell>
+</Row>
+</Table>
+</Worksheet>
+<Worksheet ss:Name="Phase 1 Plan">
+<Table>
+<Row>
+<Cell><Data ss:Type="String">No.</Data></Cell>
+<Cell><Data ss:Type="String">Capability</Data></Cell>
+<Cell><Data ss:Type="String">Why it belongs in Phase 1</Data></Cell>
+<Cell><Data ss:Type="String">Current commands / scope</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">1</Data></Cell>
+<Cell><Data ss:Type="String">Local sandbox lifecycle</Data></Cell>
+<Cell><Data ss:Type="String">Supports local development and CI usage by making sandbox start, stop, reset, inspection, and troubleshooting repeatable.</Data></Cell>
+<Cell><Data ss:Type="String">node / stop / reset / logs / status / accounts</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">2</Data></Cell>
+<Cell><Data ss:Type="String">Local amendment controls</Data></Cell>
+<Cell><Data ss:Type="String">Supports local-only amendment testing and alignment against other networks.</Data></Cell>
+<Cell><Data ss:Type="String">amendment list / info / enable / disable / sync</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">3</Data></Cell>
+<Cell><Data ss:Type="String">Custom Docker image and tag</Data></Cell>
+<Cell><Data ss:Type="String">Supports local development and CI usage against pinned or custom xrpld container builds.</Data></Cell>
+<Cell><Data ss:Type="String">custom docker image repository and tag selection for sandbox runs</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">4</Data></Cell>
+<Cell><Data ss:Type="String">Faucet funding</Data></Cell>
+<Cell><Data ss:Type="String">Required for quick account setup across local, testnet, and devnet workflows.</Data></Cell>
+<Cell><Data ss:Type="String">faucet</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">5</Data></Cell>
+<Cell><Data ss:Type="String">Snapshots</Data></Cell>
+<Cell><Data ss:Type="String">Enables repeatable local state and fast rollback during development and testing.</Data></Cell>
+<Cell><Data ss:Type="String">snapshot save / restore / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">6</Data></Cell>
+<Cell><Data ss:Type="String">Script runner</Data></Cell>
+<Cell><Data ss:Type="String">Lets teams run project scripts with injected XRPL network context, so custom automation and workflows can share the same environment without manually wiring XRPL client connections, endpoints, and request setup first.</Data></Cell>
+<Cell><Data ss:Type="String">run with injected XRPL_* environment</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">7</Data></Cell>
+<Cell><Data ss:Type="String">Project bootstrap</Data></Cell>
+<Cell><Data ss:Type="String">Scaffolds a starter project so users can begin with a working layout, scripts, and config instead of building the setup from scratch.</Data></Cell>
+<Cell><Data ss:Type="String">init [directory]</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">8</Data></Cell>
+<Cell><Data ss:Type="String">Useful examples</Data></Cell>
+<Cell><Data ss:Type="String">Provides copy-pasteable example workflows so users can learn capabilities quickly and adapt them into their own scripts and tests.</Data></Cell>
+<Cell><Data ss:Type="String">README examples and starter flows</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">9</Data></Cell>
+<Cell><Data ss:Type="String">AMM wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Covers one of the core DeFi workflows expected in an XRPL developer tool.</Data></Cell>
+<Cell><Data ss:Type="String">amm create / info</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">10</Data></Cell>
+<Cell><Data ss:Type="String">NFT wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Provides end-to-end NFT demos and basic lifecycle operations for onboarding and testing.</Data></Cell>
+<Cell><Data ss:Type="String">nft mint / list / offers / sell / accept / burn</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">11</Data></Cell>
+<Cell><Data ss:Type="String">MPT wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Extends the CLI into newer XRPL token workflows and issuance operations.</Data></Cell>
+<Cell><Data ss:Type="String">mpt create / destroy / authorize / set / info / pay / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">12</Data></Cell>
+<Cell><Data ss:Type="String">DEX offers wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Supports basic trading and order-book interactions used in demos and local tests.</Data></Cell>
+<Cell><Data ss:Type="String">offer create / cancel / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">13</Data></Cell>
+<Cell><Data ss:Type="String">Trustline wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Essential for IOU workflows and issuer-account setup in local development.</Data></Cell>
+<Cell><Data ss:Type="String">trustline set / freeze / list / issuer-defaults</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">14</Data></Cell>
+<Cell><Data ss:Type="String">Escrow wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Covers common advanced transaction flows needed in educational and integration scenarios.</Data></Cell>
+<Cell><Data ss:Type="String">escrow create / finish / cancel / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">15</Data></Cell>
+<Cell><Data ss:Type="String">Checks wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Rounds out payment-related transaction helpers for demos and exploratory use.</Data></Cell>
+<Cell><Data ss:Type="String">check create / cash / cancel / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">16</Data></Cell>
+<Cell><Data ss:Type="String">Payment channels wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Adds streaming and off-ledger style payment primitives to the starter toolset.</Data></Cell>
+<Cell><Data ss:Type="String">channel create / fund / claim / sign / verify / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">17</Data></Cell>
+<Cell><Data ss:Type="String">AccountSet wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Needed for account flags, signer-list setup, and other account-configuration tasks.</Data></Cell>
+<Cell><Data ss:Type="String">accountset set / clear / signer-list / info</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">18</Data></Cell>
+<Cell><Data ss:Type="String">Tickets wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Supports newer transaction-submission patterns and sequence management flows.</Data></Cell>
+<Cell><Data ss:Type="String">ticket create / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">19</Data></Cell>
+<Cell><Data ss:Type="String">DepositPreauth wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Useful for account authorization workflows often needed in integration testing.</Data></Cell>
+<Cell><Data ss:Type="String">depositpreauth authorize / unauthorize / list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">20</Data></Cell>
+<Cell><Data ss:Type="String">Clawback wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Covers modern token-control flows for both IOU and MPT assets.</Data></Cell>
+<Cell><Data ss:Type="String">clawback IOU and MPT support</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">21</Data></Cell>
+<Cell><Data ss:Type="String">Transaction history wrapper</Data></Cell>
+<Cell><Data ss:Type="String">Gives users an immediate way to inspect account-level transaction history in the same CLI.</Data></Cell>
+<Cell><Data ss:Type="String">tx list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">22</Data></Cell>
+<Cell><Data ss:Type="String">Multiple network targets</Data></Cell>
+<Cell><Data ss:Type="String">Lets users run the same xrpl-up workflows against local, testnet, and devnet, which makes it easier to move from local development to shared testing environments without changing tools.</Data></Cell>
+<Cell><Data ss:Type="String">local / testnet / devnet</Data></Cell>
+</Row>
+</Table>
+</Worksheet>
+</Workbook>

@@ -1,0 +1,42 @@
+<html><head><meta charset='utf-8'></head><body>
+<table border='1'>
+<tr><th>Section</th><th>Feature</th><th>Source</th><th>Overlap with xrpl-up</th><th>Implemented in xrpl-up</th><th>Notes</th></tr>
+<tr><td>xrpl-up Overlap</td><td>Local sandbox lifecycle</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>node/stop/reset/logs/status</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Faucet funding (faucet)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>fund accounts on local/testnet/devnet</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Snapshots</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>snapshot save/restore/list</td></tr>
+<tr><td>xrpl-up Overlap</td><td>AMM wrapper (amm)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>create/info for pools</td></tr>
+<tr><td>xrpl-up Overlap</td><td>NFT wrapper (nft)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>mint/list/offers/sell/accept/burn</td></tr>
+<tr><td>xrpl-up Overlap</td><td>MPT wrapper (mpt)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>create/destroy/authorize/set/info/pay/list</td></tr>
+<tr><td>xrpl-up Overlap</td><td>DEX offers wrapper (offer)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>create/cancel/list</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Trustline wrapper (trustline)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>set/freeze/list/issuer-defaults</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Escrow wrapper (escrow)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>create/finish/cancel/list</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Checks wrapper (check)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>create/cash/cancel/list</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Payment channels wrapper (channel)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>create/fund/claim/sign/verify/list</td></tr>
+<tr><td>xrpl-up Overlap</td><td>AccountSet wrapper (accountset)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>set/clear flags, signer list, info</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Tickets wrapper (ticket)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>create/list</td></tr>
+<tr><td>xrpl-up Overlap</td><td>DepositPreauth wrapper (depositpreauth)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>authorize/unauthorize/list</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Clawback wrapper (clawback)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>IOU and MPT clawback</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Transaction history wrapper (tx)</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>list account txs</td></tr>
+<tr><td>xrpl-up Overlap</td><td>Script runner</td><td>xrpl-up</td><td>Yes</td><td>Yes</td><td>run + injected env</td></tr>
+<tr><td>Workload</td><td>CLI: run server</td><td>workload</td><td>No</td><td>No</td><td>Starts the workload API server for traffic generation.</td></tr>
+<tr><td>Workload</td><td>CLI: gen testnet configs</td><td>workload</td><td>Partial</td><td>No</td><td>Generates testnet configs from config.toml.</td></tr>
+<tr><td>Workload</td><td>Transaction types (31) traffic generator</td><td>workload</td><td>Partial</td><td>Partial</td><td>Sends weighted mixes of XRPL transaction types to simulate real usage or load test.</td></tr>
+<tr><td>Workload</td><td>Lifecycle states + retry logic</td><td>workload</td><td>No</td><td>No</td><td>Tracks tx lifecycle and retries retryable submissions.</td></tr>
+<tr><td>Workload</td><td>Dashboard (live charts, diagnostics)</td><td>workload</td><td>No</td><td>No</td><td>UI for live metrics, success rates, and diagnostics.</td></tr>
+<tr><td>Workload</td><td>WebSocket streams + RPC fallback</td><td>workload</td><td>Partial</td><td>Partial</td><td>Primary WS validation with RPC polling fallback.</td></tr>
+<tr><td>Workload</td><td>SQLite persistence</td><td>workload</td><td>No</td><td>No</td><td>Persists workload state to SQLite for restart/resume.</td></tr>
+<tr><td>Workload</td><td>Assertions (Antithesis SDK)</td><td>workload</td><td>No</td><td>No</td><td>Optional SDK hooks for assertions and event tracing.</td></tr>
+<tr><td>Workload</td><td>Self-healing (expiry, fee cache, auto-create accounts)</td><td>workload</td><td>No</td><td>No</td><td>Auto-recovers from blocked accounts and fee spikes.</td></tr>
+<tr><td>Workload</td><td>Env vars (RPC_URL, WS_URL, etc)</td><td>workload</td><td>Partial</td><td>Partial</td><td>Environment variable configuration for runtime settings.</td></tr>
+<tr><td>Workload</td><td>config.toml modeling</td><td>workload</td><td>No</td><td>No</td><td>Structured config for funding, accounts, pools, and tx weights.</td></tr>
+<tr><td>Generate Ledger</td><td>CLI: gen auto (ledger+configs+compose)</td><td>generate_ledger</td><td>Partial</td><td>No</td><td>xrpl-up generates local compose but not full multi-node genesis</td></tr>
+<tr><td>Generate Ledger</td><td>CLI: gen ledger (ledger.json/accounts.json)</td><td>generate_ledger</td><td>Partial</td><td>No</td><td>xrpl-up uses rippled.cfg genesis, not JSON ledger generation</td></tr>
+<tr><td>Generate Ledger</td><td>CLI: rippled cfg write</td><td>generate_ledger</td><td>Partial</td><td>Partial</td><td>xrpl-up auto-generates rippled.cfg for local</td></tr>
+<tr><td>Generate Ledger</td><td>CLI: compose write</td><td>generate_ledger</td><td>Partial</td><td>Partial</td><td>xrpl-up writes compose for local sandbox only</td></tr>
+<tr><td>Generate Ledger</td><td>Amendment profiles (mainnet/develop/custom)</td><td>generate_ledger</td><td>Partial</td><td>Partial</td><td>xrpl-up has local amendment list + sync</td></tr>
+<tr><td>Generate Ledger</td><td>Per-amendment enable/disable</td><td>generate_ledger</td><td>Partial</td><td>Partial</td><td>xrpl-up can enable/disable locally</td></tr>
+<tr><td>Generate Ledger</td><td>Spec formats (trustline/amm/mpt)</td><td>generate_ledger</td><td>Partial</td><td>No</td><td>xrpl-up uses CLI flags, not spec strings</td></tr>
+<tr><td>Generate Ledger</td><td>Library API for generation</td><td>generate_ledger</td><td>No</td><td>No</td><td>xrpl-up exposes CLI helpers, not ledger generator API</td></tr>
+<tr><td>Generate Ledger</td><td>Crypto backends (CPU/GPU)</td><td>generate_ledger</td><td>No</td><td>No</td><td></td></tr>
+<tr><td>Generate Ledger</td><td>GL_* env var config</td><td>generate_ledger</td><td>No</td><td>No</td><td></td></tr>
+</table></body></html>

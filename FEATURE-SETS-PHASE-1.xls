@@ -1,0 +1,452 @@
+<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+<Worksheet ss:Name="FEATURE-SETS">
+<Table>
+<Row>
+<Cell><Data ss:Type="String">Section</Data></Cell>
+<Cell><Data ss:Type="String">Feature</Data></Cell>
+<Cell><Data ss:Type="String">Source</Data></Cell>
+<Cell><Data ss:Type="String">Overlap with xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Implemented in xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Notes</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Local sandbox lifecycle</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">node/stop/reset/logs/status</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Faucet funding (faucet)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">fund accounts on local/testnet/devnet</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Snapshots</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">snapshot save/restore/list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">AMM wrapper (amm)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">create/info for pools</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">NFT wrapper (nft)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">mint/list/offers/sell/accept/burn</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">MPT wrapper (mpt)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">create/destroy/authorize/set/info/pay/list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">DEX offers wrapper (offer)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">create/cancel/list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Trustline wrapper (trustline)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">set/freeze/list/issuer-defaults</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Escrow wrapper (escrow)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">create/finish/cancel/list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Checks wrapper (check)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">create/cash/cancel/list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Payment channels wrapper (channel)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">create/fund/claim/sign/verify/list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">AccountSet wrapper (accountset)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">set/clear flags, signer list, info</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Tickets wrapper (ticket)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">create/list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">DepositPreauth wrapper (depositpreauth)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">authorize/unauthorize/list</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Clawback wrapper (clawback)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">IOU and MPT clawback</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Transaction history wrapper (tx)</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">list account txs</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">xrpl-up Overlap</Data></Cell>
+<Cell><Data ss:Type="String">Script runner</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">run + injected env</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">CLI: run server</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Starts the workload API server for traffic generation.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">CLI: gen testnet configs</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Generates testnet configs from config.toml.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">Transaction types (31) traffic generator</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Sends weighted mixes of XRPL transaction types to simulate real usage or load test.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">Lifecycle states + retry logic</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Tracks tx lifecycle and retries retryable submissions.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">Dashboard (live charts, diagnostics)</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">UI for live metrics, success rates, and diagnostics.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">WebSocket streams + RPC fallback</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Primary WS validation with RPC polling fallback.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">SQLite persistence</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Persists workload state to SQLite for restart/resume.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">Assertions (Antithesis SDK)</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Optional SDK hooks for assertions and event tracing.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">Self-healing (expiry, fee cache, auto-create accounts)</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Auto-recovers from blocked accounts and fee spikes.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">Env vars (RPC_URL, WS_URL, etc)</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Environment variable configuration for runtime settings.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Workload</Data></Cell>
+<Cell><Data ss:Type="String">config.toml modeling</Data></Cell>
+<Cell><Data ss:Type="String">workload</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">Structured config for funding, accounts, pools, and tx weights.</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">CLI: gen auto (ledger+configs+compose)</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up generates local compose but not full multi-node genesis</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">CLI: gen ledger (ledger.json/accounts.json)</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up uses rippled.cfg genesis, not JSON ledger generation</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">CLI: rippled cfg write</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up auto-generates rippled.cfg for local</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">CLI: compose write</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up writes compose for local sandbox only</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">Amendment profiles (mainnet/develop/custom)</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up has local amendment list + sync</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">Per-amendment enable/disable</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up can enable/disable locally</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">Spec formats (trustline/amm/mpt)</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">Partial</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up uses CLI flags, not spec strings</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">Library API for generation</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">xrpl-up exposes CLI helpers, not ledger generator API</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">Crypto backends (CPU/GPU)</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String"></Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Generate Ledger</Data></Cell>
+<Cell><Data ss:Type="String">GL_* env var config</Data></Cell>
+<Cell><Data ss:Type="String">generate_ledger</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String">No</Data></Cell>
+<Cell><Data ss:Type="String"></Data></Cell>
+</Row>
+</Table></Worksheet>
+<Worksheet ss:Name="Phase 1">
+<Table>
+<Row>
+<Cell><Data ss:Type="String">Section</Data></Cell>
+<Cell><Data ss:Type="String">Feature</Data></Cell>
+<Cell><Data ss:Type="String">Implemented</Data></Cell>
+<Cell><Data ss:Type="String">Notes</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Sandbox Operations</Data></Cell>
+<Cell><Data ss:Type="String">Local node lifecycle (node/stop/reset/status/logs)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Start/stop local Docker sandbox and view status/logs</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Sandbox Operations</Data></Cell>
+<Cell><Data ss:Type="String">Accounts and faucet (accounts/faucet)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Pre-funded accounts and faucet funding on local/testnet/devnet</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Sandbox Operations</Data></Cell>
+<Cell><Data ss:Type="String">Config export/validate (config)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Generate or validate rippled.cfg</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Sandbox Operations</Data></Cell>
+<Cell><Data ss:Type="String">Snapshots (snapshot save/restore/list)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Save and restore local ledger state (requires --persist)</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Sandbox Operations</Data></Cell>
+<Cell><Data ss:Type="String">Script runner (run)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Run TS/JS scripts with XRPL_NETWORK env injected</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Sandbox Operations</Data></Cell>
+<Cell><Data ss:Type="String">Project scaffolding (init)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Generate starter project and scripts</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">AMM (amm create/info)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Create AMM pools and query state</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">NFT (nft mint/list/offers/sell/accept/burn)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Full NFT lifecycle helpers</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">MPT (mpt create/destroy/authorize/set/info/pay/list)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Full MPT issuance and transfer flow</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">DEX offers (offer create/cancel/list)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Create/cancel/list offers</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">Trustlines (trustline set/freeze/list/issuer-defaults)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Trustline and issuer defaults helpers</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">Escrow (escrow create/finish/cancel/list)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Escrow lifecycle helpers</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">Checks (check create/cash/cancel/list)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Check lifecycle helpers</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">Payment channels (channel create/fund/claim/sign/verify/list)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Channel lifecycle + signing/verification</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">AccountSet (accountset set/clear/signer-list/info)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Account flags and signer lists</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">Tickets (ticket create/list)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Reserve sequences and list tickets</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">DepositPreauth (depositpreauth authorize/unauthorize/list)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">DepositPreauth helpers</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">Clawback (clawback iou/mpt)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Issuer clawback helpers</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">Transaction history (tx list)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Account transaction listing</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">Protocol Wrappers</Data></Cell>
+<Cell><Data ss:Type="String">Amendment management (amendment list/info/enable/disable/sync)</Data></Cell>
+<Cell><Data ss:Type="String">Yes</Data></Cell>
+<Cell><Data ss:Type="String">Local amendment control and diff/sync</Data></Cell>
+</Row>
+</Table></Worksheet>
+</Workbook>

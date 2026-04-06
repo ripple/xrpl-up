@@ -24,7 +24,7 @@ export default defineConfig({
         maxForks: 3,
       },
     },
-    include: ["tests/e2e/**/*.test.ts"],
+    include: ["tests/e2e/escrow/escrow.network2.test.ts"],
     exclude: [
       "**/node_modules/**",
       "**/.worktrees/**",

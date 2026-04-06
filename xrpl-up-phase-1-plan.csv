@@ -1,0 +1,23 @@
+No.,Capability,Why it belongs in Phase 1,Current commands / scope
+1,Local sandbox lifecycle,"Supports local development and CI usage by making sandbox start, stop, reset, inspection, and troubleshooting repeatable.",node / stop / reset / logs / status / accounts
+2,Local amendment controls,Supports local-only amendment testing and alignment against other networks.,amendment list / info / enable / disable / sync
+3,Custom Docker image and tag,Supports local development and CI usage against pinned or custom xrpld container builds.,custom docker image repository and tag selection for sandbox runs
+4,Faucet funding,"Required for quick account setup across local, testnet, and devnet workflows.",faucet
+5,Snapshots,Enables repeatable local state and fast rollback during development and testing.,snapshot save / restore / list
+6,Script runner,"Lets teams run project scripts with injected XRPL network context, so custom automation and workflows can share the same environment without manually wiring XRPL client connections, endpoints, and request setup first.",run with injected XRPL_* environment
+7,Project bootstrap,"Scaffolds a starter project so users can begin with a working layout, scripts, and config instead of building the setup from scratch.",init [directory]
+8,Useful examples,Provides copy-pasteable example workflows so users can learn capabilities quickly and adapt them into their own scripts and tests.,README examples and starter flows
+9,AMM wrapper,Covers one of the core DeFi workflows expected in an XRPL developer tool.,amm create / info
+10,NFT wrapper,Provides end-to-end NFT demos and basic lifecycle operations for onboarding and testing.,nft mint / list / offers / sell / accept / burn
+11,MPT wrapper,Extends the CLI into newer XRPL token workflows and issuance operations.,mpt create / destroy / authorize / set / info / pay / list
+12,DEX offers wrapper,Supports basic trading and order-book interactions used in demos and local tests.,offer create / cancel / list
+13,Trustline wrapper,Essential for IOU workflows and issuer-account setup in local development.,trustline set / freeze / list / issuer-defaults
+14,Escrow wrapper,Covers common advanced transaction flows needed in educational and integration scenarios.,escrow create / finish / cancel / list
+15,Checks wrapper,Rounds out payment-related transaction helpers for demos and exploratory use.,check create / cash / cancel / list
+16,Payment channels wrapper,Adds streaming and off-ledger style payment primitives to the starter toolset.,channel create / fund / claim / sign / verify / list
+17,AccountSet wrapper,"Needed for account flags, signer-list setup, and other account-configuration tasks.",accountset set / clear / signer-list / info
+18,Tickets wrapper,Supports newer transaction-submission patterns and sequence management flows.,ticket create / list
+19,DepositPreauth wrapper,Useful for account authorization workflows often needed in integration testing.,depositpreauth authorize / unauthorize / list
+20,Clawback wrapper,Covers modern token-control flows for both IOU and MPT assets.,clawback IOU and MPT support
+21,Transaction history wrapper,Gives users an immediate way to inspect account-level transaction history in the same CLI.,tx list
+22,Multiple network targets,"Lets users run the same xrpl-up workflows against local, testnet, and devnet, which makes it easier to move from local development to shared testing environments without changing tools.",local / testnet / devnet

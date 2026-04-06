@@ -1,0 +1,24 @@
+<html><head><meta charset='utf-8'></head><body>
+<table border='1'>
+<tr><th>Section</th><th>Feature</th><th>Implemented</th><th>Notes</th></tr>
+<tr><td>Sandbox Operations</td><td>Local node lifecycle (node/stop/reset/status/logs)</td><td>Yes</td><td>Start/stop local Docker sandbox and view status/logs</td></tr>
+<tr><td>Sandbox Operations</td><td>Accounts and faucet (accounts/faucet)</td><td>Yes</td><td>Pre-funded accounts and faucet funding on local/testnet/devnet</td></tr>
+<tr><td>Sandbox Operations</td><td>Config export/validate (config)</td><td>Yes</td><td>Generate or validate rippled.cfg</td></tr>
+<tr><td>Sandbox Operations</td><td>Snapshots (snapshot save/restore/list)</td><td>Yes</td><td>Save and restore local ledger state (requires --persist)</td></tr>
+<tr><td>Sandbox Operations</td><td>Script runner (run)</td><td>Yes</td><td>Run TS/JS scripts with XRPL_NETWORK env injected</td></tr>
+<tr><td>Sandbox Operations</td><td>Project scaffolding (init)</td><td>Yes</td><td>Generate starter project and scripts</td></tr>
+<tr><td>Protocol Wrappers</td><td>AMM (amm create/info)</td><td>Yes</td><td>Create AMM pools and query state</td></tr>
+<tr><td>Protocol Wrappers</td><td>NFT (nft mint/list/offers/sell/accept/burn)</td><td>Yes</td><td>Full NFT lifecycle helpers</td></tr>
+<tr><td>Protocol Wrappers</td><td>MPT (mpt create/destroy/authorize/set/info/pay/list)</td><td>Yes</td><td>Full MPT issuance and transfer flow</td></tr>
+<tr><td>Protocol Wrappers</td><td>DEX offers (offer create/cancel/list)</td><td>Yes</td><td>Create/cancel/list offers</td></tr>
+<tr><td>Protocol Wrappers</td><td>Trustlines (trustline set/freeze/list/issuer-defaults)</td><td>Yes</td><td>Trustline and issuer defaults helpers</td></tr>
+<tr><td>Protocol Wrappers</td><td>Escrow (escrow create/finish/cancel/list)</td><td>Yes</td><td>Escrow lifecycle helpers</td></tr>
+<tr><td>Protocol Wrappers</td><td>Checks (check create/cash/cancel/list)</td><td>Yes</td><td>Check lifecycle helpers</td></tr>
+<tr><td>Protocol Wrappers</td><td>Payment channels (channel create/fund/claim/sign/verify/list)</td><td>Yes</td><td>Channel lifecycle + signing/verification</td></tr>
+<tr><td>Protocol Wrappers</td><td>AccountSet (accountset set/clear/signer-list/info)</td><td>Yes</td><td>Account flags and signer lists</td></tr>
+<tr><td>Protocol Wrappers</td><td>Tickets (ticket create/list)</td><td>Yes</td><td>Reserve sequences and list tickets</td></tr>
+<tr><td>Protocol Wrappers</td><td>DepositPreauth (depositpreauth authorize/unauthorize/list)</td><td>Yes</td><td>DepositPreauth helpers</td></tr>
+<tr><td>Protocol Wrappers</td><td>Clawback (clawback iou/mpt)</td><td>Yes</td><td>Issuer clawback helpers</td></tr>
+<tr><td>Protocol Wrappers</td><td>Transaction history (tx list)</td><td>Yes</td><td>Account transaction listing</td></tr>
+<tr><td>Protocol Wrappers</td><td>Amendment management (amendment list/info/enable/disable/sync)</td><td>Yes</td><td>Local amendment control and diff/sync</td></tr>
+</table></body></html>
