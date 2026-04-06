@@ -84,6 +84,7 @@ async function measureLedgerDrift(): Promise<number> {
 }
 
 const driftS = await measureLedgerDrift();
+console.log(`[patch-clock] measured drift: ${driftS}s (positive=ledger ahead, negative=ledger behind)`);
 
 if (driftS !== 0) {
   // Apply offset so Date.now() tracks ledger time:
