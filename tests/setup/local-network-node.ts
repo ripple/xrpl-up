@@ -184,8 +184,9 @@ export async function setup(): Promise<void> {
   await waitForFaucetHealth(HEALTH_TIMEOUT_MS);
   console.log("[local-network-node] Local stack is ready");
 
-  // No clock drift compensation needed — consensus mode advances close_time
-  // in real-time via the consensus protocol, not via ledger_accept.
+  // With a pre-seeded genesis DB, ledger close_time may be behind wall clock.
+  // The patch-clock.ts setupFile measures drift dynamically per test file,
+  // so we just clear any stale offset from a previous run.
   delete process.env.XRPL_CLOCK_OFFSET_MS;
 
   // Set env var so all worker forks inherit it — workers are spawned after

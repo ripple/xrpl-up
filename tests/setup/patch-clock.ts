@@ -1,16 +1,21 @@
 /**
- * Vitest setupFile: patches Date.now() to account for standalone rippled
- * ledger clock drift.
+ * Vitest setupFile: patches Date.now() to account for rippled ledger clock drift.
  *
- * Problem: Local standalone rippled creates a burst of initial ledgers during
- * startup (advancing close_time by D seconds with no real time passing).
- * Tests that compute `new Date(Date.now() + 5_000)` for EscrowCreate finishAfter
- * get a timestamp that is already in the ledger's past → tecNO_PERMISSION.
+ * Problem: Tests compute timestamps relative to Date.now() (e.g. EscrowCreate
+ * finishAfter = Date.now() + 30s), but the ledger's close_time may differ from
+ * wall clock. This happens in two scenarios:
  *
- * Fix: shift Date.now() forward by (D - 500ms) so that:
- *   - EscrowCreate: finishAfter is D-0.5 + 5 = 4.5+ ledger-seconds in the future ✓
- *   - EscrowFinish/Cancel after 16-second wait: the 15-16 ledger closes are
- *     enough to advance past finishAfter/cancelAfter ✓
+ * 1. **Standalone**: rippled creates a burst of initial ledgers on startup,
+ *    advancing close_time ahead of wall clock by D seconds.
+ * 2. **Consensus with pre-seeded DB**: The genesis DB was built at a past date,
+ *    so the ledger's close_time starts behind wall clock by D seconds.
+ *
+ * If the test's timestamp is in the ledger's past (standalone) or far future
+ * (consensus), rippled returns tecNO_PERMISSION.
+ *
+ * Fix: shift Date.now() by the measured drift so it tracks ledger time:
+ *   - Positive drift (ledger ahead): shift Date.now() forward
+ *   - Negative drift (ledger behind): shift Date.now() backward
  *
  * Safety: Vitest uses performance.now() (monotonic) for test timeouts — not
  * Date.now() — so this patch does not affect timeout detection.
@@ -56,7 +61,7 @@ async function measureLedgerDrift(): Promise<number> {
           const closeTime = r.result?.ledger?.close_time;
           if (typeof closeTime === "number") {
             const wallRipple = Math.floor(Date.now() / 1000) - RIPPLE_EPOCH;
-            done(Math.max(0, closeTime - wallRipple));
+            done(closeTime - wallRipple);
           } else {
             done(0);
           }
@@ -80,14 +85,15 @@ async function measureLedgerDrift(): Promise<number> {
 
 const driftS = await measureLedgerDrift();
 
-if (driftS > 0) {
-  // Apply offset = drift - 0.5s  so that Date.now() returns
-  //   wall_clock + drift - 0.5  ≈  ledger_time - 0.5 seconds
-  // This ensures:
-  //   finishAfter = (ledger - 0.5) + N > ledger  (EscrowCreate succeeds)
-  //   finishAfter is only N-0.5 ledger-seconds away, within the 16-second wait
-  const adjustedOffsetMs = Math.max(0, driftS * 1000 - 500);
-  if (adjustedOffsetMs > 0) {
+if (driftS !== 0) {
+  // Apply offset so Date.now() tracks ledger time:
+  //   Positive drift (ledger ahead): shift Date.now() forward by (drift - 0.5s)
+  //   Negative drift (ledger behind): shift Date.now() backward by (drift + 0.5s)
+  // The 0.5s buffer keeps timestamps slightly behind ledger time so that
+  // EscrowCreate finishAfter is in the ledger's future, not its past.
+  const sign = driftS > 0 ? 1 : -1;
+  const adjustedOffsetMs = driftS * 1000 - sign * 500;
+  if (Math.abs(adjustedOffsetMs) > 100) {
     const _originalNow = Date.now.bind(Date);
     Date.now = () => _originalNow() + adjustedOffsetMs;
   }
