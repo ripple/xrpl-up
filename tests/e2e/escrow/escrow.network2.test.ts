@@ -248,15 +248,15 @@ describe("escrow cancel", () => {
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
-      "--finish-after", new Date(Date.now() + 5_000).toISOString(),
-      "--cancel-after", new Date(Date.now() + 15_000).toISOString(),
+      "--finish-after", new Date(Date.now() + 30_000).toISOString(),
+      "--cancel-after", new Date(Date.now() + 45_000).toISOString(),
       "--seed", sender.seed!,
       "--json",
     ]);
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
-    await new Promise((r) => setTimeout(r, 16_000));
+    await new Promise((r) => setTimeout(r, 50_000));
 
     const result = runCLI([
       "--node", XRPL_WS,
@@ -276,15 +276,15 @@ describe("escrow cancel", () => {
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
-      "--finish-after", new Date(Date.now() + 5_000).toISOString(),
-      "--cancel-after", new Date(Date.now() + 15_000).toISOString(),
+      "--finish-after", new Date(Date.now() + 30_000).toISOString(),
+      "--cancel-after", new Date(Date.now() + 45_000).toISOString(),
       "--seed", sender.seed!,
       "--json",
     ]);
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
-    await new Promise((r) => setTimeout(r, 16_000));
+    await new Promise((r) => setTimeout(r, 50_000));
 
     const result = runCLI([
       "--node", XRPL_WS,
@@ -327,15 +327,15 @@ describe("escrow cancel", () => {
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
-      "--finish-after", new Date(Date.now() + 5_000).toISOString(),
-      "--cancel-after", new Date(Date.now() + 15_000).toISOString(),
+      "--finish-after", new Date(Date.now() + 30_000).toISOString(),
+      "--cancel-after", new Date(Date.now() + 45_000).toISOString(),
       "--seed", sender.seed!,
       "--json",
     ]);
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
-    await new Promise((r) => setTimeout(r, 16_000));
+    await new Promise((r) => setTimeout(r, 50_000));
 
     const result = runCLI([
       "--node", XRPL_WS,
@@ -356,15 +356,15 @@ describe("escrow cancel", () => {
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
-      "--finish-after", new Date(Date.now() + 5_000).toISOString(),
-      "--cancel-after", new Date(Date.now() + 15_000).toISOString(),
+      "--finish-after", new Date(Date.now() + 30_000).toISOString(),
+      "--cancel-after", new Date(Date.now() + 45_000).toISOString(),
       "--seed", sender.seed!,
       "--json",
     ]);
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
-    await new Promise((r) => setTimeout(r, 16_000));
+    await new Promise((r) => setTimeout(r, 50_000));
 
     const tmpDir = mkdtempSync(resolve(tmpdir(), "xrpl-test-keystore-"));
     try {
