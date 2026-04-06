@@ -57,9 +57,8 @@ afterAll(() => {
 
 describe("snapshot save", () => {
   it("exits 0", () => {
-    const stop = runXrplUp(["stop"], {}, 30_000);
-    expect(stop.status, cliOutput(stop)).toBe(0);
-
+    // snapshot save connects to the running node to verify accounts,
+    // then stops services, tars the volume, and restarts.
     const result = runXrplUp(["snapshot", "save", SNAP_NAME], {}, 120_000);
     expect(result.status, cliOutput(result)).toBe(0);
   });
@@ -78,7 +77,7 @@ describe("snapshot save", () => {
   });
 
   it("node WebSocket is healthy after save", async () => {
-    const start = runXrplUp(["start", "--local", "--detach"], {}, 120_000);
+    const start = runXrplUp(["start", "--local", "--local-network", "--detach"], {}, 120_000);
     expect(start.status, cliOutput(start)).toBe(0);
     const result = runXrplUp(["status", "--local"], {}, 15_000);
     expect(result.status, cliOutput(result)).toBe(0);
@@ -146,9 +145,6 @@ describe("snapshot restore", () => {
 
 describe("snapshot save (overwrite existing)", () => {
   it("exits 0 when a snapshot with the same name already exists", () => {
-    const stop = runXrplUp(["stop"], {}, 30_000);
-    expect(stop.status, cliOutput(stop)).toBe(0);
-
     // First save
     const first = runXrplUp(["snapshot", "save", SNAP_OVERWRITE], {}, 120_000);
     expect(first.status, cliOutput(first)).toBe(0);
