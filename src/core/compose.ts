@@ -707,8 +707,21 @@ async function waitForConsensus(timeoutMs: number): Promise<void> {
       if (seq > 0 && firstSeq === 0) firstSeq = seq;
 
       if (seq > firstSeq && (state === 'proposing' || state === 'full')) {
-        await client.disconnect();
-        return;
+        // Check that ledger close_time has converged to wall clock.
+        // The pre-seeded DB may have a stale close_time; wait until
+        // the consensus network catches up to real time so users
+        // never encounter clock drift.
+        const RIPPLE_EPOCH = 946684800;
+        const closeTime = info?.validated_ledger?.close_time ?? 0;
+        if (closeTime > 0) {
+          const wallRipple = Math.floor(Date.now() / 1000) - RIPPLE_EPOCH;
+          const drift = Math.abs(closeTime - wallRipple);
+          if (drift <= 2) {
+            await client.disconnect();
+            return;
+          }
+          // drift still too large — keep waiting for convergence
+        }
       }
 
       // Progress log so CI doesn't look stuck
