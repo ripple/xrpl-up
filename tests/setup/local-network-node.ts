@@ -11,6 +11,7 @@
 import { spawnSync } from "child_process";
 import net from "net";
 import { resolve } from "path";
+import Socket from "@xrplf/isomorphic/ws";
 
 const LOCAL_WS_PORT = 6006;
 const LOCAL_FAUCET_HEALTH = "http://localhost:3001/health";
@@ -160,6 +161,29 @@ async function prefundWorkerMasters(): Promise<void> {
   }
 }
 
+// Track ledger seq and time at setup start for close-rate summary
+let setupSeq = 0;
+let setupTime = 0;
+
+async function getLedgerSeq(): Promise<number> {
+  return new Promise((resolve) => {
+    const ws = new Socket(`ws://127.0.0.1:${LOCAL_WS_PORT}`);
+    const timer = setTimeout(() => { ws.close(); resolve(0); }, 3000);
+    ws.addEventListener("open", () => {
+      ws.send(JSON.stringify({ command: "ledger", ledger_index: "validated" }));
+    });
+    ws.addEventListener("message", (event: { data: unknown }) => {
+      clearTimeout(timer);
+      try {
+        const r = JSON.parse(event.data as string) as { result?: { ledger_index?: number } };
+        resolve(r.result?.ledger_index ?? 0);
+      } catch { resolve(0); }
+      finally { ws.close(); }
+    });
+    ws.addEventListener("error", () => { clearTimeout(timer); resolve(0); });
+  });
+}
+
 export async function setup(): Promise<void> {
   let alreadyRunning = await isPortOpen(LOCAL_WS_PORT);
 
@@ -184,6 +208,10 @@ export async function setup(): Promise<void> {
   await waitForFaucetHealth(HEALTH_TIMEOUT_MS);
   console.log("[local-network-node] Local stack is ready");
 
+  // Record starting ledger for close-rate summary
+  setupSeq = await getLedgerSeq();
+  setupTime = Date.now();
+
   // With a pre-seeded genesis DB, ledger close_time may be behind wall clock.
   // The patch-clock.ts setupFile measures drift dynamically per test file,
   // so we just clear any stale offset from a previous run.
@@ -199,6 +227,17 @@ export async function setup(): Promise<void> {
 }
 
 export async function teardown(): Promise<void> {
+  // Print ledger close-rate summary
+  const endSeq = await getLedgerSeq();
+  const elapsedS = (Date.now() - setupTime) / 1000;
+  const ledgersClosed = endSeq - setupSeq;
+  if (ledgersClosed > 0 && elapsedS > 0) {
+    const avgCloseS = (elapsedS / ledgersClosed).toFixed(1);
+    console.log(
+      `[local-network-node] Ledger close rate: ${ledgersClosed} ledgers in ${elapsedS.toFixed(0)}s (avg ${avgCloseS}s/ledger)`
+    );
+  }
+
   if (process.env.XRPL_LOCAL_TEARDOWN === "1") {
     console.log("[local-network-node] Stopping local stack…");
     stopLocalStack();
