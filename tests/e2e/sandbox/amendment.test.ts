@@ -41,40 +41,31 @@ describe("sandbox amendment list --local", () => {
     expect(result.stdout).toContain("total known");
   });
 
-  it("all configured genesis amendments are enabled on the local node", () => {
+  it("all configured genesis amendments are known to the local rippled build", () => {
+    // Verify every amendment hash in our [amendments] config is recognized by
+    // the running rippled binary (shows up in the feature list). This catches
+    // config entries with wrong hashes or amendments removed from rippled.
+    //
+    // Note: in consensus mode, amendments activate through voting (~17 min),
+    // NOT at genesis. So we check "known" (appears in feature list), not "enabled".
     const configuredNames = getConfiguredAmendmentNames();
     expect(configuredNames.size).toBeGreaterThan(50); // sanity: we expect ~75
 
     const result = runXrplUp(["amendment", "list", "--local"], {}, 30_000);
     expect(result.status).toBe(0);
 
-    // Parse output lines to find amendments that are NOT enabled.
-    // Output lines look like:
-    //   AMM                               8CC0774A3BF6…  ✔         ✔
-    //   SomeDisabledOne                   ABCDEF012345…  ✗         ✔
-    // The first ✔/✗ after the hash is the Enabled column.
-    const notEnabled: string[] = [];
+    const unknownAmendments: string[] = [];
     for (const name of configuredNames) {
-      // Find the line containing this amendment name
       const lineRegex = new RegExp(`^.*?\\b${name}\\b.*$`, "m");
-      const lineMatch = result.stdout.match(lineRegex);
-      if (!lineMatch) {
-        // Amendment not in output at all — the rippled build doesn't know it
-        notEnabled.push(`${name} (not in feature list)`);
-        continue;
-      }
-      // Extract the status marks (✔ or ✗) — first one is Enabled
-      const marks = lineMatch[0].match(/[✔✗]/g) ?? [];
-      if (marks.length >= 1 && marks[0] !== "✔") {
-        notEnabled.push(name);
+      if (!result.stdout.match(lineRegex)) {
+        unknownAmendments.push(name);
       }
     }
 
     expect(
-      notEnabled,
-      `Configured amendments NOT enabled on local node: ${notEnabled.join(", ")}. ` +
-      `Either the node needs a reset (fresh genesis) or these amendments ` +
-      `should be removed from [amendments] in src/core/compose.ts.`,
+      unknownAmendments,
+      `Configured amendments NOT recognized by rippled build: ${unknownAmendments.join(", ")}. ` +
+      `These may have incorrect hashes or were removed from rippled.`,
     ).toEqual([]);
   });
 });

@@ -574,7 +574,7 @@ export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debu
   // AND for all amendments to activate. First boot: ~30-60s for consensus
   // + amendment activation. Restart with --load: ~10-15s.
   if (!noConsensus) {
-    await waitForConsensus(240_000);
+    await waitForConsensus(120_000);
   }
 
   await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
@@ -596,44 +596,22 @@ export function isConsensusMode(): boolean {
 }
 
 /**
- * Poll rippled server_info until a validated ledger exists, indicating the
- * 2-node consensus network has started closing ledgers.
- */
-/**
- * Wait for the 2-node consensus network to produce validated ledgers AND
- * activate all genesis amendments.
+ * Wait for the 2-node consensus network to produce validated ledgers.
  *
- * Amendments listed in [amendments] are included at genesis but may not
- * become active until several ledger closes later. We query the `feature`
- * admin command and wait until every amendment reports `enabled: true`.
- * This prevents temDISABLED errors on fast runtimes (e.g., Node 24) where
- * tests would otherwise start before amendments activate.
+ * In consensus mode, amendments listed in [amendments] are configured for
+ * voting but activate through the normal flag-ledger process (~256 ledgers
+ * × ~4s = ~17 min). We don't wait for amendment activation here — only
+ * for the network to reach "proposing" state with validated ledgers.
+ *
+ * The [amendments] config controls which amendments are voted on, not
+ * which are force-enabled at genesis (that only works in standalone mode).
  */
 async function waitForConsensus(timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   const { Client } = await import('xrpl');
 
-  // Collect the amendment hashes we configured in [amendments] so we only
-  // wait for those to be enabled. The Docker image may know about newer
-  // amendments not in our config — those will be supported but not enabled,
-  // and that's fine (they won't cause temDISABLED for configured features).
-  const configuredHashes = new Set<string>();
-  try {
-    const cfgPath = fs.existsSync(RIPPLED_CFG_FILE_NODE1) ? RIPPLED_CFG_FILE_NODE1 : RIPPLED_CFG_FILE;
-    const cfg = fs.readFileSync(cfgPath, 'utf-8');
-    const amendmentsMatch = cfg.match(/\[amendments\]\n([\s\S]*?)(?:\n\[|$)/);
-    if (amendmentsMatch) {
-      for (const line of amendmentsMatch[1].split('\n')) {
-        const hash = line.trim().split(/\s+/)[0];
-        if (hash && /^[0-9A-Fa-f]{64}$/.test(hash)) {
-          configuredHashes.add(hash.toUpperCase());
-        }
-      }
-    }
-  } catch { /* fall back to just checking validated ledger */ }
-
   let lastLogTime = 0;
-  const LOG_INTERVAL_MS = 15_000; // log progress every 15s
+  const LOG_INTERVAL_MS = 15_000;
 
   while (Date.now() < deadline) {
     let client: InstanceType<typeof Client> | null = null;
@@ -641,61 +619,24 @@ async function waitForConsensus(timeoutMs: number): Promise<void> {
       client = new Client(LOCAL_WS_URL, { timeout: 60_000 });
       await client.connect();
 
-      // Phase 1: validated ledger exists and node is proposing
       const res = await client.request({ command: 'server_info' } as any);
       const info = (res.result as any)?.info;
       const seq = info?.validated_ledger?.seq ?? 0;
       const state = info?.server_state ?? '';
 
       if (seq > 0 && (state === 'proposing' || state === 'full')) {
-        // If we don't know which amendments to check, just accept seq > 0
-        if (configuredHashes.size === 0) {
-          await client.disconnect();
-          return;
-        }
+        await client.disconnect();
+        return;
+      }
 
-        // Phase 2: all configured amendments enabled
-        // The `feature` admin command returns { result: { features: { <hash>: { enabled, name, supported } } } }
-        const featureRes = await client.request({ command: 'feature' } as any);
-        const features = (featureRes.result as any)?.features ?? {};
-
-        let enabledCount = 0;
-        const notEnabled: string[] = [];
-        for (const hash of configuredHashes) {
-          const entry = features[hash];
-          if (entry?.enabled === true) {
-            enabledCount++;
-          } else {
-            notEnabled.push(entry?.name ?? hash.slice(0, 12) + '…');
-          }
-        }
-
-        if (notEnabled.length === 0) {
-          await client.disconnect();
-          return;
-        }
-
-        // Periodic progress log so CI doesn't look stuck
-        const now = Date.now();
-        if (now - lastLogTime > LOG_INTERVAL_MS) {
-          lastLogTime = now;
-          const elapsed = Math.round((now - (deadline - timeoutMs)) / 1000);
-          console.log(
-            `  [waitForConsensus] ${elapsed}s: seq=${seq} state=${state} ` +
-            `amendments=${enabledCount}/${configuredHashes.size} ` +
-            `(waiting: ${notEnabled.slice(0, 5).join(', ')}${notEnabled.length > 5 ? '…' : ''})`
-          );
-        }
-      } else {
-        // Phase 1 progress log
-        const now = Date.now();
-        if (now - lastLogTime > LOG_INTERVAL_MS) {
-          lastLogTime = now;
-          const elapsed = Math.round((now - (deadline - timeoutMs)) / 1000);
-          console.log(
-            `  [waitForConsensus] ${elapsed}s: seq=${seq} state=${state || '(connecting)'} — waiting for validated ledger…`
-          );
-        }
+      // Progress log so CI doesn't look stuck
+      const now = Date.now();
+      if (now - lastLogTime > LOG_INTERVAL_MS) {
+        lastLogTime = now;
+        const elapsed = Math.round((now - (deadline - timeoutMs)) / 1000);
+        console.log(
+          `  [waitForConsensus] ${elapsed}s: seq=${seq} state=${state || '(connecting)'} — waiting for validated ledger…`
+        );
       }
     } catch {
       // not ready yet
@@ -705,26 +646,8 @@ async function waitForConsensus(timeoutMs: number): Promise<void> {
     await new Promise(r => setTimeout(r, 2000));
   }
 
-  // Final diagnostic before throwing
-  let diagnostic = '';
-  try {
-    const diagClient = new Client(LOCAL_WS_URL, { timeout: 10_000 });
-    await diagClient.connect();
-    const featureRes = await diagClient.request({ command: 'feature' } as any);
-    const features = (featureRes.result as any)?.features ?? {};
-    const notEnabled: string[] = [];
-    for (const hash of configuredHashes) {
-      const entry = features[hash];
-      if (!entry || entry.enabled !== true) {
-        notEnabled.push(entry?.name ?? hash);
-      }
-    }
-    diagnostic = `\n  Not enabled (${notEnabled.length}): ${notEnabled.join(', ')}`;
-    await diagClient.disconnect();
-  } catch { /* ignore */ }
-
   throw new Error(
-    `Consensus network amendments did not activate within ${timeoutMs / 1000}s.${diagnostic}\n` +
+    `Consensus network did not reach proposing state within ${timeoutMs / 1000}s.\n` +
     `  Check: docker compose -p ${COMPOSE_PROJECT} logs rippled`
   );
 }
