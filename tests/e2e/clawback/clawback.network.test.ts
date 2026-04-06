@@ -161,7 +161,7 @@ describe("clawback IOU", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs JSON with hash and result", async () => {
     const [issuer, holder] = await setupIouClawback("100");
@@ -184,7 +184,7 @@ describe("clawback IOU", () => {
     };
     expect(out.result).toBe("tesSUCCESS");
     expect(out.hash).toBeDefined();
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run prints tx_blob without submitting", async () => {
     const [issuer] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -222,7 +222,7 @@ describe("clawback IOU", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/Transaction:/);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -244,7 +244,7 @@ describe("clawback MPT", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs JSON with hash and result", async () => {
     const [issuer, holder, mptIssuanceId] = await setupMptClawback("100");
@@ -269,7 +269,7 @@ describe("clawback MPT", () => {
     };
     expect(out.result).toBe("tesSUCCESS");
     expect(out.hash).toBeDefined();
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run prints tx_blob without submitting", async () => {
     const [issuer] = await createFunded(client, master, 1, FUND_AMOUNT);

@@ -1099,7 +1099,7 @@ export async function initCommand(options: InitOptions = {}): Promise<void> {
     : process.cwd();
 
   logger.blank();
-  console.log(chalk.bold('  Initialize XRPL project'));
+  logger.section('Initialize XRPL project');
   logger.blank();
 
   const defaultName = path.basename(targetDir);
@@ -1158,7 +1158,7 @@ export async function initCommand(options: InitOptions = {}): Promise<void> {
   }
 
   logger.blank();
-  console.log(chalk.bold('  Project ready!'));
+  logger.section('Project ready!');
   logger.blank();
 
   const cd = options.directory ? `cd ${options.directory} && ` : '';
@@ -1177,9 +1177,9 @@ export async function initCommand(options: InitOptions = {}): Promise<void> {
     `xrpl-up run scripts/example-mpt.ts       ${chalk.dim('# issue a Multi-Purpose Token')}`,
     ...(isLocal ? [`xrpl-up run scripts/example-amm.ts       ${chalk.dim('# create AMM pool and trade')}`] : []),
   ];
-  console.log('  Next steps:');
+  logger.log('Next steps:');
   for (const step of steps) {
-    console.log(`    ${chalk.cyan(step)}`);
+    logger.log(`  ${chalk.cyan(step)}`);
   }
   logger.blank();
 }

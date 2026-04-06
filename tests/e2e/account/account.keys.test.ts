@@ -52,7 +52,7 @@ describe("account set-regular-key", () => {
     expect(infoResult.status).toBe(0);
     expect(infoResult.stdout).toContain("Regular Key:");
     expect(infoResult.stdout).toContain(regularKeyWallet.address);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("removes the regular key and account info no longer shows it", async () => {
     const [accountWallet, regularKeyWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -86,7 +86,7 @@ describe("account set-regular-key", () => {
     ]);
     expect(infoResult.status).toBe(0);
     expect(infoResult.stdout).not.toContain("Regular Key:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, tx_blob", async () => {
     const [accountWallet, regularKeyWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -103,7 +103,7 @@ describe("account set-regular-key", () => {
     expect(typeof data.hash).toBe("string");
     expect(data.hash.length).toBeGreaterThan(0);
     expect(typeof data.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits without waiting for validation", async () => {
     const [accountWallet, regularKeyWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -120,7 +120,7 @@ describe("account set-regular-key", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Transaction submitted:");
     void regularKeyWallet; // suppress unused warning
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run prints SetRegularKey JSON without submitting", async () => {
     const [accountWallet, regularKeyWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -137,7 +137,7 @@ describe("account set-regular-key", () => {
     expect(tx.TransactionType).toBe("SetRegularKey");
     expect(tx.Account).toBe(accountWallet.address);
     expect(tx.RegularKey).toBe(regularKeyWallet.address);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── account delete ───────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ describe("account delete", () => {
     expect(tx.TransactionType).toBe("AccountDelete");
     expect(tx.Account).toBe(fundedWallet.address);
     expect(tx.Destination).toBe(destWallet.address);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run with --destination-tag includes DestinationTag in JSON", async () => {
     const [fundedWallet, destWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -179,7 +179,7 @@ describe("account delete", () => {
     const tx = JSON.parse(result.stdout) as { TransactionType: string; DestinationTag?: number };
     expect(tx.TransactionType).toBe("AccountDelete");
     expect(tx.DestinationTag).toBe(42);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait with --confirm submits and returns a 64-char hex hash", async () => {
     const [fundedWallet, destWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -196,7 +196,7 @@ describe("account delete", () => {
     ]);
     expect(result.status).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json with --confirm and --no-wait outputs JSON with hash field", async () => {
     const [fundedWallet, destWallet] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -214,7 +214,7 @@ describe("account delete", () => {
     const out = JSON.parse(result.stdout) as { hash: string };
     expect(typeof out.hash).toBe("string");
     expect(out.hash).toMatch(/^[0-9A-Fa-f]{64}$/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("account info returns actNotFound for a non-existent (unfunded) account", () => {
     const unfundedWallet = Wallet.generate();

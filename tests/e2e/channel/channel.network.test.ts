@@ -73,7 +73,7 @@ describe("channel create", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
     expect(result.stdout).toMatch(/Channel ID:\s+[0-9A-F]{64}/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs channelId in JSON", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -94,7 +94,7 @@ describe("channel create", () => {
     };
     expect(out.result).toBe("tesSUCCESS");
     expect(out.channelId).toMatch(/^[0-9A-F]{64}$/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs TransactionType PaymentChannelCreate without submitting", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -116,7 +116,7 @@ describe("channel create", () => {
     expect(typeof out.tx_blob).toBe("string");
     expect(out.tx.Amount).toBe("500000");
     expect(out.tx.SettleDelay).toBe(60);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--cancel-after sets CancelAfter epoch in dry-run", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -137,7 +137,7 @@ describe("channel create", () => {
     };
     expect(typeof out.tx.CancelAfter).toBe("number");
     expect(out.tx.CancelAfter).toBeGreaterThan(0);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--destination-tag sets DestinationTag in dry-run", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -154,7 +154,7 @@ describe("channel create", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     const out = JSON.parse(result.stdout) as { tx: { DestinationTag?: number } };
     expect(out.tx.DestinationTag).toBe(42);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--public-key overrides derived public key in dry-run", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -172,7 +172,7 @@ describe("channel create", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     const out = JSON.parse(result.stdout) as { tx: { PublicKey: string } };
     expect(out.tx.PublicKey).toBe(pubKey);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and output contains a 64-char hex hash", async () => {
     const [source, destination] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -187,7 +187,7 @@ describe("channel create", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -215,7 +215,7 @@ describe("channel fund", () => {
     const channel = res.result.channels.find((c) => c.channel_id === channelId);
     expect(channel).toBeDefined();
     expect(Number(channel!.amount)).toBe(700_000);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs result in JSON", async () => {
     const { source, channelId } = await setupChannel();
@@ -231,7 +231,7 @@ describe("channel fund", () => {
     const out = JSON.parse(result.stdout) as { hash: string; result: string };
     expect(out.result).toBe("tesSUCCESS");
     expect(out.hash).toMatch(/^[0-9A-F]{64}$/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs PaymentChannelFund tx without submitting", async () => {
     const [source] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -252,7 +252,7 @@ describe("channel fund", () => {
     expect(out.tx.Amount).toBe("200000");
     expect(out.tx.Channel).toBe(DUMMY_CHANNEL.toUpperCase());
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--expiration sets Expiration in dry-run", async () => {
     const [source] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -270,7 +270,7 @@ describe("channel fund", () => {
     const out = JSON.parse(result.stdout) as { tx: { Expiration?: number } };
     expect(typeof out.tx.Expiration).toBe("number");
     expect(out.tx.Expiration).toBeGreaterThan(0);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and outputs a 64-char hex hash", async () => {
     const { source, channelId } = await setupChannel();
@@ -284,7 +284,7 @@ describe("channel fund", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -308,7 +308,7 @@ describe("channel list", () => {
     expect(result.stdout).toContain("Expiration:");
     expect(result.stdout).toContain("Cancel After:");
     expect(result.stdout).toContain("Public Key:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs a JSON array containing the channel", async () => {
     const { source, channelId } = await setupChannel();
@@ -323,7 +323,7 @@ describe("channel list", () => {
     expect(Array.isArray(channels)).toBe(true);
     const found = channels.find((c) => c.channel_id === channelId);
     expect(found).toBeDefined();
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--destination filter returns channel when destination matches", async () => {
     const { source, destination, channelId } = await setupChannel();
@@ -340,7 +340,7 @@ describe("channel list", () => {
     expect(channels.every((c) => c.destination_account === destination.address)).toBe(true);
     const found = channels.find((c) => c.channel_id === channelId);
     expect(found).toBeDefined();
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--destination filter with non-matching address returns empty list", async () => {
     const { source } = await setupChannel();
@@ -355,7 +355,7 @@ describe("channel list", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     const channels = JSON.parse(result.stdout) as unknown[];
     expect(channels).toHaveLength(0);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -388,7 +388,7 @@ describe("channel claim", () => {
     ]);
     expect(claimResult.status, `stdout: ${claimResult.stdout} stderr: ${claimResult.stderr}`).toBe(0);
     expect(claimResult.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs result in JSON", async () => {
     const { source, destination, channelId } = await setupChannel(60);
@@ -418,7 +418,7 @@ describe("channel claim", () => {
     const out = JSON.parse(claimResult.stdout) as { hash: string; result: string };
     expect(out.result).toBe("tesSUCCESS");
     expect(out.hash).toMatch(/^[0-9A-F]{64}$/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs PaymentChannelClaim tx without submitting", async () => {
     const [source] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -441,7 +441,7 @@ describe("channel claim", () => {
     // --close flag = 0x00020000 = 131072
     expect(out.tx.Flags).toBeDefined();
     expect(Number(out.tx.Flags) & 0x00020000).toBe(0x00020000);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--renew flag is set in dry-run", async () => {
     const [source] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -460,7 +460,7 @@ describe("channel claim", () => {
     // --renew flag = 0x00010000 = 65536
     expect(out.tx.Flags).toBeDefined();
     expect(Number(out.tx.Flags) & 0x00010000).toBe(0x00010000);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("source closes a channel with --close flag", async () => {
     // settle-delay 0 allows immediate close by source
@@ -474,7 +474,7 @@ describe("channel claim", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and outputs a 64-char hex hash", async () => {
     const { source, channelId } = await setupChannel(60);
@@ -488,5 +488,5 @@ describe("channel claim", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 });

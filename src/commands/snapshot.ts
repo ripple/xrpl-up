@@ -107,6 +107,7 @@ export async function snapshotSave(name: string): Promise<void> {
 
   // ── Flush: wait until all wallet-store accounts are confirmed on-chain ─────
   const walletAccounts = new WalletStore('local').all();
+  const flushStartMs = Date.now();
   const flushSpinner = ora({
     text: chalk.dim(walletAccounts.length > 0
       ? `Waiting for ${walletAccounts.length} account(s) to confirm on-chain…`
@@ -145,7 +146,8 @@ export async function snapshotSave(name: string): Promise<void> {
     await client.disconnect();
 
     if (allConfirmed) {
-      flushSpinner.succeed(chalk.dim('All accounts confirmed on-chain'));
+      const flushElapsed = ((Date.now() - flushStartMs) / 1000).toFixed(1);
+      flushSpinner.succeed(chalk.dim(`All accounts confirmed on-chain (${flushElapsed}s)`));
     } else {
       flushSpinner.fail(chalk.red('Timed out waiting for accounts to confirm on-chain'));
       throw new Error(
@@ -165,6 +167,7 @@ export async function snapshotSave(name: string): Promise<void> {
   }
 
   // ── Stop services, tar volume, restart ─────────────────────────────────────
+  const stopStartMs = Date.now();
   const stopSpinner = ora({ text: chalk.dim('Stopping sandbox for snapshot…'), prefixText: ' ' }).start();
   try {
     // Stop all services — ensures clean SQLite state (WAL checkpointed)
@@ -172,13 +175,19 @@ export async function snapshotSave(name: string): Promise<void> {
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" stop`,
       { stdio: 'ignore' },
     );
-    stopSpinner.succeed(chalk.dim('Sandbox stopped'));
+    const stopElapsed = ((Date.now() - stopStartMs) / 1000).toFixed(1);
+    stopSpinner.succeed(chalk.dim(`Sandbox stopped (${stopElapsed}s)`));
   } catch {
     stopSpinner.fail('Failed to stop sandbox');
-    throw new Error('Could not stop sandbox. Is it running?');
+    throw new Error(
+      'Could not stop sandbox for snapshot.\n' +
+      '  Check:  docker ps | grep xrpl-up\n' +
+      '  Logs:   docker compose -p xrpl-up-local logs --tail 20'
+    );
   }
 
   const tmpDest = dest + '.tmp';
+  const saveStartMs = Date.now();
   const saveSpinner = ora({ text: chalk.dim(`Saving snapshot "${name}"…`), prefixText: ' ' }).start();
   try {
     execSync(
@@ -229,7 +238,8 @@ export async function snapshotSave(name: string): Promise<void> {
     for (const { backup } of backups) {
       if (fs.existsSync(backup)) fs.unlinkSync(backup);
     }
-    saveSpinner.succeed(chalk.green(`Snapshot "${name}" saved`));
+    const saveElapsed = ((Date.now() - saveStartMs) / 1000).toFixed(1);
+    saveSpinner.succeed(chalk.green(`Snapshot "${name}" saved`) + chalk.dim(` (${saveElapsed}s)`));
   } catch (err) {
     for (const file of [finalSidecar, finalMeta, dest]) {
       if (fs.existsSync(file)) fs.unlinkSync(file);
@@ -245,6 +255,7 @@ export async function snapshotSave(name: string): Promise<void> {
   }
 
   // ── Restart all services ───────────────────────────────────────────────────
+  const resumeStartMs = Date.now();
   const startSpinner = ora({ text: chalk.dim('Resuming sandbox…'), prefixText: ' ' }).start();
   try {
     execSync(
@@ -253,7 +264,8 @@ export async function snapshotSave(name: string): Promise<void> {
     );
     await waitForPort(LOCAL_WS_PORT, 60_000, 'rippled WebSocket');
     await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
-    startSpinner.succeed(chalk.dim('Sandbox resumed'));
+    const resumeElapsed = ((Date.now() - resumeStartMs) / 1000).toFixed(1);
+    startSpinner.succeed(chalk.dim(`Sandbox resumed (${resumeElapsed}s)`));
   } catch (err) {
     startSpinner.fail(chalk.red('Sandbox failed to resume'));
     throw err;
@@ -294,22 +306,26 @@ export async function snapshotRestore(name: string): Promise<void> {
   logger.blank();
 
   // ── Stop all services ──────────────────────────────────────────────────────
+  const restoreStopMs = Date.now();
   const stopSpinner = ora({ text: chalk.dim('Stopping sandbox…'), prefixText: ' ' }).start();
   try {
     execSync(
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" stop`,
       { stdio: 'ignore' },
     );
-    stopSpinner.succeed(chalk.dim('Sandbox stopped'));
+    const restoreStopElapsed = ((Date.now() - restoreStopMs) / 1000).toFixed(1);
+    stopSpinner.succeed(chalk.dim(`Sandbox stopped (${restoreStopElapsed}s)`));
   } catch {
-    stopSpinner.fail('Failed to stop sandbox — is it running?');
+    stopSpinner.fail('Failed to stop sandbox');
     throw new Error(
       'Could not stop sandbox. Is it running?\n' +
-      '  Start with: xrpl-up start --local --detach'
+      '  Check:  docker ps | grep xrpl-up\n' +
+      '  Start:  xrpl-up start --local --local-network --detach'
     );
   }
 
   // ── Wipe and extract to BOTH volumes ───────────────────────────────────────
+  const restoreExtractMs = Date.now();
   const restoreSpinner = ora({ text: chalk.dim(`Restoring snapshot "${name}"…`), prefixText: ' ' }).start();
   try {
     for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
@@ -321,7 +337,8 @@ export async function snapshotRestore(name: string): Promise<void> {
         { stdio: 'ignore' },
       );
     }
-    restoreSpinner.succeed(chalk.green(`Snapshot "${name}" restored to both nodes`));
+    const restoreExtractElapsed = ((Date.now() - restoreExtractMs) / 1000).toFixed(1);
+    restoreSpinner.succeed(chalk.green(`Snapshot "${name}" restored to both nodes`) + chalk.dim(` (${restoreExtractElapsed}s)`));
   } catch (err) {
     restoreSpinner.fail(`Failed to restore snapshot "${name}"`);
     throw err;
@@ -337,6 +354,7 @@ export async function snapshotRestore(name: string): Promise<void> {
 
   // ── Restart all services ───────────────────────────────────────────────────
   // The entrypoint detects ledger.db → uses --load to resume from SQLite.
+  const restoreResumeMs = Date.now();
   const startSpinner = ora({ text: chalk.dim('Resuming sandbox…'), prefixText: ' ' }).start();
   try {
     execSync(
@@ -345,7 +363,8 @@ export async function snapshotRestore(name: string): Promise<void> {
     );
     await waitForPort(LOCAL_WS_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'rippled WebSocket');
     await waitForPort(FAUCET_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'faucet HTTP');
-    startSpinner.succeed(chalk.dim('Sandbox resumed'));
+    const restoreResumeElapsed = ((Date.now() - restoreResumeMs) / 1000).toFixed(1);
+    startSpinner.succeed(chalk.dim(`Sandbox resumed (${restoreResumeElapsed}s)`));
   } catch (err) {
     startSpinner.fail(chalk.red('Sandbox failed to resume'));
     const rippledLogs = safeCommandOutput(
@@ -366,6 +385,7 @@ export async function snapshotRestore(name: string): Promise<void> {
   })();
 
   if (restoredAccounts.length > 0) {
+    const verifyStartMs = Date.now();
     const verifySpinner = ora({ text: chalk.dim('Verifying restored ledger state…'), prefixText: ' ' }).start();
     const probe = restoredAccounts[0].address;
     try {
@@ -389,7 +409,8 @@ export async function snapshotRestore(name: string): Promise<void> {
       }
       await client.disconnect();
       if (found) {
-        verifySpinner.succeed(chalk.dim(`Verified account ${probe.slice(0, 8)}… exists on restored ledger`));
+        const verifyElapsed = ((Date.now() - verifyStartMs) / 1000).toFixed(1);
+        verifySpinner.succeed(chalk.dim(`Verified account ${probe.slice(0, 8)}… exists on restored ledger (${verifyElapsed}s)`));
       } else {
         throw new Error('Account not found after waiting');
       }

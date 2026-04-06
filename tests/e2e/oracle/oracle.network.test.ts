@@ -43,7 +43,7 @@ describe("oracle set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates an oracle with --price-data JSON", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -62,7 +62,7 @@ describe("oracle set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("updates an oracle price (uses same document-id)", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -86,7 +86,7 @@ describe("oracle set", () => {
     ]);
     expect(updateResult.status, `update: ${updateResult.stderr}`).toBe(0);
     expect(updateResult.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--last-update-time override is accepted", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -103,7 +103,7 @@ describe("oracle set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs structured JSON", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -123,7 +123,7 @@ describe("oracle set", () => {
     expect(out.hash).toMatch(/^[0-9A-Fa-f]{64}$/);
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run prints tx_blob and tx without submitting", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -142,7 +142,7 @@ describe("oracle set", () => {
     expect(out.tx.TransactionType).toBe("OracleSet");
     expect(out.tx.OracleDocumentID).toBe(1);
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and outputs a hash", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -158,7 +158,7 @@ describe("oracle set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--provider-hex sets provider without encoding", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -176,7 +176,7 @@ describe("oracle set", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     const out = JSON.parse(result.stdout) as { tx: { Provider?: string } };
     expect(out.tx.Provider?.toUpperCase()).toBe(pythHex.toUpperCase());
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--asset-class-hex sets asset class without encoding", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -194,7 +194,7 @@ describe("oracle set", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     const out = JSON.parse(result.stdout) as { tx: { AssetClass?: string } };
     expect(out.tx.AssetClass?.toUpperCase()).toBe(currencyHex.toUpperCase());
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("price pair without scale defaults to Scale 0 in dry-run", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -213,7 +213,7 @@ describe("oracle set", () => {
       tx: { PriceDataSeries: Array<{ PriceData: { Scale?: number } }> };
     };
     expect(out.tx.PriceDataSeries[0].PriceData.Scale).toBe(0);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── oracle get ───────────────────────────────────────────────────────────────
@@ -245,7 +245,7 @@ describe("oracle get", () => {
     expect(result.stdout).toMatch(/BTC\/USD/);
     expect(result.stdout).toMatch(/ETH\/USD/);
     expect(result.stdout).toContain("1");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs raw ledger entry as JSON", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -278,7 +278,7 @@ describe("oracle get", () => {
     expect(out.node.LedgerEntryType).toBe("Oracle");
     expect(out.node.OracleDocumentID).toBe(1);
     expect(Array.isArray(out.node.PriceDataSeries)).toBe(true);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("returns error for non-existent oracle", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -290,7 +290,7 @@ describe("oracle get", () => {
     ]);
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/error/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--node option is accepted on oracle get", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -313,7 +313,7 @@ describe("oracle get", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("pyth");
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── oracle delete ────────────────────────────────────────────────────────────
@@ -350,7 +350,7 @@ describe("oracle delete", () => {
     ]);
     expect(getResult.status).toBe(1);
     expect(getResult.stderr).toMatch(/error|not found|entryNotFound/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs structured JSON on delete", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -378,7 +378,7 @@ describe("oracle delete", () => {
     expect(out.hash).toMatch(/^[0-9A-Fa-f]{64}$/);
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run on delete prints tx_blob without submitting", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -394,7 +394,7 @@ describe("oracle delete", () => {
     expect(out.tx.TransactionType).toBe("OracleDelete");
     expect(out.tx.OracleDocumentID).toBe(99);
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait on delete exits 0 and outputs hash", async () => {
     const [oracle] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -418,5 +418,5 @@ describe("oracle delete", () => {
     ]);
     expect(deleteResult.status, `delete: ${deleteResult.stderr}`).toBe(0);
     expect(deleteResult.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 });

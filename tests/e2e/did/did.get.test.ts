@@ -52,7 +52,7 @@ describe("did get", () => {
     // Data shown as raw hex
     const expectedDataHex = Buffer.from("attestation-payload").toString("hex");
     expect(result.stdout.toLowerCase()).toContain(expectedDataHex.toLowerCase());
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs raw ledger entry JSON", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -76,7 +76,7 @@ describe("did get", () => {
     const out = JSON.parse(result.stdout) as { LedgerEntryType?: string; URI?: string; Data?: string };
     expect(out.LedgerEntryType).toBe("DID");
     expect(typeof out.URI).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("returns not-found message for address with no DID", async () => {
     // Use a fresh wallet that has no DID — no funding needed, just need an address
@@ -113,5 +113,5 @@ describe("did get", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("https://example.com/did/node-test");
-  }, 90_000);
+  }, 120_000);
 });

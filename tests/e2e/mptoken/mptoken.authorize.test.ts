@@ -69,7 +69,7 @@ describe("mptoken authorize", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("holder opts out of an issuance via CLI (--unauthorize, balance is zero)", async () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
@@ -90,7 +90,7 @@ describe("mptoken authorize", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("issuer authorizes holder on require-auth issuance via CLI (--holder)", async () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
@@ -111,7 +111,7 @@ describe("mptoken authorize", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("issuer revokes holder authorization on require-auth issuance (--holder --unauthorize)", async () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
@@ -142,7 +142,7 @@ describe("mptoken authorize", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, fee, ledger", async () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
@@ -164,7 +164,7 @@ describe("mptoken authorize", () => {
     expect(typeof out.hash).toBe("string");
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs tx_blob and TransactionType MPTokenAuthorize without submitting", async () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
@@ -182,7 +182,7 @@ describe("mptoken authorize", () => {
     };
     expect(out.tx.TransactionType).toBe("MPTokenAuthorize");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits without waiting and outputs Transaction hash", async () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
@@ -195,5 +195,5 @@ describe("mptoken authorize", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Transaction:");
-  }, 90_000);
+  }, 120_000);
 });

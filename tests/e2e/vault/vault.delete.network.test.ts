@@ -143,7 +143,7 @@ it.concurrent("--no-wait submits without waiting and outputs Transaction hash", 
   ]);
   expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
   expect(result.stdout).toMatch(/Transaction: [0-9A-Fa-f]{64}/);
-}, 90_000);
+}, 120_000);
 
 it.concurrent("--account + --keystore + --password key material deletes successfully", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);

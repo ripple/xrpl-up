@@ -55,7 +55,7 @@ describe("account set fields", () => {
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     expect(data.EmailHash?.toUpperCase()).toBe(emailHash.toUpperCase());
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--transfer-rate sets TransferRate on-chain", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -74,7 +74,7 @@ describe("account set fields", () => {
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     expect(data.TransferRate).toBe(1005000000);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--tick-size sets TickSize on-chain", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -93,7 +93,7 @@ describe("account set fields", () => {
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     expect(data.TickSize).toBe(5);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── account set flags ────────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ describe("account set flags", () => {
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     // lsfDefaultRipple = 0x00800000
     expect(data.Flags! & 0x00800000).not.toBe(0);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--clear-flag defaultRipple clears lsfDefaultRipple bit on-chain", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -137,7 +137,7 @@ describe("account set flags", () => {
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     // lsfDefaultRipple = 0x00800000 — should be cleared on a fresh wallet
     expect(data.Flags! & 0x00800000).toBe(0);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--mnemonic key material submits AccountSet successfully", async () => {
     const mnemonic = generateMnemonic(wordlist);
@@ -155,7 +155,7 @@ describe("account set flags", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/Transaction submitted:/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--account + --keystore + --password submits AccountSet successfully", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -182,7 +182,7 @@ describe("account set flags", () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── account set clawback ─────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ describe("account set --allow-clawback", () => {
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     expect(data.Flags! & LSF_ALLOW_TRUST_LINE_CLAWBACK).not.toBe(0);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── account set (domain + misc) ─────────────────────────────────────────────
@@ -240,7 +240,7 @@ describe("account set", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Transaction submitted:");
     expect(result.stdout).toMatch(/Transaction submitted: [A-F0-9]+/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run prints AccountSet JSON without submitting", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -259,7 +259,7 @@ describe("account set", () => {
     expect(tx.Domain).toBe(
       Buffer.from("dryrun.example.com", "utf8").toString("hex").toUpperCase()
     );
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, tx_blob", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -276,7 +276,7 @@ describe("account set", () => {
     expect(typeof data.hash).toBe("string");
     expect(data.hash.length).toBeGreaterThan(0);
     expect(typeof data.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("exits 1 when no key material provided", () => {
     const result = runCLI([

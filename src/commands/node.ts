@@ -172,10 +172,13 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   if (isLocal) {
     const image = options.image ?? DEFAULT_IMAGE;
     const dockerSpinner = ora({
-      text: `Building & starting local stack${chalk.dim(' (first run may take a minute…)')}`,
+      text: localNetwork
+        ? `Starting 2-node consensus network${chalk.dim(' (first run may take a minute…)')}`
+        : `Starting standalone node${chalk.dim(' (first run may take a minute…)')}`,
       color: 'cyan',
       indent: 2,
     }).start();
+    const dockerStartMs = Date.now();
 
     try {
       // Validate custom config before starting Docker — surface errors early
@@ -195,8 +198,10 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
         ? (options.detach ? (options.ledgerInterval ?? 1000) : 0)
         : 0;
       await composeUp(image, noConsensus, options.debug ?? false, ledgerIntervalMs, options.config, options.noRestart ?? false);
+      const dockerElapsed = ((Date.now() - dockerStartMs) / 1000).toFixed(1);
+      const modeLabel = localNetwork ? 'Consensus network' : 'Standalone node';
       dockerSpinner.succeed(
-        `Local stack started  ${chalk.dim('rippled ws://localhost:6006')}  ${chalk.dim('faucet http://localhost:3001')}`
+        `${modeLabel} started ${chalk.dim(`(${dockerElapsed}s)`)}  ${chalk.dim('rippled ws://localhost:6006')}  ${chalk.dim('faucet http://localhost:3001')}`
       );
 
       // When --exit-on-crash is set, attach two background watchers:
@@ -257,8 +262,13 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
         });
       }
     } catch (err: unknown) {
-      dockerSpinner.fail('Failed to start local stack');
+      const dockerElapsed = ((Date.now() - dockerStartMs) / 1000).toFixed(1);
+      dockerSpinner.fail(`Failed to start local stack ${chalk.dim(`(${dockerElapsed}s)`)}`);
       logger.error(err instanceof Error ? err.message : String(err));
+      logger.dim('  Troubleshooting:');
+      logger.dim('    docker ps -a                              # check container state');
+      logger.dim('    docker compose -p xrpl-up-local logs      # view container logs');
+      logger.dim('    docker info                               # verify Docker daemon');
       composeDown();
       process.exit(1);
     }
@@ -273,18 +283,20 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     color: 'cyan',
     indent: 2,
   }).start();
+  const connectStartMs = Date.now();
 
   try {
     await manager.connect();
   } catch (err: unknown) {
-    connectSpinner.fail('Connection failed');
+    connectSpinner.fail(`Connection failed ${chalk.dim(`(${networkUrl})`)}`);
     logger.error(err instanceof Error ? err.message : String(err));
     if (isLocal) composeDown();
     process.exit(1);
   }
 
   const serverInfo = await manager.getServerInfo();
-  connectSpinner.succeed(`Connected to ${chalk.cyan.bold(networkDisplayName)}`);
+  const connectElapsed = ((Date.now() - connectStartMs) / 1000).toFixed(1);
+  connectSpinner.succeed(`Connected to ${chalk.cyan.bold(networkDisplayName)} ${chalk.dim(`(${connectElapsed}s)`)}`);
 
   logger.blank();
   logger.section('Network');
@@ -333,6 +345,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
 
   const fundLabel = isLocal ? 'local faucet' : 'testnet faucet';
   const shouldFund = !persist || existingAccounts.length === 0;
+  const fundStartMs = Date.now();
 
   const fundSpinner = shouldFund ? ora({
     text: chalk.dim(`Funding account 1/${count} from ${fundLabel}…`),
@@ -379,8 +392,9 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
       }
     }
 
+    const fundElapsed = ((Date.now() - fundStartMs) / 1000).toFixed(1);
     fundSpinner!.succeed(
-      chalk.green(`${count} accounts funded on ${chalk.cyan(networkDisplayName)}`)
+      chalk.green(`${count} accounts funded on ${chalk.cyan(networkDisplayName)}`) + chalk.dim(` (${fundElapsed}s)`)
     );
     logger.blank();
   }
@@ -396,6 +410,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
       .filter(Boolean);
 
     const forkSpinner = ora({ color: 'cyan', indent: 2 }).start();
+    const forkStartMs = Date.now();
 
     try {
       let addresses: string[] = explicitAddresses;
@@ -428,12 +443,13 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
           forkSpinner.text = `Forking accounts ${chalk.cyan(String(done))}/${total}…`;
         });
 
+        const forkElapsed = ((Date.now() - forkStartMs) / 1000).toFixed(1);
         const snapshotLedger = forkedAccounts[0]?.ledgerIndex;
         const ledgerLabel = snapshotLedger
           ? chalk.dim(` (state at ledger #${snapshotLedger.toLocaleString()})`)
           : '';
         forkSpinner.succeed(
-          `Forked ${chalk.cyan(String(forkedAccounts.length))} account(s) from ${chalk.dim(forkSource)}${ledgerLabel}`
+          `Forked ${chalk.cyan(String(forkedAccounts.length))} account(s) from ${chalk.dim(forkSource)}${ledgerLabel} ${chalk.dim(`(${forkElapsed}s)`)}`
         );
 
         for (const fa of forkedAccounts) {

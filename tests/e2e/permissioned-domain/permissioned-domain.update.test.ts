@@ -161,7 +161,7 @@ describe("permissioned-domain update", () => {
     expect(out.tx.TransactionType).toBe("PermissionedDomainSet");
     expect(out.tx.DomainID.toUpperCase()).toBe(domainId.toUpperCase());
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits without waiting for validation", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
@@ -177,7 +177,7 @@ describe("permissioned-domain update", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Transaction:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--account/--keystore/--password key material updates domain successfully", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);

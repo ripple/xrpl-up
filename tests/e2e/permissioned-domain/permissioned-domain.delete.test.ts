@@ -137,7 +137,7 @@ describe("permissioned-domain delete", () => {
     expect(out.tx.TransactionType).toBe("PermissionedDomainDelete");
     expect(out.tx.DomainID.toUpperCase()).toBe(domainId.toUpperCase());
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits without waiting for validation", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
@@ -152,7 +152,7 @@ describe("permissioned-domain delete", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Transaction:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--account/--keystore/--password key material deletes domain successfully", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);

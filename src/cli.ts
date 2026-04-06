@@ -389,9 +389,16 @@ function handleError(err: unknown): void {
     && /(localhost|127\.0\.0\.1|:6006)/.test(msg);
   if (isLocalFail) {
     console.error('\n  Local XRPL node is not running.');
+    console.error('  Check:                 docker ps | grep xrpl-up');
     console.error('  Start it:              xrpl-up start --detach');
     console.error('  Or target a network:   xrpl-up <sandbox-cmd> --network testnet');
     console.error('                         xrpl-up <xrpl-cmd> -n testnet');
+  }
+  const isDockerFail = /docker.*not available|daemon is not running|Cannot connect to the Docker/i.test(msg);
+  if (isDockerFail) {
+    console.error('\n  Docker is required for local sandbox commands.');
+    console.error('  Install:  https://docker.com');
+    console.error('  macOS:    open -a Docker');
   }
   process.exit(1);
 }

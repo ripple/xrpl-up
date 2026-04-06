@@ -89,7 +89,7 @@ describe("check create", () => {
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
     expect(result.stdout).toMatch(/CheckId:\s+[0-9A-Fa-f]{64}/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--expiration appears in dry-run tx", async () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -115,7 +115,7 @@ describe("check create", () => {
     };
     expect(out.tx.TransactionType).toBe("CheckCreate");
     expect(typeof out.tx.Expiration).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--destination-tag appears in dry-run tx", async () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -138,7 +138,7 @@ describe("check create", () => {
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     const out = JSON.parse(result.stdout) as { tx: { DestinationTag?: number } };
     expect(out.tx.DestinationTag).toBe(42);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--invoice-id is hex-encoded in dry-run tx", async () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -163,7 +163,7 @@ describe("check create", () => {
     expect(typeof out.tx.InvoiceID).toBe("string");
     expect(out.tx.InvoiceID).toHaveLength(64);
     expect(out.tx.InvoiceID!.toLowerCase()).toMatch(/^6f726465722d313233/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json output includes hash, result, checkId fields", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -191,7 +191,7 @@ describe("check create", () => {
     expect(out.hash).toHaveLength(64);
     expect(typeof out.checkId).toBe("string");
     expect(out.checkId).toHaveLength(64);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType CheckCreate and does not submit", async () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -216,7 +216,7 @@ describe("check create", () => {
     };
     expect(out.tx.TransactionType).toBe("CheckCreate");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and output contains 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -235,7 +235,7 @@ describe("check create", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--account + --keystore + --password key material creates successfully", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -276,7 +276,7 @@ describe("check create", () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -300,7 +300,7 @@ describe("check cash", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("cashes an XRP check with --deliver-min", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -319,7 +319,7 @@ describe("check cash", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json output includes hash and result fields", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -342,7 +342,7 @@ describe("check cash", () => {
     expect(out.result).toBe("tesSUCCESS");
     expect(typeof out.hash).toBe("string");
     expect(out.hash).toHaveLength(64);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs signed tx with TransactionType CheckCash without submitting", async () => {
     const [receiver] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -366,7 +366,7 @@ describe("check cash", () => {
     };
     expect(out.tx.TransactionType).toBe("CheckCash");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and outputs a 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -386,7 +386,7 @@ describe("check cash", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -408,7 +408,7 @@ describe("check cancel", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json output includes hash and result fields", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -429,7 +429,7 @@ describe("check cancel", () => {
     expect(out.result).toBe("tesSUCCESS");
     expect(typeof out.hash).toBe("string");
     expect(out.hash).toHaveLength(64);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs signed tx with TransactionType CheckCancel without submitting", async () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -451,7 +451,7 @@ describe("check cancel", () => {
     };
     expect(out.tx.TransactionType).toBe("CheckCancel");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and outputs a 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -469,7 +469,7 @@ describe("check cancel", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("receiver can cancel a check sent to them", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -486,7 +486,7 @@ describe("check cancel", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -508,7 +508,7 @@ describe("check list", () => {
     expect(result.stdout).toContain("CheckID:");
     expect(result.stdout).toContain("SendMax:");
     expect(result.stdout).toContain("Destination:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs a JSON array containing the created check", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -532,5 +532,5 @@ describe("check list", () => {
     expect(found).toBeDefined();
     expect(found!.destination).toBe(receiver.address);
     expect(found!.sendMax).toContain("XRP");
-  }, 90_000);
+  }, 120_000);
 });

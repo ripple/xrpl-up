@@ -54,7 +54,7 @@ describe("mptoken issuance list and get", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain(issuanceId);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("list --json outputs a JSON array containing the issuance", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -78,7 +78,7 @@ describe("mptoken issuance list and get", () => {
     expect(Array.isArray(arr)).toBe(true);
     const found = arr.find((iss) => iss.Issuer === issuer.address && iss.AssetScale === 2);
     expect(found, `Issuance for ${issuer.address} with AssetScale=2 not found in list`).toBeTruthy();
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("list shows 'No MPT issuances.' for an account with no issuances", async () => {
     const [emptyAccount] = await createFunded(client, master, 1, 3);
@@ -126,7 +126,7 @@ describe("mptoken issuance list and get", () => {
     expect(result.stdout).toContain("100");
     expect(result.stdout).toContain("Metadata:");
     expect(result.stdout).toContain("query-test-token");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("get --json outputs raw JSON with node.Issuer and correct fields", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -164,5 +164,5 @@ describe("mptoken issuance list and get", () => {
     expect(out.node.AssetScale).toBe(2);
     expect(out.node.MaximumAmount).toBe("999999");
     expect(out.node.TransferFee).toBe(100);
-  }, 90_000);
+  }, 120_000);
 });

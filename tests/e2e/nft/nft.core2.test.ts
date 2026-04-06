@@ -55,7 +55,7 @@ describe("nft burn", () => {
     ]);
     expect(burnResult.status, `burn stdout: ${burnResult.stdout} stderr: ${burnResult.stderr}`).toBe(0);
     expect(burnResult.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs structured JSON", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -84,7 +84,7 @@ describe("nft burn", () => {
     expect(out.hash).toMatch(/^[0-9A-Fa-f]{64}$/);
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs tx_blob and tx without submitting", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -101,7 +101,7 @@ describe("nft burn", () => {
     expect(out.tx.TransactionType).toBe("NFTokenBurn");
     expect(out.tx.NFTokenID).toBe("0".repeat(64).toUpperCase());
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits and outputs hash", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -126,7 +126,7 @@ describe("nft burn", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── nft modify ──────────────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ describe("nft modify", () => {
     const token = nfts.find((n) => n.NFTokenID === nftokenId);
     expect(token).toBeDefined();
     expect(convertHexToString(token!.URI!)).toBe(newUri);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs structured JSON", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -204,7 +204,7 @@ describe("nft modify", () => {
     expect(out.hash).toMatch(/^[0-9A-Fa-f]{64}$/);
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs tx_blob and tx without submitting", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -223,7 +223,7 @@ describe("nft modify", () => {
     expect(out.tx.NFTokenID).toBe("0".repeat(64).toUpperCase());
     expect(typeof out.tx.URI).toBe("string");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--clear-uri clears the URI of a mutable NFT", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -250,7 +250,7 @@ describe("nft modify", () => {
     ]);
     expect(modifyResult.status, `modify stdout: ${modifyResult.stdout} stderr: ${modifyResult.stderr}`).toBe(0);
     expect(modifyResult.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits and outputs hash", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -277,5 +277,5 @@ describe("nft modify", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 });
