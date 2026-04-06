@@ -16,7 +16,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -37,7 +37,7 @@ describe("mptoken issuance create", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
     expect(result.stdout).toContain("MPTokenIssuanceID:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates an issuance with flags and transfer fee", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -76,7 +76,7 @@ describe("mptoken issuance create", () => {
     expect(entry.node.TransferFee).toBe(500);
     expect(entry.node.AssetScale).toBe(6);
     expect(entry.node.MaximumAmount).toBe("1000000000");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates an issuance with --metadata and verifies via get", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -102,7 +102,7 @@ describe("mptoken issuance create", () => {
     ]);
     expect(getResult.status, `stdout: ${getResult.stdout} stderr: ${getResult.stderr}`).toBe(0);
     expect(getResult.stdout).toContain("test-token-metadata");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, fee, ledger, issuanceId", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -126,7 +126,7 @@ describe("mptoken issuance create", () => {
     expect(typeof out.ledger).toBe("number");
     expect(typeof out.issuanceId).toBe("string");
     expect(out.issuanceId).toMatch(/^[0-9A-Fa-f]+$/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType MPTokenIssuanceCreate", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -140,7 +140,7 @@ describe("mptoken issuance create", () => {
     const out = JSON.parse(result.stdout) as { tx_blob: string; tx: { TransactionType: string } };
     expect(out.tx.TransactionType).toBe("MPTokenIssuanceCreate");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits without waiting and outputs transaction hash", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -152,5 +152,5 @@ describe("mptoken issuance create", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Transaction:");
-  }, 90_000);
+  }, 120_000);
 });

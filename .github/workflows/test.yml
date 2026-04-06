@@ -22,13 +22,21 @@ concurrency:
 
 jobs:
   test:
-    name: e2e (node-${{ matrix.node-version }})
+    name: e2e (node-${{ matrix.node-version }}, ${{ matrix.mode }})
     runs-on: ubuntu-latest
     timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
         node-version: [20, 22, 24]
+        mode: [standalone, local-network, snapshot]
+        include:
+          - mode: standalone
+            test-script: test:e2e:local
+          - mode: local-network
+            test-script: test:e2e:local-network
+          - mode: snapshot
+            test-script: test:e2e:snapshot
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,14 +47,16 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
-      - name: Run e2e tests against local docker node
+      - name: Pull rippled Docker image
+        run: docker pull xrpllabsofficial/xrpld:latest
+      - name: Run e2e tests (${{ matrix.mode }})
         env:
           XRPL_LOCAL_TEARDOWN: '1'
-        run: npm run test:e2e:local
+        run: npm run ${{ matrix.test-script }}
       - name: Upload dist artifact
         # Only upload from the canonical Node version used by the release job.
         # Uploading from all matrix legs would create duplicate artifacts.
-        if: ${{ inputs.upload-dist && matrix.node-version == 22 }}
+        if: ${{ inputs.upload-dist && matrix.node-version == 22 && matrix.mode == 'standalone' }}
         uses: actions/upload-artifact@v4
         with:
           name: dist

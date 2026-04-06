@@ -84,7 +84,7 @@ describe("sandbox amendment enable --local", () => {
       "n\n",  // answer "no" to the reset prompt — keeps the sandbox running
     );
     expect(result.status).toBe(0);
-  }, 90_000);
+  }, 120_000);
 
   it("amendment is queued in the genesis config file", () => {
     if (!targetAmendment) return; // skip — no candidate (all amendments already enabled)

@@ -16,7 +16,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(DEVNET_WS);
+  client = new Client(DEVNET_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMasterDevnet(client);
   await initTicketPoolDevnet(client, master, 7);
@@ -143,7 +143,7 @@ it.concurrent("--no-wait submits without waiting and outputs Transaction hash", 
   ]);
   expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
   expect(result.stdout).toMatch(/Transaction: [0-9A-Fa-f]{64}/);
-}, 90_000);
+}, 120_000);
 
 it.concurrent("--account + --keystore + --password key material deletes successfully", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);

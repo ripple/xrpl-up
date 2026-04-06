@@ -16,7 +16,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -57,7 +57,7 @@ describe("did delete", () => {
     ]);
     expect(getResult.status).toBe(0);
     expect(getResult.stdout).toContain(`No DID found for ${owner.address}`);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs structured result on delete", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -83,7 +83,7 @@ describe("did delete", () => {
     expect(out.hash).toMatch(/^[0-9A-Fa-f]{64}$/);
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run prints tx_blob without submitting", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -97,7 +97,7 @@ describe("did delete", () => {
     const out = JSON.parse(result.stdout) as { tx_blob: string; tx: { TransactionType: string } };
     expect(out.tx.TransactionType).toBe("DIDDelete");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 with a hash", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -118,5 +118,5 @@ describe("did delete", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 });

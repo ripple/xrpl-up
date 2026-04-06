@@ -22,7 +22,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -44,7 +44,7 @@ describe("permissioned-domain create", () => {
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Domain ID:");
     expect(result.stdout).toContain("Tx:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates a domain with 3 credentials via --credential", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
@@ -58,7 +58,7 @@ describe("permissioned-domain create", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Domain ID:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates a domain via --credentials-json", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
@@ -73,7 +73,7 @@ describe("permissioned-domain create", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Domain ID:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs {result, domainId, tx}", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
@@ -94,7 +94,7 @@ describe("permissioned-domain create", () => {
     expect(out.domainId).toMatch(/^[0-9A-Fa-f]{64}$/);
     expect(typeof out.tx).toBe("string");
     expect(out.tx).toMatch(/^[0-9A-Fa-f]{64}$/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run prints unsigned tx JSON without submitting", async () => {
     const [owner, credIssuer] = await createFunded(client, master, 2, 3);
@@ -149,5 +149,5 @@ describe("permissioned-domain create", () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
-  }, 90_000);
+  }, 120_000);
 });

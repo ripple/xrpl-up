@@ -29,7 +29,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -68,7 +68,7 @@ describe("escrow finish", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("finishes a crypto-condition escrow with --condition and --fulfillment", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -96,7 +96,7 @@ describe("escrow finish", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json output includes hash, result, fee, ledger", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -129,7 +129,7 @@ describe("escrow finish", () => {
     expect(out.hash).toHaveLength(64);
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and output contains 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -157,7 +157,7 @@ describe("escrow finish", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType EscrowFinish and does not submit", async () => {
     const [sender] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -174,7 +174,7 @@ describe("escrow finish", () => {
     expect(out.tx.TransactionType).toBe("EscrowFinish");
     expect(typeof out.tx_blob).toBe("string");
     expect(out.tx.OfferSequence).toBe(1);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run with --condition and --fulfillment sets fields in tx", async () => {
     const [sender] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -192,7 +192,7 @@ describe("escrow finish", () => {
     const out = JSON.parse(result.stdout) as { tx: { Condition?: string; Fulfillment?: string } };
     expect(out.tx.Condition).toBe(TEST_CONDITION);
     expect(out.tx.Fulfillment).toBe(TEST_FULFILLMENT);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--account/--keystore/--password key material finishes successfully", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -234,7 +234,7 @@ describe("escrow finish", () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -248,15 +248,15 @@ describe("escrow cancel", () => {
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
-      "--finish-after", new Date(Date.now() + 5_000).toISOString(),
-      "--cancel-after", new Date(Date.now() + 15_000).toISOString(),
+      "--finish-after", new Date(Date.now() + 30_000).toISOString(),
+      "--cancel-after", new Date(Date.now() + 45_000).toISOString(),
       "--seed", sender.seed!,
       "--json",
     ]);
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
-    await new Promise((r) => setTimeout(r, 16_000));
+    await new Promise((r) => setTimeout(r, 50_000));
 
     const result = runCLI([
       "--node", XRPL_WS,
@@ -267,7 +267,7 @@ describe("escrow cancel", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json output includes hash, result, fee, ledger", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -276,15 +276,15 @@ describe("escrow cancel", () => {
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
-      "--finish-after", new Date(Date.now() + 5_000).toISOString(),
-      "--cancel-after", new Date(Date.now() + 15_000).toISOString(),
+      "--finish-after", new Date(Date.now() + 30_000).toISOString(),
+      "--cancel-after", new Date(Date.now() + 45_000).toISOString(),
       "--seed", sender.seed!,
       "--json",
     ]);
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
-    await new Promise((r) => setTimeout(r, 16_000));
+    await new Promise((r) => setTimeout(r, 50_000));
 
     const result = runCLI([
       "--node", XRPL_WS,
@@ -301,7 +301,7 @@ describe("escrow cancel", () => {
     expect(out.hash).toHaveLength(64);
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType EscrowCancel and does not submit", async () => {
     const [sender] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -318,7 +318,7 @@ describe("escrow cancel", () => {
     expect(out.tx.TransactionType).toBe("EscrowCancel");
     expect(typeof out.tx_blob).toBe("string");
     expect(out.tx.OfferSequence).toBe(1);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and output contains 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -327,15 +327,15 @@ describe("escrow cancel", () => {
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
-      "--finish-after", new Date(Date.now() + 5_000).toISOString(),
-      "--cancel-after", new Date(Date.now() + 15_000).toISOString(),
+      "--finish-after", new Date(Date.now() + 30_000).toISOString(),
+      "--cancel-after", new Date(Date.now() + 45_000).toISOString(),
       "--seed", sender.seed!,
       "--json",
     ]);
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
-    await new Promise((r) => setTimeout(r, 16_000));
+    await new Promise((r) => setTimeout(r, 50_000));
 
     const result = runCLI([
       "--node", XRPL_WS,
@@ -347,7 +347,7 @@ describe("escrow cancel", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--account/--keystore/--password key material cancels successfully", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -356,15 +356,15 @@ describe("escrow cancel", () => {
       "escrow", "create",
       "--to", receiver.address,
       "--amount", "1",
-      "--finish-after", new Date(Date.now() + 5_000).toISOString(),
-      "--cancel-after", new Date(Date.now() + 15_000).toISOString(),
+      "--finish-after", new Date(Date.now() + 30_000).toISOString(),
+      "--cancel-after", new Date(Date.now() + 45_000).toISOString(),
       "--seed", sender.seed!,
       "--json",
     ]);
     expect(createResult.status, `create: ${createResult.stderr}`).toBe(0);
     const { sequence } = JSON.parse(createResult.stdout) as { sequence: number };
 
-    await new Promise((r) => setTimeout(r, 16_000));
+    await new Promise((r) => setTimeout(r, 50_000));
 
     const tmpDir = mkdtempSync(resolve(tmpdir(), "xrpl-test-keystore-"));
     try {
@@ -390,5 +390,5 @@ describe("escrow cancel", () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
-  }, 90_000);
+  }, 120_000);
 });

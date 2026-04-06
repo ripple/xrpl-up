@@ -19,7 +19,7 @@ export async function fetchActiveAccountsInLedger(
   sourceUrl: string,
   ledgerIndex: number
 ): Promise<string[]> {
-  const client = new Client(sourceUrl);
+  const client = new Client(sourceUrl, { timeout: 60_000 });
   await client.connect();
 
   try {
@@ -68,7 +68,7 @@ export async function fetchForkAccounts(
   addresses: string[],
   ledgerIndex?: number
 ): Promise<ForkAccount[]> {
-  const client = new Client(sourceUrl);
+  const client = new Client(sourceUrl, { timeout: 60_000 });
   await client.connect();
 
   const results: ForkAccount[] = [];

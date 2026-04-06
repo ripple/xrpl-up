@@ -16,7 +16,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(DEVNET_WS);
+  client = new Client(DEVNET_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMasterDevnet(client);
   await initTicketPoolDevnet(client, master, 13);
@@ -75,7 +75,7 @@ it.concurrent("deposit: XRP into a vault and outputs Vault ID", async () => {
   expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
   expect(result.stdout).toContain(`Vault ID: ${vaultId}`);
   expect(result.stdout).toContain("tesSUCCESS");
-}, 90_000);
+}, 120_000);
 
 it.concurrent("deposit: --json outputs {result, vaultId, tx}", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 5);
@@ -94,7 +94,7 @@ it.concurrent("deposit: --json outputs {result, vaultId, tx}", async () => {
   expect(out.vaultId).toBe(vaultId);
   expect(typeof out.tx).toBe("string");
   expect(out.tx).toHaveLength(64);
-}, 90_000);
+}, 120_000);
 
 it.concurrent("deposit: --dry-run prints VaultDeposit tx JSON without submitting", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 5);
@@ -161,7 +161,7 @@ it.concurrent("deposit: --account + --keystore + --password key material deposit
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
   }
-}, 90_000);
+}, 120_000);
 
 // ── vault withdraw ────────────────────────────────────────────────────────────
 
@@ -267,7 +267,7 @@ it.concurrent("withdraw: --no-wait submits without waiting and outputs Transacti
   ]);
   expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
   expect(result.stdout).toMatch(/Transaction: [0-9A-Fa-f]{64}/);
-}, 90_000);
+}, 120_000);
 
 it.concurrent("withdraw: --account + --keystore + --password key material withdraws successfully", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 5);

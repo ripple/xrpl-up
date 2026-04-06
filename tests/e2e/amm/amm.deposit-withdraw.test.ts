@@ -17,7 +17,7 @@ async function ensureConnected(): Promise<void> {
 }
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, 16);

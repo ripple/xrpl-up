@@ -12,7 +12,7 @@ let client: Client | null = null;
 
 async function getClient(): Promise<Client> {
   if (client && client.isConnected()) return client;
-  client = new Client(RIPPLED_WS_URL);
+  client = new Client(RIPPLED_WS_URL, { timeout: 60_000 });
   // Swallow connection-level errors (e.g. rippled restarting for a snapshot).
   // The HTTP server stays up; the next request will reconnect via this function.
   client.on('error', () => { client = null; });

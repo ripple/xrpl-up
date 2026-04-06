@@ -100,8 +100,13 @@ export async function statusCommand(options: StatusOptions = {}): Promise<void> 
 
     logger.blank();
   } catch (err: unknown) {
-    spinner.fail('Failed to fetch status');
+    spinner.fail(`Failed to fetch status from ${chalk.dim(networkConfig.url)}`);
     logger.error(err instanceof Error ? err.message : String(err));
+    if (isLocal) {
+      logger.dim('  Is the local sandbox running? Check with:');
+      logger.dim('    docker ps | grep xrpl-up');
+      logger.dim('  Start it with: xrpl-up start --local --detach');
+    }
     await manager.disconnect();
     process.exit(1);
   }

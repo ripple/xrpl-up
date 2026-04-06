@@ -33,7 +33,7 @@ async function ensureConnected(): Promise<void> {
 }
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -59,7 +59,7 @@ describe("credential create", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
     expect(result.stdout).toContain("Credential ID:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates a credential with --credential-type-hex", async () => {
     await ensureConnected();
@@ -74,7 +74,7 @@ describe("credential create", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
     expect(result.stdout).toContain("Credential ID:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates a credential with --uri", async () => {
     await ensureConnected();
@@ -90,7 +90,7 @@ describe("credential create", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
     expect(result.stdout).toContain("Credential ID:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates a credential with --expiration", async () => {
     await ensureConnected();
@@ -106,7 +106,7 @@ describe("credential create", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, fee, ledger, credentialId", async () => {
     await ensureConnected();
@@ -133,7 +133,7 @@ describe("credential create", () => {
     expect(typeof out.ledger).toBe("number");
     expect(typeof out.credentialId).toBe("string");
     expect(out.credentialId).toMatch(/^[0-9A-Fa-f]{64}$/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType CredentialCreate and does not submit", async () => {
     await ensureConnected();
@@ -150,7 +150,7 @@ describe("credential create", () => {
     const out = JSON.parse(result.stdout) as { tx_blob: string; tx: { TransactionType: string } };
     expect(out.tx.TransactionType).toBe("CredentialCreate");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── credential accept ────────────────────────────────────────────────────────
@@ -193,7 +193,7 @@ describe("credential accept", () => {
     );
     expect(cred).toBeDefined();
     expect((cred!.Flags! & 0x00010000) !== 0).toBe(true);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, fee, ledger", async () => {
     await ensureConnected();
@@ -228,7 +228,7 @@ describe("credential accept", () => {
     expect(typeof out.hash).toBe("string");
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType CredentialAccept and does not submit", async () => {
     await ensureConnected();
@@ -245,7 +245,7 @@ describe("credential accept", () => {
     const out = JSON.parse(result.stdout) as { tx_blob: string; tx: { TransactionType: string } };
     expect(out.tx.TransactionType).toBe("CredentialAccept");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("accepts credential with --credential-type-hex", async () => {
     await ensureConnected();
@@ -271,7 +271,7 @@ describe("credential accept", () => {
     ]);
     expect(acceptResult.status, `accept: ${acceptResult.stderr}`).toBe(0);
     expect(acceptResult.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits without waiting and prints hash", async () => {
     await ensureConnected();
@@ -297,7 +297,7 @@ describe("credential accept", () => {
     ]);
     expect(acceptResult.status, `accept: ${acceptResult.stderr}`).toBe(0);
     expect(acceptResult.stdout).toContain("Transaction:");
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── credential delete ────────────────────────────────────────────────────────
@@ -385,7 +385,7 @@ describe("credential delete", () => {
       (o) => o.CredentialType === credTypeHex
     );
     expect(cred).toBeUndefined();
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, fee, ledger, credentialId", async () => {
     await ensureConnected();
@@ -422,7 +422,7 @@ describe("credential delete", () => {
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
     expect(typeof out.credentialId).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType CredentialDelete and does not submit", async () => {
     await ensureConnected();
@@ -439,7 +439,7 @@ describe("credential delete", () => {
     const out = JSON.parse(result.stdout) as { tx_blob: string; tx: { TransactionType: string } };
     expect(out.tx.TransactionType).toBe("CredentialDelete");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--credential-type-hex deletes credential using raw hex type", async () => {
     await ensureConnected();
@@ -465,7 +465,7 @@ describe("credential delete", () => {
     ]);
     expect(deleteResult.status, `delete: ${deleteResult.stderr}`).toBe(0);
     expect(deleteResult.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits without waiting and prints hash", async () => {
     await ensureConnected();
@@ -491,7 +491,7 @@ describe("credential delete", () => {
     ]);
     expect(deleteResult.status, `delete: ${deleteResult.stderr}`).toBe(0);
     expect(deleteResult.stdout).toContain("Transaction:");
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── credential list ──────────────────────────────────────────────────────────
@@ -530,7 +530,7 @@ describe("credential list", () => {
     expect(listResult.stdout).toContain(credType);
     expect(listResult.stdout).toContain(issuer.address);
     expect(listResult.stdout).toContain(subject.address);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("lists a pending credential with accepted=no", async () => {
     await ensureConnected();
@@ -554,7 +554,7 @@ describe("credential list", () => {
     expect(listResult.status, `list: ${listResult.stderr}`).toBe(0);
     expect(listResult.stdout).toContain(credType);
     expect(listResult.stdout).toContain("Accepted:        no");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs raw JSON array with accepted credential", async () => {
     await ensureConnected();
@@ -592,5 +592,5 @@ describe("credential list", () => {
     const found = arr.find((c) => c.CredentialType === credTypeHex);
     expect(found).toBeDefined();
     expect((found!.Flags! & 0x00010000) !== 0).toBe(true);
-  }, 90_000);
+  }, 120_000);
 });

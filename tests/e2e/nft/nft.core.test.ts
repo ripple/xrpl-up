@@ -17,7 +17,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -41,7 +41,7 @@ describe("nft mint", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
     expect(result.stdout).toMatch(/NFTokenID:\s+[0-9A-F]{64}/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("mints an NFT with --uri and verifies it appears in account nfts", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -67,7 +67,7 @@ describe("nft mint", () => {
     expect(nftsResult.status).toBe(0);
     const nfts = JSON.parse(nftsResult.stdout) as Array<{ NFTokenID: string }>;
     expect(nfts.some((n) => n.NFTokenID === out.nftokenId)).toBe(true);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("mints an NFT with --transfer-fee and --transferable", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -84,7 +84,7 @@ describe("nft mint", () => {
     const out = JSON.parse(result.stdout) as { result: string; nftokenId: string };
     expect(out.result).toBe("tesSUCCESS");
     expect(out.nftokenId).toMatch(/^[0-9A-F]{64}$/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs structured JSON with nftokenId", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -101,7 +101,7 @@ describe("nft mint", () => {
     expect(typeof out.hash).toBe("string");
     expect(out.hash).toMatch(/^[0-9A-Fa-f]{64}$/);
     expect(out.nftokenId).toMatch(/^[0-9A-F]{64}$/i);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs tx_blob and tx without submitting", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -117,7 +117,7 @@ describe("nft mint", () => {
     expect(out.tx.TransactionType).toBe("NFTokenMint");
     expect(out.tx.NFTokenTaxon).toBe(0);
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--burnable flag sets tfBurnable in dry-run tx Flags", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -134,7 +134,7 @@ describe("nft mint", () => {
     expect(out.tx.Flags).toBeDefined();
     // tfBurnable = 0x00000001 = 1
     expect(out.tx.Flags! & 0x00000001).not.toBe(0);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--only-xrp flag sets tfOnlyXRP in dry-run tx Flags", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -151,7 +151,7 @@ describe("nft mint", () => {
     expect(out.tx.Flags).toBeDefined();
     // tfOnlyXRP = 0x00000002 = 2
     expect(out.tx.Flags! & 0x00000002).not.toBe(0);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--mutable flag sets tfMutable in dry-run tx Flags", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -168,7 +168,7 @@ describe("nft mint", () => {
     expect(out.tx.Flags).toBeDefined();
     // tfMutable = 0x00000010 = 16
     expect(out.tx.Flags! & 0x00000010).not.toBe(0);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and outputs a 64-char hex hash", async () => {
     const [minter] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -181,5 +181,5 @@ describe("nft mint", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 });

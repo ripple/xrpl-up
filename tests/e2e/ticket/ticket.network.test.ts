@@ -20,7 +20,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -52,7 +52,7 @@ describe("ticket create", () => {
     ]);
     expect(listResult.status, `stdout: ${listResult.stdout}\nstderr: ${listResult.stderr}`).toBe(0);
     expect(listResult.stdout).toContain("Ticket sequence:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates multiple tickets and count matches --count", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -68,7 +68,7 @@ describe("ticket create", () => {
     expect(out.result).toBe("tesSUCCESS");
     expect(Array.isArray(out.sequences)).toBe(true);
     expect(out.sequences).toHaveLength(3);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, sequences fields", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -89,7 +89,7 @@ describe("ticket create", () => {
     for (const seq of out.sequences) {
       expect(typeof seq).toBe("number");
     }
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType TicketCreate and does not submit", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -105,7 +105,7 @@ describe("ticket create", () => {
     expect(out.tx.TransactionType).toBe("TicketCreate");
     expect(out.tx.TicketCount).toBe(1);
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and output contains 64-char hex hash", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -118,7 +118,7 @@ describe("ticket create", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--account + --keystore + --password key material creates successfully", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -145,7 +145,7 @@ describe("ticket create", () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
-  }, 90_000);
+  }, 120_000);
 });
 
 // ─── ticket list ──────────────────────────────────────────────────────────────
@@ -174,7 +174,7 @@ describe("ticket list", () => {
     for (const seq of sequences) {
       expect(result.stdout).toContain(`Ticket sequence: ${seq}`);
     }
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs JSON array with sequence field", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -204,7 +204,7 @@ describe("ticket list", () => {
     for (const t of tickets) {
       expect(typeof t.sequence).toBe("number");
     }
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("shows 'No tickets.' for an account with none", async () => {
     // Fresh funded wallet — has no tickets yet
@@ -216,7 +216,7 @@ describe("ticket list", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout.trim()).toBe("No tickets.");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("count of listed tickets matches --count used to create", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -242,5 +242,5 @@ describe("ticket list", () => {
     for (const seq of sequences) {
       expect(tickets.some((t) => t.sequence === seq)).toBe(true);
     }
-  }, 90_000);
+  }, 120_000);
 });

@@ -19,7 +19,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -40,7 +40,7 @@ describe("did set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates DID with --data succeeds", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -52,7 +52,7 @@ describe("did set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("updates existing DID URI", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -73,7 +73,7 @@ describe("did set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("clears URI field with --clear-uri", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -94,7 +94,7 @@ describe("did set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--uri '' empty string clears URI (equivalent to --clear-uri)", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -114,7 +114,7 @@ describe("did set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, fee, ledger", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -136,7 +136,7 @@ describe("did set", () => {
     expect(out.hash).toMatch(/^[0-9A-Fa-f]{64}$/);
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run prints tx_blob and tx without submitting", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -157,7 +157,7 @@ describe("did set", () => {
     // URI should be hex-encoded
     const expectedHex = Buffer.from("https://example.com/did/dry").toString("hex").toUpperCase();
     expect(out.tx.URI?.toUpperCase()).toBe(expectedHex);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 with a hash", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -170,7 +170,7 @@ describe("did set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--uri-hex sets URI as raw hex without re-encoding", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -185,7 +185,7 @@ describe("did set", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     const out = JSON.parse(result.stdout) as { tx: { URI?: string } };
     expect(out.tx.URI?.toLowerCase()).toBe(uriHex.toLowerCase());
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--data-hex sets Data as raw hex without re-encoding", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -200,7 +200,7 @@ describe("did set", () => {
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     const out = JSON.parse(result.stdout) as { tx: { Data?: string } };
     expect(out.tx.Data?.toLowerCase()).toBe(dataHex.toLowerCase());
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--did-document sets DIDDocument hex-encoded", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -216,7 +216,7 @@ describe("did set", () => {
     const out = JSON.parse(result.stdout) as { tx: { DIDDocument?: string } };
     const expectedHex = Buffer.from(doc).toString("hex").toUpperCase();
     expect(out.tx.DIDDocument?.toUpperCase()).toBe(expectedHex);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--account + --keystore + --password key material succeeds", async () => {
     const [owner] = await createFunded(client, master, 1, 3);
@@ -243,5 +243,5 @@ describe("did set", () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
-  }, 90_000);
+  }, 120_000);
 });

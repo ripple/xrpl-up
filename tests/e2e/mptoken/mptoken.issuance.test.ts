@@ -30,7 +30,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -75,7 +75,7 @@ describe("mptoken issuance destroy and set", () => {
     expect(result.stdout).toContain("tesSUCCESS");
     const idMatch = result.stdout.match(/MPTokenIssuanceID:\s+([0-9A-Fa-f]+)/);
     expect(idMatch, "Expected MPTokenIssuanceID in output").toBeTruthy();
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("locks issuance globally via issuance set --lock", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -88,7 +88,7 @@ describe("mptoken issuance destroy and set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("unlocks issuance globally via issuance set --unlock", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -110,7 +110,7 @@ describe("mptoken issuance destroy and set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("locks per-holder balance via issuance set --lock --holder", async () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
@@ -134,7 +134,7 @@ describe("mptoken issuance destroy and set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("unlocks per-holder balance via issuance set --unlock --holder (--json)", async () => {
     const [issuer, holder] = await createFunded(client, master, 2, 3);
@@ -177,7 +177,7 @@ describe("mptoken issuance destroy and set", () => {
     expect(typeof out.hash).toBe("string");
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("issuance set --dry-run outputs TransactionType MPTokenIssuanceSet without submitting", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -196,7 +196,7 @@ describe("mptoken issuance destroy and set", () => {
     };
     expect(out.tx.TransactionType).toBe("MPTokenIssuanceSet");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("issuance set --no-wait submits without waiting and outputs Transaction hash", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -210,7 +210,7 @@ describe("mptoken issuance destroy and set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Transaction:");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("destroys an issuance via issuance destroy", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);
@@ -282,7 +282,7 @@ describe("mptoken issuance destroy and set", () => {
     };
     expect(out.tx.TransactionType).toBe("MPTokenIssuanceDestroy");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("issuance destroy --no-wait submits without waiting and outputs Transaction hash", async () => {
     const [issuer] = await createFunded(client, master, 1, 3);

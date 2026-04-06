@@ -35,7 +35,7 @@ async function holderDeposit(holder: Wallet, amountStr: string): Promise<void> {
 }
 
 beforeAll(async () => {
-  client = new Client(DEVNET_WS);
+  client = new Client(DEVNET_WS, { timeout: 60_000 });
   await client.connect();
 
   master = await fundMasterDevnet(client); // 1 faucet call
@@ -133,7 +133,7 @@ it.concurrent("full clawback: holder deposits IOU, issuer claws back all (explic
   expect(result.stdout).toContain(`Vault ID: ${vaultId}`);
   expect(result.stdout).toContain(`Holder:   ${holder.address}`);
   expect(result.stdout).toContain("tesSUCCESS");
-}, 90_000);
+}, 120_000);
 
 it.concurrent("partial clawback with --amount", async () => {
   const holder = holders[1];
@@ -177,7 +177,7 @@ it.concurrent("--json outputs {result, vaultId, holder, tx}", async () => {
   expect(out.holder).toBe(holder.address);
   expect(typeof out.tx).toBe("string");
   expect(out.tx).toHaveLength(64);
-}, 90_000);
+}, 120_000);
 
 it.concurrent("--dry-run prints VaultClawback tx JSON without submitting", async () => {
   const holder = holders[3];
@@ -200,7 +200,7 @@ it.concurrent("--dry-run prints VaultClawback tx JSON without submitting", async
   expect(out.tx.VaultID).toBe(vaultId);
   expect(out.tx.Holder).toBe(holder.address);
   expect(typeof out.tx_blob).toBe("string");
-}, 90_000);
+}, 120_000);
 
 it.concurrent("--no-wait submits without waiting and outputs Transaction hash", async () => {
   const holder = holders[4];
@@ -248,4 +248,4 @@ it.concurrent("--account + --keystore + --password key material claws back succe
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
   }
-}, 90_000);
+}, 120_000);

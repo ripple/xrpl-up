@@ -18,7 +18,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -76,7 +76,7 @@ describe("multisig set", () => {
     expect(listResult.stdout).toContain(signer2.address);
     expect(listResult.stdout).toContain(signer3.address);
     expect(listResult.stdout).toContain("weight: 1");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("updates the signer list (replace 2-of-3 with 2-of-2)", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -132,7 +132,7 @@ describe("multisig set", () => {
     expect(listResult.stdout).toContain(signer1.address);
     expect(listResult.stdout).toContain(signer2.address);
     expect(listResult.stdout).not.toContain(signer3.address);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, fee, ledger", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -162,7 +162,7 @@ describe("multisig set", () => {
     expect(typeof out.hash).toBe("string");
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType SignerListSet and does not submit", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -188,7 +188,7 @@ describe("multisig set", () => {
     };
     expect(out.tx.TransactionType).toBe("SignerListSet");
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits without waiting for validation", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -209,7 +209,7 @@ describe("multisig set", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Transaction:");
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -258,7 +258,7 @@ describe("multisig list", () => {
     expect(result.stdout).toContain("weight: 2");
     expect(result.stdout).toContain("weight: 3");
     expect(result.stdout).toContain("weight: 1");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs raw JSON array with SignerQuorum and SignerEntries", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -312,7 +312,7 @@ describe("multisig list", () => {
     expect(accounts).toContain(signer1.address);
     expect(accounts).toContain(signer2.address);
     expect(accounts).toContain(signer3.address);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("shows 'No signer list configured.' for account with no signer list", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -325,7 +325,7 @@ describe("multisig list", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("No signer list configured.");
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -383,7 +383,7 @@ describe("multisig delete", () => {
       `stdout: ${listResult.stdout} stderr: ${listResult.stderr}`,
     ).toBe(0);
     expect(listResult.stdout).toContain("No signer list configured.");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs hash, result, fee, ledger", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -426,7 +426,7 @@ describe("multisig delete", () => {
     expect(typeof out.hash).toBe("string");
     expect(typeof out.fee).toBe("string");
     expect(typeof out.ledger).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs signed tx JSON with TransactionType SignerListSet and does not submit", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -448,7 +448,7 @@ describe("multisig delete", () => {
     expect(out.tx.TransactionType).toBe("SignerListSet");
     expect(out.tx.SignerQuorum).toBe(0);
     expect(typeof out.tx_blob).toBe("string");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait submits without waiting for validation", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
@@ -482,5 +482,5 @@ describe("multisig delete", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("Transaction:");
-  }, 90_000);
+  }, 120_000);
 });

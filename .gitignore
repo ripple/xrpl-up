@@ -2,6 +2,7 @@ node_modules/
 dist/
 *.docx
 .claude/
+.DS_Store
 CONTEXT-*.md
 # Compiled TypeScript output in test directories
 tests/**/*.js

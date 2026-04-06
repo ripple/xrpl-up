@@ -11,8 +11,8 @@
  * Do NOT include in the main test:e2e:local run — service restarts
  * would disrupt other tests running concurrently on the same node.
  *
- * Requires the node to have been started with --persist (handled by
- * local-node.ts globalSetup which always uses --persist).
+ * Requires the node to be running with --local-network (consensus mode,
+ * handled by snapshot-setup.ts globalSetup).
  */
 import { describe, it, expect, afterAll } from "vitest";
 import fs from "fs";
@@ -32,10 +32,18 @@ function sidecarPath(name: string): string {
   return path.join(SNAPSHOTS_DIR, `${name}-accounts.json`);
 }
 
+function metaPath(name: string): string {
+  return path.join(SNAPSHOTS_DIR, `${name}-meta.json`);
+}
+
+function cliOutput(result: { stdout?: string | null; stderr?: string | null }): string {
+  return result.stderr || result.stdout || "xrpl-up command failed without output";
+}
+
 afterAll(() => {
   // Clean up all test snapshots created during this run
   for (const name of [SNAP_NAME, SNAP_OVERWRITE]) {
-    for (const file of [snapshotPath(name), sidecarPath(name)]) {
+    for (const file of [snapshotPath(name), sidecarPath(name), metaPath(name)]) {
       try {
         fs.unlinkSync(file);
       } catch {
@@ -49,8 +57,10 @@ afterAll(() => {
 
 describe("snapshot save", () => {
   it("exits 0", () => {
+    // snapshot save verifies accounts on-chain, stops services, tars the
+    // volume, then resumes the sandbox. The next test checks the resume worked.
     const result = runXrplUp(["snapshot", "save", SNAP_NAME], {}, 120_000);
-    expect(result.status).toBe(0);
+    expect(result.status, cliOutput(result)).toBe(0);
   });
 
   it("creates a .tar.gz file in ~/.xrpl-up/snapshots/", () => {
@@ -66,9 +76,11 @@ describe("snapshot save", () => {
     expect(fs.existsSync(sidecarPath(SNAP_NAME))).toBe(true);
   });
 
-  it("node WebSocket is healthy after save", async () => {
+  it("node WebSocket is healthy after save (verifies save resumed the sandbox)", async () => {
+    // Do NOT start the sandbox here — snapshot save is supposed to resume
+    // it automatically. An extra start would mask a broken resume flow.
     const result = runXrplUp(["status", "--local"], {}, 15_000);
-    expect(result.status).toBe(0);
+    expect(result.status, cliOutput(result)).toBe(0);
     expect(result.stdout).toContain("healthy");
   });
 });
@@ -78,7 +90,7 @@ describe("snapshot save", () => {
 describe("snapshot list", () => {
   it("exits 0", () => {
     const result = runXrplUp(["snapshot", "list"], {}, 10_000);
-    expect(result.status).toBe(0);
+    expect(result.status, cliOutput(result)).toBe(0);
   });
 
   it("stdout contains the saved snapshot name", () => {
@@ -112,18 +124,20 @@ describe("snapshot restore", () => {
 
   it("exits 0 for an existing snapshot", () => {
     const result = runXrplUp(["snapshot", "restore", SNAP_NAME], {}, 120_000);
-    expect(result.status).toBe(0);
+    expect(result.status, cliOutput(result)).toBe(0);
   });
 
   it("node WebSocket is healthy after restore", async () => {
     const result = runXrplUp(["status", "--local"], {}, 15_000);
-    expect(result.status).toBe(0);
+    expect(result.status, cliOutput(result)).toBe(0);
     expect(result.stdout).toContain("healthy");
   });
 
-  it("faucet HTTP endpoint is healthy after restore", async () => {
-    const resp = await fetch("http://localhost:3001/health");
-    expect(resp.ok).toBe(true);
+  it("faucet HTTP endpoint is healthy after restore", () => {
+    const result = runXrplUp(["status", "--local"], {}, 15_000);
+    expect(result.status, cliOutput(result)).toBe(0);
+    expect(result.stdout).toContain("Faucet:");
+    expect(result.stdout).toContain("healthy");
   });
 });
 
@@ -132,10 +146,11 @@ describe("snapshot restore", () => {
 describe("snapshot save (overwrite existing)", () => {
   it("exits 0 when a snapshot with the same name already exists", () => {
     // First save
-    runXrplUp(["snapshot", "save", SNAP_OVERWRITE], {}, 120_000);
+    const first = runXrplUp(["snapshot", "save", SNAP_OVERWRITE], {}, 120_000);
+    expect(first.status, cliOutput(first)).toBe(0);
     // Second save — should overwrite, not fail
     const result = runXrplUp(["snapshot", "save", SNAP_OVERWRITE], {}, 120_000);
-    expect(result.status).toBe(0);
+    expect(result.status, cliOutput(result)).toBe(0);
   });
 
   it("the overwritten snapshot is still listed", () => {

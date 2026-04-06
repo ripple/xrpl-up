@@ -1,6 +1,6 @@
 {
   "name": "@shichengsh001/xrpl-up",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "XRPL sandbox for local development",
   "author": "",
   "license": "MIT",
@@ -16,8 +16,7 @@
     "sandbox"
   ],
   "bin": {
-    "xrpl-up": "./dist/cli.js",
-    "xrpl": "./dist/cli/index.js"
+    "xrpl-up": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -26,7 +25,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "postbuild": "cp src/faucet-server/package.json dist/faucet-server/package.json && cp src/faucet-server/Dockerfile dist/faucet-server/Dockerfile && chmod +x dist/cli.js dist/cli/index.js",
+    "postbuild": "cp src/faucet-server/package.json dist/faucet-server/package.json && cp src/faucet-server/Dockerfile dist/faucet-server/Dockerfile && chmod +x dist/cli.js && mkdir -p dist/core/genesis && cp src/core/genesis/*.tar.gz dist/core/genesis/",
     "dev": "tsx src/cli.ts",
     "clean": "rm -rf dist",
     "prepare": "npm run build",
@@ -34,6 +33,7 @@
     "test:watch": "vitest",
     "test:e2e": "vitest run tests/e2e",
     "test:e2e:local": "vitest run --config vitest.config.local.ts tests/e2e",
+    "test:e2e:local-network": "vitest run --config vitest.config.local-network.ts tests/e2e",
     "test:e2e:snapshot": "vitest run --config vitest.config.snapshot.ts",
     "typecheck": "tsc --noEmit"
   },

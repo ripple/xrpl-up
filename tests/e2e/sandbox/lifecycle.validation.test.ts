@@ -57,12 +57,6 @@ describe("sandbox amendment validation", () => {
     expect(combined).toContain("--local");
   });
 
-  it("amendment disable without --local exits 1 immediately", () => {
-    const result = runXrplUp(["amendment", "disable", "SomeAmendment"]);
-    expect(result.status).toBe(1);
-    const combined = result.stdout + result.stderr;
-    expect(combined).toContain("--local");
-  });
 
 });
 

@@ -30,7 +30,7 @@ export async function resilientRequest<TResponse = Record<string, unknown>>(
     const useFallback = i % 2 === 1;
     try {
       if (useFallback) {
-        const fb = new Client(XRPL_WS_FALLBACK);
+        const fb = new Client(XRPL_WS_FALLBACK, { timeout: 60_000 });
         try {
           await fb.connect();
           return (await fb.request(params)) as TResponse;
@@ -61,7 +61,7 @@ export async function resilientSubmitAndWait(
     const useFallback = i % 2 === 1;
     try {
       if (useFallback) {
-        const fb = new Client(XRPL_WS_FALLBACK);
+        const fb = new Client(XRPL_WS_FALLBACK, { timeout: 60_000 });
         try {
           await fb.connect();
           return await fb.submitAndWait(tx_blob);
@@ -121,7 +121,7 @@ export async function fundMaster(client: Client): Promise<Wallet> {
   }
 
   // Fallback: retry once using the fallback node
-  const fallbackClient = new Client(XRPL_WS_FALLBACK);
+  const fallbackClient = new Client(XRPL_WS_FALLBACK, { timeout: 60_000 });
   try {
     await fallbackClient.connect();
     const result = await tryFund(FAUCET_URL_FALLBACK, fallbackClient);

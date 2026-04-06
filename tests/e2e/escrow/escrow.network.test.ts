@@ -25,7 +25,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -52,7 +52,7 @@ describe("escrow create", () => {
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
     expect(result.stdout).toMatch(/Sequence:/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("creates an escrow with --cancel-after and prints tesSUCCESS", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -67,7 +67,7 @@ describe("escrow create", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json output includes hash, result, sequence fields", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -86,7 +86,7 @@ describe("escrow create", () => {
     expect(typeof out.hash).toBe("string");
     expect(out.hash).toHaveLength(64);
     expect(typeof out.sequence).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--dry-run outputs JSON with TransactionType EscrowCreate and does not submit", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -105,7 +105,7 @@ describe("escrow create", () => {
     expect(typeof out.tx_blob).toBe("string");
     expect(out.tx.Amount).toBe("2000000");
     expect(typeof out.tx.FinishAfter).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--no-wait exits 0 and output contains 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -120,7 +120,7 @@ describe("escrow create", () => {
     ]);
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     expect(result.stdout).toMatch(/[0-9A-Fa-f]{64}/);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--destination-tag appears in dry-run tx", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -137,7 +137,7 @@ describe("escrow create", () => {
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     const out = JSON.parse(result.stdout) as { tx: { DestinationTag?: number } };
     expect(out.tx.DestinationTag).toBe(42);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--source-tag appears in dry-run tx", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -154,7 +154,7 @@ describe("escrow create", () => {
     expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
     const out = JSON.parse(result.stdout) as { tx: { SourceTag?: number } };
     expect(out.tx.SourceTag).toBe(99);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--condition + --cancel-after appears in dry-run tx", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -172,7 +172,7 @@ describe("escrow create", () => {
     const out = JSON.parse(result.stdout) as { tx: { Condition?: string; CancelAfter?: number } };
     expect(out.tx.Condition).toBe(TEST_CONDITION);
     expect(typeof out.tx.CancelAfter).toBe("number");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--account + --keystore + --password key material creates successfully", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -201,7 +201,7 @@ describe("escrow create", () => {
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
-  }, 90_000);
+  }, 120_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -231,7 +231,7 @@ describe("escrow list", () => {
     expect(result.stdout).toContain(`Sequence:    ${sequence}`);
     expect(result.stdout).toContain("1.000000 XRP");
     expect(result.stdout).toContain(receiver.address);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--json outputs an array with the expected escrow entry", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
@@ -270,5 +270,5 @@ describe("escrow list", () => {
     expect(entry!.finishAfter).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(entry!.cancelAfter).toBe("none");
     expect(entry!.condition).toBe("none");
-  }, 90_000);
+  }, 120_000);
 });

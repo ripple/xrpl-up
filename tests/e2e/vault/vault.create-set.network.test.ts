@@ -15,7 +15,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(DEVNET_WS);
+  client = new Client(DEVNET_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMasterDevnet(client);
   await initTicketPoolDevnet(client, master, 15);
@@ -53,7 +53,7 @@ it.concurrent("create: creates an XRP vault and outputs Vault ID", async () => {
   expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
   expect(result.stdout).toMatch(/Vault ID: [0-9A-F]{64}/);
   expect(result.stdout).toContain("tesSUCCESS");
-}, 90_000);
+}, 120_000);
 
 it.concurrent("create: --assets-maximum appears in dry-run tx", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
@@ -87,7 +87,7 @@ it.concurrent("create: --json outputs {result, vaultId, tx}", async () => {
   expect(out.vaultId).toHaveLength(64);
   expect(typeof out.tx).toBe("string");
   expect(out.tx).toHaveLength(64);
-}, 90_000);
+}, 120_000);
 
 it.concurrent("create: --dry-run outputs JSON with TransactionType VaultCreate and does not submit", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
@@ -160,7 +160,7 @@ it.concurrent("create: --account + --keystore + --password key material creates 
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
   }
-}, 90_000);
+}, 120_000);
 
 // ── vault set ─────────────────────────────────────────────────────────────────
 
@@ -233,7 +233,7 @@ it.concurrent("set: --dry-run prints VaultSet tx JSON without submitting", async
   expect(out.tx.VaultID).toBe(vaultId);
   expect(out.tx.Data).toBe("AABB");
   expect(typeof out.tx_blob).toBe("string");
-}, 90_000);
+}, 120_000);
 
 it.concurrent("set: --no-wait submits without waiting and outputs Transaction hash", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
@@ -248,7 +248,7 @@ it.concurrent("set: --no-wait submits without waiting and outputs Transaction ha
   ]);
   expect(result.status, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toBe(0);
   expect(result.stdout).toMatch(/Transaction: [0-9A-Fa-f]{64}/);
-}, 90_000);
+}, 120_000);
 
 it.concurrent("set: --account + --keystore + --password key material updates successfully", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);

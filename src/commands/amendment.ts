@@ -36,7 +36,7 @@ function resolveSourceUrl(from: string): string {
 }
 
 async function fetchFeatures(url: string): Promise<AmendmentInfo[]> {
-  const client = new Client(url);
+  const client = new Client(url, { timeout: 60_000 });
   await client.connect();
   try {
     const resp = await client.request({ command: 'feature' } as any);
@@ -240,7 +240,7 @@ export async function amendmentInfoCommand(nameOrHash: string, options: Amendmen
     if (!found.supported) {
       logger.dim('  Upgrade the local rippled image to support this amendment:');
       logger.dim('    Edit the rippled-image field in your xrpl-up config (xrpl-up config export to view path)');
-      logger.dim('    xrpl-up reset --local && xrpl-up node');
+      logger.dim('    xrpl-up reset --local && xrpl-up start');
       logger.blank();
     }
   } catch (err: unknown) {
@@ -269,7 +269,7 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
     indent: 2,
   }).start();
 
-  const client = new Client(LOCAL_WS_URL);
+  const client = new Client(LOCAL_WS_URL, { timeout: 60_000 });
   try {
     await client.connect();
 
@@ -316,7 +316,7 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
       fs.writeFileSync(EXTRA_AMENDMENTS_FILE, existing + line + '\n', 'utf-8');
     }
 
-    // Regenerate rippled.cfg so the next `xrpl-up node` picks it up automatically.
+    // Regenerate rippled.cfg so the next `xrpl-up start` picks it up automatically.
     writeRippledConfig();
 
     spinner.succeed(chalk.green(`Amendment queued for next genesis: ${found.name}`));
@@ -337,13 +337,13 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
       resetCommand();
       printQueuedAmendments();
       logger.dim('  Run the following to start with the new amendment active:');
-      logger.dim('    xrpl-up node --local');
+      logger.dim('    xrpl-up start --local');
       logger.blank();
     } else {
       logger.blank();
       logger.dim('  To activate later, run:');
       logger.dim('    xrpl-up reset');
-      logger.dim('    xrpl-up node --local');
+      logger.dim('    xrpl-up start --local');
       logger.blank();
     }
   } catch (err: unknown) {
@@ -357,93 +357,3 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
 }
 
 
-// ── amendment disable ─────────────────────────────────────────────────────────
-
-export async function amendmentDisableCommand(nameOrHash: string, options: AmendmentToggleOptions): Promise<void> {
-  if (!options.local) {
-    logger.error('amendment disable only works with --local (cannot admin-RPC a public node).');
-    process.exit(1);
-  }
-
-  const spinner = ora({
-    text: `Looking up amendment ${chalk.cyan(nameOrHash)}…`,
-    color: 'cyan',
-    indent: 2,
-  }).start();
-
-  try {
-    // Resolve name → hash
-    const amendments = await fetchFeatures(LOCAL_WS_URL);
-    const query = nameOrHash.toLowerCase();
-    const found = amendments.find(
-      a => a.name.toLowerCase() === query || a.hash.toLowerCase() === query || a.hash.toLowerCase().startsWith(query)
-    );
-
-    if (!found) {
-      spinner.fail(`Amendment not found: ${nameOrHash}`);
-      logger.dim('  Run: xrpl-up amendment list --local to see available amendments.');
-      process.exit(1);
-    }
-
-    // Check whether this amendment is user-enabled (present in EXTRA_AMENDMENTS_FILE)
-    const existing = fs.existsSync(EXTRA_AMENDMENTS_FILE)
-      ? fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8')
-      : '';
-
-    if (!existing.includes(found.hash)) {
-      spinner.fail(`Amendment not in user-enabled list: ${found.name}`);
-      if (found.enabled) {
-        logger.dim('  This amendment is part of the default genesis config and cannot be disabled.');
-      } else {
-        logger.dim('  This amendment is not currently queued for activation.');
-      }
-      process.exit(1);
-    }
-
-    // Remove the line from EXTRA_AMENDMENTS_FILE
-    spinner.text = `Removing ${chalk.cyan(found.name)} from genesis config…`;
-
-    const updated = existing
-      .split('\n')
-      .filter(line => !line.includes(found.hash))
-      .join('\n')
-      .replace(/\n{3,}/g, '\n\n');
-
-    fs.writeFileSync(EXTRA_AMENDMENTS_FILE, updated, 'utf-8');
-
-    // Regenerate rippled.cfg
-    writeRippledConfig();
-
-    spinner.succeed(chalk.green(`Amendment removed from genesis config: ${found.name}`));
-    logger.blank();
-    logger.dim(`  Hash: ${found.hash}`);
-    logger.blank();
-
-    logger.log(
-      chalk.yellow('  ⚠  Deactivating this amendment requires a full node reset.\n') +
-      chalk.dim('     All ledger data, funded accounts, and snapshots will be wiped.')
-    );
-    logger.blank();
-
-    const yes = options.autoReset || await confirm(chalk.bold('  Reset and restart the local node now? [y/N]'));
-
-    if (yes) {
-      logger.blank();
-      resetCommand();
-      printQueuedAmendments();
-      logger.dim('  Run the following to start without the removed amendment:');
-      logger.dim('    xrpl-up node --local');
-      logger.blank();
-    } else {
-      logger.blank();
-      logger.dim('  To deactivate later, run:');
-      logger.dim('    xrpl-up reset');
-      logger.dim('    xrpl-up node --local');
-      logger.blank();
-    }
-  } catch (err: unknown) {
-    spinner.fail('Failed to disable amendment');
-    logger.error(err instanceof Error ? err.message : String(err));
-    process.exit(1);
-  }
-}

@@ -17,7 +17,7 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS);
+  client = new Client(XRPL_WS, { timeout: 60_000 });
   await client.connect();
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
@@ -64,7 +64,7 @@ describe("payment tokens", () => {
     );
     expect(usdLine).toBeDefined();
     expect(Number(usdLine!.balance)).toBe(10);
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("sends MPT payment from issuer to receiver and gets tesSUCCESS", async () => {
     const [mptIssuer, mptReceiver] = await createFunded(client, master, 2, 3);
@@ -100,7 +100,7 @@ describe("payment tokens", () => {
     ]);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("tesSUCCESS");
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--paths '[]' (empty array) is accepted without error", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, 3);
@@ -141,7 +141,7 @@ describe("payment tokens", () => {
     const out = JSON.parse(result.stdout) as { hash: string; result: string; deliveredAmount: unknown };
     expect(out.result).toBe("tesSUCCESS");
     expect(out.deliveredAmount).toBeDefined();
-  }, 90_000);
+  }, 120_000);
 
   it.concurrent("--partial --deliver-min --send-max IOU payment asserts deliveredAmount >= deliver-min", async () => {
     const [flagIssuer, flagHolder] = await createFunded(client, master, 2, 3);
@@ -178,5 +178,5 @@ describe("payment tokens", () => {
         : Number((out.deliveredAmount as { value: string }).value);
     expect(deliveredValue).toBeGreaterThan(0);
     expect(deliveredValue).toBeGreaterThanOrEqual(1);
-  }, 90_000);
+  }, 120_000);
 });

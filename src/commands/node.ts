@@ -27,7 +27,7 @@ export interface NodeOptions {
   network?: string;
   accountCount?: number;
   local?: boolean;
-  persist?: boolean;
+  localNetwork?: boolean;
   image?: string;
   ledgerInterval?: number;
   fork?: boolean;
@@ -165,15 +165,20 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   }
 
   // ── Start Docker Compose stack (local mode only) ───────────────────────────
-  const persist = isLocal && (options.persist ?? false);
+  const localNetwork = isLocal && (options.localNetwork ?? false);
+  const noConsensus = isLocal && !localNetwork;
+  const persist = isLocal && localNetwork; // --local-network always persists
 
   if (isLocal) {
     const image = options.image ?? DEFAULT_IMAGE;
     const dockerSpinner = ora({
-      text: `Building & starting local stack${chalk.dim(' (first run may take a minute…)')}`,
+      text: localNetwork
+        ? `Starting 2-node consensus network${chalk.dim(' (first run may take a minute…)')}`
+        : `Starting standalone node${chalk.dim(' (first run may take a minute…)')}`,
       color: 'cyan',
       indent: 2,
     }).start();
+    const dockerStartMs = Date.now();
 
     try {
       // Validate custom config before starting Docker — surface errors early
@@ -187,10 +192,16 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
         }
       }
 
-      const ledgerIntervalMs = options.detach ? (options.ledgerInterval ?? 1000) : 0;
-      await composeUp(image, persist, options.debug ?? false, ledgerIntervalMs, options.config, options.noRestart ?? false);
+      // In --local-network mode, ledgers close via consensus (~4s) — no ledger_accept needed.
+      // In standalone mode (default), faucet auto-advances ledgers when detached.
+      const ledgerIntervalMs = noConsensus
+        ? (options.detach ? (options.ledgerInterval ?? 1000) : 0)
+        : 0;
+      await composeUp(image, noConsensus, options.debug ?? false, ledgerIntervalMs, options.config, options.noRestart ?? false);
+      const dockerElapsed = ((Date.now() - dockerStartMs) / 1000).toFixed(1);
+      const modeLabel = localNetwork ? 'Consensus network' : 'Standalone node';
       dockerSpinner.succeed(
-        `Local stack started  ${chalk.dim('rippled ws://localhost:6006')}  ${chalk.dim('faucet http://localhost:3001')}`
+        `${modeLabel} started ${chalk.dim(`(${dockerElapsed}s)`)}  ${chalk.dim('rippled ws://localhost:6006')}  ${chalk.dim('faucet http://localhost:3001')}`
       );
 
       // When --exit-on-crash is set, attach two background watchers:
@@ -251,8 +262,13 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
         });
       }
     } catch (err: unknown) {
-      dockerSpinner.fail('Failed to start local stack');
+      const dockerElapsed = ((Date.now() - dockerStartMs) / 1000).toFixed(1);
+      dockerSpinner.fail(`Failed to start local stack ${chalk.dim(`(${dockerElapsed}s)`)}`);
       logger.error(err instanceof Error ? err.message : String(err));
+      logger.dim('  Troubleshooting:');
+      logger.dim('    docker ps -a                              # check container state');
+      logger.dim('    docker compose -p xrpl-up-local logs      # view container logs');
+      logger.dim('    docker info                               # verify Docker daemon');
       composeDown();
       process.exit(1);
     }
@@ -267,18 +283,20 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     color: 'cyan',
     indent: 2,
   }).start();
+  const connectStartMs = Date.now();
 
   try {
     await manager.connect();
   } catch (err: unknown) {
-    connectSpinner.fail('Connection failed');
+    connectSpinner.fail(`Connection failed ${chalk.dim(`(${networkUrl})`)}`);
     logger.error(err instanceof Error ? err.message : String(err));
     if (isLocal) composeDown();
     process.exit(1);
   }
 
   const serverInfo = await manager.getServerInfo();
-  connectSpinner.succeed(`Connected to ${chalk.cyan.bold(networkDisplayName)}`);
+  const connectElapsed = ((Date.now() - connectStartMs) / 1000).toFixed(1);
+  connectSpinner.succeed(`Connected to ${chalk.cyan.bold(networkDisplayName)} ${chalk.dim(`(${connectElapsed}s)`)}`);
 
   logger.blank();
   logger.section('Network');
@@ -293,7 +311,11 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     logger.log(`${chalk.dim('Genesis:')}    ${chalk.dim(GENESIS_ADDRESS)}`);
     logger.log(`${chalk.dim('Faucet:')}     ${chalk.dim('http://localhost:3001')}`);
     const ledgerInterval = options.ledgerInterval ?? 1000;
-    logger.log(`${chalk.dim('Ledger:')}     ${chalk.dim(`auto-advance every ${ledgerInterval}ms`)}`);
+    if (noConsensus) {
+      logger.log(`${chalk.dim('Ledger:')}     ${chalk.dim(`auto-advance every ${ledgerInterval}ms (standalone)`)}`);
+    } else {
+      logger.log(`${chalk.dim('Ledger:')}     ${chalk.dim('consensus close ~4s (persistent)')}`);
+    }
     if (options.debug) {
       logger.log(`${chalk.dim('Logs:')}       ${chalk.dim('debug level — run: xrpl-up logs rippled')}`);
     }
@@ -316,13 +338,14 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   // In persist mode with existing accounts, skip funding and reload from store.
   if (persist && existingAccounts.length > 0) {
     logger.info(
-      `Resuming with ${chalk.cyan(String(existingAccounts.length))} persisted accounts  ${chalk.dim('(use without --persist to reset)')}`
+      `Resuming with ${chalk.cyan(String(existingAccounts.length))} persisted accounts  ${chalk.dim('(use xrpl-up reset to start fresh)')}`
     );
     logger.blank();
   }
 
   const fundLabel = isLocal ? 'local faucet' : 'testnet faucet';
   const shouldFund = !persist || existingAccounts.length === 0;
+  const fundStartMs = Date.now();
 
   const fundSpinner = shouldFund ? ora({
     text: chalk.dim(`Funding account 1/${count} from ${fundLabel}…`),
@@ -369,8 +392,9 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
       }
     }
 
+    const fundElapsed = ((Date.now() - fundStartMs) / 1000).toFixed(1);
     fundSpinner!.succeed(
-      chalk.green(`${count} accounts funded on ${chalk.cyan(networkDisplayName)}`)
+      chalk.green(`${count} accounts funded on ${chalk.cyan(networkDisplayName)}`) + chalk.dim(` (${fundElapsed}s)`)
     );
     logger.blank();
   }
@@ -386,6 +410,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
       .filter(Boolean);
 
     const forkSpinner = ora({ color: 'cyan', indent: 2 }).start();
+    const forkStartMs = Date.now();
 
     try {
       let addresses: string[] = explicitAddresses;
@@ -418,12 +443,13 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
           forkSpinner.text = `Forking accounts ${chalk.cyan(String(done))}/${total}…`;
         });
 
+        const forkElapsed = ((Date.now() - forkStartMs) / 1000).toFixed(1);
         const snapshotLedger = forkedAccounts[0]?.ledgerIndex;
         const ledgerLabel = snapshotLedger
           ? chalk.dim(` (state at ledger #${snapshotLedger.toLocaleString()})`)
           : '';
         forkSpinner.succeed(
-          `Forked ${chalk.cyan(String(forkedAccounts.length))} account(s) from ${chalk.dim(forkSource)}${ledgerLabel}`
+          `Forked ${chalk.cyan(String(forkedAccounts.length))} account(s) from ${chalk.dim(forkSource)}${ledgerLabel} ${chalk.dim(`(${forkElapsed}s)`)}`
         );
 
         for (const fa of forkedAccounts) {
@@ -536,7 +562,11 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   // ── Detach mode (CI/CD) ────────────────────────────────────────────────────
   if (isLocal && options.detach) {
     logger.log(`  ${chalk.green('✔')} Sandbox ready  ${chalk.dim('→')}  ${chalk.cyan(LOCAL_WS_URL)}`);
-    logger.dim(`  Auto-advancing ledger every ${options.ledgerInterval ?? 1000}ms via faucet server`);
+    if (noConsensus) {
+      logger.dim(`  Auto-advancing ledger every ${options.ledgerInterval ?? 1000}ms via faucet server`);
+    } else {
+      logger.dim(`  Consensus network — ledgers close automatically every ~4s`);
+    }
     logger.dim(`  Run ${chalk.white('xrpl-up stop')} to tear down`);
     logger.blank();
     await manager.disconnect();
@@ -557,10 +587,28 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   }
   logger.blank();
 
-  // ── Auto-ledger-advance (local mode only) ──────────────────────────────────
+  // ── Auto-ledger-advance (standalone local mode only) ────────────────────────
   let advanceHandle: ReturnType<typeof setTimeout> | undefined;
 
-  if (isLocal && !options.noAutoAdvance) {
+  if (isLocal && !noConsensus && !options.noAutoAdvance) {
+    // Consensus mode: ledgers close automatically via consensus.
+    // Subscribe to transactions for live display (no ledger_accept needed).
+    await manager.subscribeToTransactions((tx) => {
+      const t       = (tx.transaction ?? tx) as Record<string, unknown>;
+      const meta    = tx.meta as Record<string, unknown> | undefined;
+      const result  = (meta?.TransactionResult as string) ?? 'unknown';
+      const ok      = result === 'tesSUCCESS';
+      const icon    = ok ? chalk.green('✓') : chalk.red('✗');
+      const type    = chalk.white(String(t.TransactionType ?? '').padEnd(18));
+      const from    = chalk.dim(labelAddress(String(t.Account ?? '')));
+      const to      = t.Destination
+        ? chalk.dim(' → ') + chalk.dim(labelAddress(String(t.Destination)))
+        : '';
+      const fee     = chalk.dim(`fee: ${t.Fee ?? '?'} drops`);
+      const outcome = ok ? '' : chalk.red(`  ${tecMessage(result)}`);
+      console.log(`\n  ${icon} ${type} ${from}${to}  ${fee}${outcome}`);
+    });
+  } else if (isLocal && !options.noAutoAdvance) {
     const ledgerInterval = options.ledgerInterval ?? 1000;
 
     const scheduleAdvance = () => {
