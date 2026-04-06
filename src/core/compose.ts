@@ -670,13 +670,14 @@ async function waitForConsensus(timeoutMs: number): Promise<void> {
         }
 
         // Phase 2: all configured amendments enabled
+        // The `feature` admin command returns { result: { features: { <hash>: { enabled, name, supported } } } }
         const featureRes = await client.request({ command: 'feature' } as any);
-        const result = (featureRes.result as any) ?? {};
+        const features = (featureRes.result as any)?.features ?? {};
 
         let allConfiguredEnabled = true;
         for (const hash of configuredHashes) {
-          const entry = result[hash];
-          if (entry && typeof entry === 'object' && entry.enabled !== true) {
+          const entry = features[hash];
+          if (!entry || entry.enabled !== true) {
             allConfiguredEnabled = false;
             break;
           }
