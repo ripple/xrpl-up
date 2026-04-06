@@ -20,9 +20,8 @@ export default defineConfig({
     pool: "forks",
     poolOptions: {
       forks: {
-        // Keep concurrency low for the 2-node consensus network
         minForks: 1,
-        maxForks: 2,
+        maxForks: 4,
       },
     },
     include: ["tests/e2e/**/*.test.ts"],
