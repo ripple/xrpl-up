@@ -6,7 +6,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { Client } from 'xrpl';
 import {
-  stopService, startService, waitForPort, composeDown, isConsensusMode,
+  waitForPort, isConsensusMode,
   LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT, COMPOSE_FILE, COMPOSE_PROJECT,
   VOLUME_NAME, PEER_VOLUME_NAME,
 } from '../core/compose';
@@ -82,8 +82,12 @@ function assertConsensusMode(action: 'save' | 'restore'): void {
 /**
  * Save the current ledger state as a named snapshot.
  *
- * In consensus mode the volume contains NuDB + SQLite. We stop all services,
- * tar the primary node's volume, then restart.
+ * Strategy: stop → tar → restart.
+ *
+ * Stopping all services first ensures rippled flushes buffers, checkpoints
+ * the SQLite WAL, and closes NuDB cleanly. Tarring a stopped volume gives a
+ * guaranteed-consistent snapshot with no risk of torn pages from concurrent
+ * writes. The ~10-15s downtime is an acceptable trade-off for reliability.
  *
  * Only the primary node's volume is captured. On restore, the same tarball is
  * extracted into both the primary and peer volumes. This works because both
@@ -112,72 +116,13 @@ export async function snapshotSave(name: string): Promise<void> {
 
   logger.blank();
 
-  // ── Flush: wait until all wallet-store accounts are confirmed on-chain ─────
-  const walletAccounts = new WalletStore('local').all();
-  const flushStartMs = Date.now();
-  const flushSpinner = ora({
-    text: chalk.dim(walletAccounts.length > 0
-      ? `Waiting for ${walletAccounts.length} account(s) to confirm on-chain…`
-      : 'Flushing pending transactions…'),
-    prefixText: ' ',
-  }).start();
-
-  try {
-    const client = new Client(LOCAL_WS_URL, { timeout: 60_000 });
-    await client.connect();
-
-    const TIMEOUT_MS = 60_000;
-    const POLL_MS    = 1000;
-    const deadline   = Date.now() + TIMEOUT_MS;
-    let allConfirmed = false;
-
-    while (Date.now() < deadline) {
-      let missing = 0;
-      for (const acct of walletAccounts) {
-        try {
-          await client.request({
-            command: 'account_info',
-            account: acct.address,
-            ledger_index: 'validated',
-          });
-        } catch {
-          missing++;
-        }
-      }
-
-      if (missing === 0) { allConfirmed = true; break; }
-      flushSpinner.text = chalk.dim(`Waiting for ${missing} account(s) to confirm…`);
-      await new Promise(r => setTimeout(r, POLL_MS));
-    }
-
-    await client.disconnect();
-
-    if (allConfirmed) {
-      const flushElapsed = ((Date.now() - flushStartMs) / 1000).toFixed(1);
-      flushSpinner.succeed(chalk.dim(`All accounts confirmed on-chain (${flushElapsed}s)`));
-    } else {
-      flushSpinner.fail(chalk.red('Timed out waiting for accounts to confirm on-chain'));
-      throw new Error(
-        `Snapshot aborted: not all accounts confirmed on the validated ledger.\n` +
-        `  Wait for ledger closes, then retry:\n` +
-        `  xrpl-up accounts --local\n` +
-        `  xrpl-up snapshot save ${name}`
-      );
-    }
-  } catch (err) {
-    if ((err as Error).message?.startsWith('Snapshot aborted')) throw err;
-    flushSpinner.fail(chalk.red('Could not verify accounts — snapshot aborted'));
-    throw new Error(
-      `Snapshot aborted: failed to connect to local rippled at ${LOCAL_WS_URL}.\n` +
-      `  Is the sandbox running?  xrpl-up status`
-    );
-  }
-
-  // ── Stop services, tar volume, restart ─────────────────────────────────────
+  // ── Stop services first ────────────────────────────────────────────────────
+  // Graceful shutdown ensures rippled flushes all buffers, checkpoints SQLite
+  // WAL, and closes NuDB cleanly. Tarring a stopped volume gives a guaranteed-
+  // consistent snapshot — no risk of torn pages from concurrent writes.
   const stopStartMs = Date.now();
   const stopSpinner = ora({ text: chalk.dim('Stopping sandbox for snapshot…'), prefixText: ' ' }).start();
   try {
-    // Stop all services — ensures clean SQLite state (WAL checkpointed)
     execSync(
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" stop`,
       { stdio: 'ignore' },
@@ -193,6 +138,7 @@ export async function snapshotSave(name: string): Promise<void> {
     );
   }
 
+  // ── Tar the volume ─────────────────────────────────────────────────────────
   const tmpDest = dest + '.tmp';
   const saveStartMs = Date.now();
   const saveSpinner = ora({ text: chalk.dim(`Saving snapshot "${name}"…`), prefixText: ' ' }).start();
@@ -341,11 +287,18 @@ export async function snapshotRestore(name: string): Promise<void> {
   const restoreSpinner = ora({ text: chalk.dim(`Restoring snapshot "${name}"…`), prefixText: ' ' }).start();
   try {
     for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
+      // Extract the primary node's snapshot into both volumes. For the peer
+      // volume, delete wallet.db afterwards so rippled regenerates a fresh
+      // node identity key on startup. Without this, both nodes share the
+      // same peer-to-peer identity (cloned from the primary's wallet.db)
+      // and reject each other's connections — causing 0 peers / no consensus.
+      // Validator identity is unaffected — it comes from rippled.cfg.
+      const rmWalletDb = vol === PEER_VOLUME_NAME ? ' && rm -f /data/wallet.db' : '';
       execSync(
         `docker run --rm ` +
         `-v ${vol}:/data ` +
         `-v "${SNAPSHOTS_DIR}":/snapshots ` +
-        `alpine sh -c "rm -rf /data/* /data/..?* /data/.[!.]* 2>/dev/null; tar xzf /snapshots/${name}.tar.gz -C /data"`,
+        `alpine sh -c "rm -rf /data/* /data/..?* /data/.[!.]* 2>/dev/null; tar xzf /snapshots/${name}.tar.gz -C /data${rmWalletDb}"`,
         { stdio: 'ignore' },
       );
     }
