@@ -4,6 +4,34 @@ import type { TicketCreate, Payment as XrplPayment } from "xrpl";
 export const XRPL_WS = "wss://s.altnet.rippletest.net:51233";
 export const XRPL_WS_FALLBACK = "wss://testnet.xrpl-labs.com/";
 
+/**
+ * Connect a Client with retry. Exported for API compatibility with local.ts.
+ * On testnet, connections are generally reliable so this rarely retries.
+ */
+export async function connectWithRetry(
+  clientRef: { client: Client },
+  maxAttempts = 3,
+  perAttemptMs = 30_000,
+): Promise<void> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      await Promise.race([
+        clientRef.client.connect(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("connect timeout")), perAttemptMs),
+        ),
+      ]);
+      return;
+    } catch {
+      try { await clientRef.client.disconnect(); } catch { /* ignore */ }
+      if (i < maxAttempts - 1) {
+        clientRef.client = new Client(XRPL_WS, { timeout: 60_000 });
+      }
+    }
+  }
+  throw new Error(`Failed to connect to ${XRPL_WS} after ${maxAttempts} attempts`);
+}
+
 const FAUCET_URL = "https://faucet.altnet.rippletest.net/accounts";
 const FAUCET_URL_FALLBACK = "https://testnet.xrpl-labs.com/accounts";
 const FAUCET_MAX_RETRIES = 30;

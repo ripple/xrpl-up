@@ -23,6 +23,7 @@ import { runXrplUp } from "../../helpers/sandbox-cli";
 const SNAPSHOTS_DIR = path.join(os.homedir(), ".xrpl-up", "snapshots");
 const SNAP_NAME = "e2e-test-snapshot";
 const SNAP_OVERWRITE = "e2e-test-snapshot-overwrite";
+const SNAP_ROLLBACK = "e2e-test-rollback";
 
 function snapshotPath(name: string): string {
   return path.join(SNAPSHOTS_DIR, `${name}.tar.gz`);
@@ -42,7 +43,7 @@ function cliOutput(result: { stdout?: string | null; stderr?: string | null }): 
 
 afterAll(() => {
   // Clean up all test snapshots created during this run
-  for (const name of [SNAP_NAME, SNAP_OVERWRITE]) {
+  for (const name of [SNAP_NAME, SNAP_OVERWRITE, SNAP_ROLLBACK]) {
     for (const file of [snapshotPath(name), sidecarPath(name), metaPath(name)]) {
       try {
         fs.unlinkSync(file);
@@ -57,8 +58,8 @@ afterAll(() => {
 
 describe("snapshot save", () => {
   it("exits 0", () => {
-    // snapshot save verifies accounts on-chain, stops services, tars the
-    // volume, then resumes the sandbox. The next test checks the resume worked.
+    // snapshot save stops services, tars the volume, then resumes the sandbox.
+    // The next test checks the resume worked.
     const result = runXrplUp(["snapshot", "save", SNAP_NAME], {}, 120_000);
     expect(result.status, cliOutput(result)).toBe(0);
   });
@@ -138,6 +139,104 @@ describe("snapshot restore", () => {
     expect(result.status, cliOutput(result)).toBe(0);
     expect(result.stdout).toContain("Faucet:");
     expect(result.stdout).toContain("healthy");
+  });
+});
+
+// ─── rollback ────────────────────────────────────────────────────────────────
+
+/**
+ * Proves that snapshot restore actually rolls back ledger state.
+ *
+ * Without this test, a restore implementation that merely restarts services
+ * (without extracting the tarball) would pass all the tests above. This
+ * sequence creates verifiable on-ledger state before and after the save
+ * point, then checks that restore erases the post-save state.
+ */
+describe("snapshot rollback", () => {
+  let preSnapshotAddress: string;
+  let postSnapshotAddress: string;
+
+  afterAll(() => {
+    for (const file of [snapshotPath(SNAP_ROLLBACK), sidecarPath(SNAP_ROLLBACK), metaPath(SNAP_ROLLBACK)]) {
+      try { fs.unlinkSync(file); } catch { /* ok */ }
+    }
+  });
+
+  it("fund account A (pre-snapshot state)", () => {
+    const result = runXrplUp(["faucet", "--network", "local"], {}, 60_000);
+    expect(result.status, cliOutput(result)).toBe(0);
+    const match = (result.stdout + result.stderr).match(/Address:\s+(r[A-Za-z0-9]{20,})/);
+    expect(match, "could not parse funded address from faucet output").toBeTruthy();
+    preSnapshotAddress = match![1];
+  });
+
+  it("wait for account A to be validated", async () => {
+    // Faucet returns before ledger close (~4s). Must wait for the account to
+    // appear on the validated ledger before saving — otherwise snapshot save
+    // stops the node and the funding tx may not be in the tarball.
+    for (let i = 0; i < 30; i++) {
+      const result = runXrplUp(
+        ["accounts", "--local", "--address", preSnapshotAddress],
+        {},
+        15_000,
+      );
+      if (result.status === 0) return;
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    throw new Error(`Account A (${preSnapshotAddress}) not validated after 60s`);
+  });
+
+  it("save snapshot (captures account A)", () => {
+    const result = runXrplUp(["snapshot", "save", SNAP_ROLLBACK], {}, 120_000);
+    expect(result.status, cliOutput(result)).toBe(0);
+  });
+
+  it("fund account B (post-snapshot state)", () => {
+    const result = runXrplUp(["faucet", "--network", "local"], {}, 60_000);
+    expect(result.status, cliOutput(result)).toBe(0);
+    const match = (result.stdout + result.stderr).match(/Address:\s+(r[A-Za-z0-9]{20,})/);
+    expect(match, "could not parse funded address from faucet output").toBeTruthy();
+    postSnapshotAddress = match![1];
+  });
+
+  it("wait for account B to be validated", async () => {
+    // After snapshot save resumes the sandbox, consensus needs time to
+    // re-establish and produce validated ledgers. On CI (2 vCPU) this
+    // can take 30-40s. Use 60s timeout.
+    for (let i = 0; i < 30; i++) {
+      const result = runXrplUp(
+        ["accounts", "--local", "--address", postSnapshotAddress],
+        {},
+        15_000,
+      );
+      if (result.status === 0) return;
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    throw new Error(`Account B (${postSnapshotAddress}) not validated after 60s`);
+  });
+
+  it("restore snapshot (rolls back to pre-B state)", () => {
+    const result = runXrplUp(["snapshot", "restore", SNAP_ROLLBACK], {}, 120_000);
+    expect(result.status, cliOutput(result)).toBe(0);
+  });
+
+  it("account A still exists after restore", () => {
+    const result = runXrplUp(
+      ["accounts", "--local", "--address", preSnapshotAddress],
+      {},
+      30_000,
+    );
+    expect(result.status, cliOutput(result)).toBe(0);
+  });
+
+  it("account B is gone after restore (proves rollback)", () => {
+    const result = runXrplUp(
+      ["accounts", "--local", "--address", postSnapshotAddress],
+      {},
+      30_000,
+    );
+    // Account B was funded AFTER the snapshot — restore should erase it
+    expect(result.status, "account B should not exist after rollback").not.toBe(0);
   });
 });
 

@@ -22,15 +22,18 @@ interface AmendmentInfo {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function resolveSourceUrl(from: string): string {
+  // Accept raw WebSocket URLs directly
+  if (from.startsWith('ws://') || from.startsWith('wss://')) {
+    return from;
+  }
   const config = loadConfig();
-  // Allow named networks from config (mainnet, testnet, devnet, custom)
   try {
     const { config: netCfg } = resolveNetwork(config, from);
     return netCfg.url;
   } catch {
     throw new Error(
       `Unknown source network: "${from}". ` +
-      `Available: ${Object.keys(DEFAULT_CONFIG.networks).join(', ')}`
+      `Available: ${Object.keys(DEFAULT_CONFIG.networks).join(', ')}, or a raw WebSocket URL`
     );
   }
 }

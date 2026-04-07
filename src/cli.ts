@@ -63,7 +63,7 @@ program
   .version(pkg.version, '-v, --version')
   .option(
     '-n, --node <url>',
-    'XRPL node URL or network name (local|testnet|devnet|mainnet)',
+    'XRPL node URL or network name (local|testnet|devnet)',
     process.env.XRPL_NODE ?? 'local'
   );
 
@@ -98,27 +98,6 @@ program
     'Start a 2-node consensus network (persistent state, snapshot support)'
   )
   .option(
-    '--fork',
-    'Fork XRP balances from a remote network into the local node (requires --local)'
-  )
-  .option(
-    '--fork-accounts <addresses>',
-    'Comma-separated addresses to fork (optional if --add-accounts-from-ledger is given)'
-  )
-  .option(
-    '--add-accounts-from-ledger <ledger>',
-    'Scan this ledger for active accounts and add them to the fork'
-  )
-  .option(
-    '--fork-at-ledger <ledger>',
-    'Ledger index to snapshot balances from (default: N-1 when --add-accounts-from-ledger is used, latest otherwise)'
-  )
-  .option(
-    '--fork-source <url>',
-    'WebSocket URL of the network to fork from',
-    'wss://xrplcluster.com'
-  )
-  .option(
     '--no-auto-advance',
     'Disable automatic ledger advancement'
   )
@@ -149,11 +128,6 @@ program
     localNetwork?: boolean;
     image?: string;
     ledgerInterval: string;
-    fork?: boolean;
-    forkAccounts?: string;
-    addAccountsFromLedger?: string;
-    forkAtLedger?: string;
-    forkSource?: string;
     autoAdvance?: boolean;
     debug?: boolean;
     detach?: boolean;
@@ -169,11 +143,6 @@ program
       localNetwork: opts.localNetwork ?? false,
       image: opts.image,
       ledgerInterval: parseInt(opts.ledgerInterval, 10),
-      fork: opts.fork,
-      forkAccounts: opts.forkAccounts,
-      accountsFromLedger: opts.addAccountsFromLedger ? parseInt(opts.addAccountsFromLedger, 10) : undefined,
-      forkAtLedger: opts.forkAtLedger ? parseInt(opts.forkAtLedger, 10) : undefined,
-      forkSource: opts.forkSource,
       noAutoAdvance: opts.autoAdvance === false,
       noSecrets: opts.secrets === false,
       debug: opts.debug,
@@ -187,7 +156,7 @@ program
 program
   .command('accounts')
   .description('List sandbox accounts and their live XRP balances')
-  .option('--network <network>', 'Network (testnet | devnet | mainnet) — omit for local sandbox')
+  .option('--network <network>', 'Network (testnet | devnet) — omit for local sandbox')
   .option('--local', 'Show accounts for the local Docker sandbox')
   .option('--address <address>', 'Query a specific address directly (bypasses wallet store)')
   .action((opts: { network?: string; local?: boolean; address?: string }) => {
@@ -211,7 +180,7 @@ program
 program
   .command('run <script> [scriptArgs...]')
   .description('Run a TypeScript/JavaScript script against an XRPL network')
-  .option('--network <network>', 'Network: local | testnet | devnet | mainnet — omit for local')
+  .option('--network <network>', 'Network: local | testnet | devnet — omit for local')
   .option('--local', 'Alias for --network local')
   .action((script: string, scriptArgs: string[], opts: { network?: string; local?: boolean }) => {
     const network = opts.local ? 'local' : (opts.network ?? 'local');
@@ -230,7 +199,7 @@ program
 program
   .command('status')
   .description('Show rippled server info and faucet health (defaults to local sandbox)')
-  .option('--network <network>', 'Remote network to query: testnet | devnet | mainnet')
+  .option('--network <network>', 'Remote network to query: testnet | devnet')
   .option('--local', 'Show status for the local Docker sandbox')
   .action((opts: { network?: string; local?: boolean }) => {
     const local = opts.local ?? !opts.network;
@@ -319,8 +288,8 @@ amendment
   .command('list')
   .description('List all amendments and their status')
   .option('--local', 'Use the local Docker sandbox')
-  .option('--network <network>', 'Network to query (testnet | devnet | mainnet) — omit for local')
-  .option('--diff <network>', 'Compare against another network (e.g. --diff mainnet)')
+  .option('--network <network>', 'Network to query (testnet | devnet) — omit for local')
+  .option('--diff <network>', 'Compare against another network (e.g. --diff testnet)')
   .option('--disabled', 'Show only disabled amendments')
   .action((opts: { local?: boolean; network?: string; diff?: string; disabled?: boolean }) => {
     const local = opts.local ?? !opts.network;
@@ -332,7 +301,7 @@ amendment
   .command('info <nameOrHash>')
   .description('Show details for a single amendment (look up by name or hash prefix)')
   .option('--local', 'Use the local Docker sandbox')
-  .option('--network <network>', 'Network to query (testnet | devnet | mainnet) — omit for local')
+  .option('--network <network>', 'Network to query (testnet | devnet) — omit for local')
   .action((nameOrHash: string, opts: { local?: boolean; network?: string }) => {
     const local = opts.local ?? !opts.network;
     amendmentInfoCommand(nameOrHash, { local, network: opts.network })

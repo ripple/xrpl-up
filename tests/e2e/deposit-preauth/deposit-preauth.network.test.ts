@@ -40,6 +40,9 @@ async function enableDepositAuth(owner: Wallet): Promise<void> {
     Account: owner.address,
     SetFlag: 9, // asfDepositAuth
   } as XrplAccountSet);
+  // Widen the LastLedgerSequence window: with 14 concurrent tests sharing one
+  // WebSocket client, the default +20 buffer can be exhausted under load.
+  accountSetTx.LastLedgerSequence = (accountSetTx.LastLedgerSequence ?? 0) + 200;
   await client.submitAndWait(owner.sign(accountSetTx).tx_blob);
 }
 

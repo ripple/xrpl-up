@@ -6,6 +6,7 @@ import {
   fundMaster,
   initTicketPool,
   createFunded,
+  connectWithRetry,
 } from "../helpers/fund";
 
 // Budget: 35 tickets × 0.2 = 7 XRP; 31 wallets × 2 XRP = 62 XRP; total 69 ≤ 99 ✓
@@ -17,8 +18,9 @@ let client: Client;
 let master: Wallet;
 
 beforeAll(async () => {
-  client = new Client(XRPL_WS, { timeout: 60_000 });
-  await client.connect();
+  const ref = { client: new Client(XRPL_WS, { timeout: 60_000 }) };
+  await connectWithRetry(ref);
+  client = ref.client;
   master = await fundMaster(client);
   await initTicketPool(client, master, TICKET_COUNT);
 }, 120_000);
@@ -26,6 +28,18 @@ beforeAll(async () => {
 afterAll(async () => {
   await client.disconnect();
 });
+
+/**
+ * Force a fresh WebSocket connection. Heavy spawnSync usage blocks the
+ * event loop, starving xrpl.js ping handlers. Between sequential describe
+ * blocks the connection may be dead or in auto-reconnect limbo (readyState
+ * 0 CONNECTING) where isConnected() is unreliable. Always replace.
+ */
+async function freshConnection(): Promise<void> {
+  try { await client.disconnect(); } catch { /* ignore */ }
+  client = new Client(XRPL_WS, { timeout: 60_000 });
+  await client.connect();
+}
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -82,6 +96,8 @@ function createBuyOffer(wallet: Wallet, nftokenId: string, amountXrp: string, ow
 // ─── nft offer create ────────────────────────────────────────────────────────
 
 describe("nft offer create", () => {
+  beforeAll(freshConnection, 30_000);
+
   it.concurrent("creates a sell offer and prints OfferID", async () => {
     const [seller] = await createFunded(client, master, 1, FUND_AMOUNT);
     const nftokenId = mintNFT(seller);
@@ -225,6 +241,8 @@ describe("nft offer create", () => {
 // ─── nft offer cancel ────────────────────────────────────────────────────────
 
 describe("nft offer cancel", () => {
+  beforeAll(freshConnection, 30_000);
+
   it.concurrent("cancels a single offer", async () => {
     const [account] = await createFunded(client, master, 1, FUND_AMOUNT);
     const nftokenId = mintNFT(account);
@@ -318,6 +336,8 @@ describe("nft offer cancel", () => {
 // ─── nft offer accept ────────────────────────────────────────────────────────
 
 describe("nft offer accept", () => {
+  beforeAll(freshConnection, 30_000);
+
   it.concurrent("accepts a sell offer (direct) — buyer accepts seller's sell offer", async () => {
     const [seller, buyer] = await createFunded(client, master, 2, FUND_AMOUNT);
     const nftokenId = mintNFT(seller);
@@ -448,6 +468,8 @@ describe("nft offer accept", () => {
 // ─── nft offer list ──────────────────────────────────────────────────────────
 
 describe("nft offer list", () => {
+  beforeAll(freshConnection, 30_000);
+
   it.concurrent("lists both sell and buy offers in human-readable output", async () => {
     const [seller, buyer] = await createFunded(client, master, 2, FUND_AMOUNT);
     const nftokenId = mintNFT(seller);

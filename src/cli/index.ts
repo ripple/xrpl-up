@@ -35,7 +35,7 @@ program
   .addHelpText("beforeAll", BANNER)
   .option(
     "-n, --node <url>",
-    "XRPL node URL or network name (mainnet|testnet|devnet)",
+    "XRPL node URL or network name (testnet|devnet|local)",
     process.env.XRPL_NODE ?? "testnet"
   );
 

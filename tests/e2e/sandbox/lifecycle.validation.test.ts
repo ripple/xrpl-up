@@ -63,12 +63,12 @@ describe("sandbox amendment validation", () => {
 // ── faucet ────────────────────────────────────────────────────────────────────
 
 describe("sandbox faucet validation", () => {
-  it("faucet --network mainnet exits 1 with mainnet guard message", () => {
-    // faucetCommand rejects mainnet before attempting any network call
+  it("faucet --network mainnet exits 1 with unknown network message", () => {
+    // "mainnet" is not a recognized network alias
     const result = runXrplUp(["faucet", "--network", "mainnet"]);
     expect(result.status).toBe(1);
     const combined = result.stdout + result.stderr;
-    expect(combined).toContain("Mainnet");
+    expect(combined).toContain("not found");
   });
 
   it("faucet --network invalid-net exits 1 with unknown network message", () => {

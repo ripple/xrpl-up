@@ -8,7 +8,7 @@ import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
 
 export interface FaucetOptions {
-  network?: string;  // 'local' | 'testnet' | 'devnet' | 'mainnet' | custom name
+  network?: string;  // 'local' | 'testnet' | 'devnet' | custom name
   seed?: string;
 }
 

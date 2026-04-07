@@ -30,10 +30,6 @@ export const DEFAULT_CONFIG: XrplUpConfig = {
       url: 'wss://s.devnet.rippletest.net:51233',
       name: 'XRPL Devnet',
     },
-    mainnet: {
-      url: 'wss://xrplcluster.com',
-      name: 'XRPL Mainnet',
-    },
   },
   defaultNetwork: 'testnet',
   accounts: {
@@ -99,11 +95,21 @@ export function resolveNetwork(
   return { name, config: netCfg };
 }
 
-export function isMainnet(networkName: string, networkConfig: NetworkConfig): boolean {
+/** Best-effort detection of mainnet URLs. Used to block/warn operations that
+ *  should not target the production XRPL network. */
+export function isMainnet(_networkName: string, networkConfig: NetworkConfig): boolean {
   return (
-    networkName === 'mainnet' ||
     networkConfig.url.includes('xrplcluster.com') ||
     networkConfig.url.includes('s1.ripple.com') ||
     networkConfig.url.includes('s2.ripple.com')
+  );
+}
+
+/** URL-only variant for use outside the config system (e.g. CLI wrapper commands). */
+export function looksLikeMainnetUrl(url: string): boolean {
+  return (
+    url.includes('xrplcluster.com') ||
+    url.includes('s1.ripple.com') ||
+    url.includes('s2.ripple.com')
   );
 }

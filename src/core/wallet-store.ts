@@ -10,7 +10,6 @@ export interface StoredAccount {
   privateKey: string;
   publicKey: string;
   balance: number; // XRP
-  forked?: boolean; // true if mirrored from a remote network (no known seed)
 }
 
 export class WalletStore {
@@ -64,25 +63,8 @@ export class WalletStore {
     }
   }
 
-  /** Returns null for forked accounts that have no known seed. */
-  toWallet(stored: StoredAccount): Wallet | null {
-    if (!stored.seed) return null;
+  toWallet(stored: StoredAccount): Wallet {
     return Wallet.fromSeed(stored.seed);
-  }
-
-  addForked(address: string, balance: number): StoredAccount {
-    const stored: StoredAccount = {
-      index: this._accounts.length,
-      address,
-      seed: '',
-      privateKey: '',
-      publicKey: '',
-      balance,
-      forked: true,
-    };
-    this._accounts.push(stored);
-    this._save();
-    return stored;
   }
 
   get count(): number {

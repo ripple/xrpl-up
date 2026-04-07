@@ -21,7 +21,7 @@ export default defineConfig({
     poolOptions: {
       forks: {
         minForks: 1,
-        maxForks: 3,
+        maxForks: 2,
       },
     },
     include: ["tests/e2e/**/*.test.ts"],

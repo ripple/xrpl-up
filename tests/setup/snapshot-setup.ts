@@ -68,6 +68,48 @@ function clearGeneratedLocalState(): void {
   }
 }
 
+async function waitForAccountsValidated(timeoutMs: number): Promise<void> {
+  const walletStorePath = path.join(XRPL_UP_DIR, "local-accounts.json");
+  let accounts: { address: string }[] = [];
+  try {
+    accounts = JSON.parse(fs.readFileSync(walletStorePath, "utf-8"));
+  } catch {
+    return; // no wallet store — nothing to wait for
+  }
+  if (accounts.length === 0) return;
+
+  const probe = accounts[0].address;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const resp = await fetch("http://localhost:3001/health");
+      if (!resp.ok) { await resp.text(); throw new Error("faucet not ready"); }
+      await resp.text();
+
+      // Check via a direct WebSocket call to rippled
+      const { Client } = await import("xrpl");
+      const client = new Client("ws://localhost:6006", { timeout: 5_000 });
+      await client.connect();
+      try {
+        await client.request({
+          command: "account_info",
+          account: probe,
+          ledger_index: "validated",
+        });
+        await client.disconnect();
+        console.log(`[snapshot-setup] Account ${probe.slice(0, 8)}… confirmed on validated ledger`);
+        return;
+      } catch {
+        await client.disconnect();
+      }
+    } catch {
+      // not ready yet
+    }
+    await new Promise((r) => setTimeout(r, 2_000));
+  }
+  console.warn("[snapshot-setup] Warning: timed out waiting for accounts to validate");
+}
+
 async function waitForFaucetHealth(timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -120,6 +162,13 @@ export async function setup(): Promise<void> {
   console.log("[snapshot-setup] Waiting for faucet health…");
   await waitForFaucetHealth(HEALTH_TIMEOUT_MS);
   console.log("[snapshot-setup] Stack ready");
+
+  // The `start` command auto-funds accounts via the faucet, but returns
+  // before those accounts appear on the validated ledger (~4s consensus close).
+  // Snapshot save stops the node immediately — if accounts aren't validated yet,
+  // they won't be in the tarball. Wait for at least one account to confirm.
+  console.log("[snapshot-setup] Waiting for funded accounts to be validated…");
+  await waitForAccountsValidated(30_000);
 
   // Publish override so any helper that respects it uses the local node.
   process.env.XRPL_NODE_OVERRIDE = "ws://localhost:6006";

@@ -2,19 +2,17 @@ import { Client } from "xrpl";
 
 export const TESTNET_URL = "wss://s.altnet.rippletest.net:51233";
 export const TESTNET_FALLBACK_URL = "wss://testnet.xrpl-labs.com/";
-export const MAINNET_URL = "wss://xrplcluster.com";
 export const DEVNET_URL = "wss://s.devnet.rippletest.net:51233";
 
-export type Network = "mainnet" | "testnet" | "devnet" | "local";
+export type Network = "testnet" | "devnet" | "local";
 
 const NETWORK_URLS: Record<Network, string> = {
-  mainnet: MAINNET_URL,
   testnet: TESTNET_URL,
   devnet: DEVNET_URL,
   local: "ws://localhost:6006",
 };
 
-/** Resolves a network alias ("mainnet" | "testnet" | "devnet" | "local") or passes through a raw WebSocket URL unchanged. */
+/** Resolves a network alias ("testnet" | "devnet" | "local") or passes through a raw WebSocket URL unchanged. */
 export function resolveNodeUrl(nodeOrNetwork: string): string {
   if (nodeOrNetwork in NETWORK_URLS) {
     return NETWORK_URLS[nodeOrNetwork as Network];

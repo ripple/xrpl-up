@@ -1531,22 +1531,19 @@ These commands are unique to xrpl-up and manage the local rippled Docker sandbox
 
 ```bash
 # Start local rippled node with 10 pre-funded accounts
-xrpl-up node --local
+xrpl-up start --local
 
 # Run in background (detached)
-xrpl-up node --local --detach
+xrpl-up start --local --detach
 
 # Persist ledger state across restarts
-xrpl-up node --local --persist
+xrpl-up start --local --local-network
 
 # Custom ledger interval
-xrpl-up node --local --ledger-interval 500
-
-# Fork XRP balances from testnet
-xrpl-up node --local --fork
+xrpl-up start --local --ledger-interval 500
 
 # Use a specific Docker image
-xrpl-up node --local --image xrpllabsofficial/xrpld:2.3.0
+xrpl-up start --local --image xrpllabsofficial/xrpld:2.3.0
 ```
 
 ### `status` — Show node health
@@ -1602,7 +1599,7 @@ xrpl-up reset --snapshots   # also delete saved snapshots
 
 ### `snapshot` — Save/restore ledger state
 
-Requires `--persist` mode.
+Requires `--local-network` mode.
 
 ```bash
 xrpl-up snapshot save my-state

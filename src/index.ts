@@ -33,7 +33,6 @@ export {
   resolveNodeUrl,
   TESTNET_URL,
   TESTNET_FALLBACK_URL,
-  MAINNET_URL,
   DEVNET_URL,
 } from './cli/utils/client';
 export type { Network } from './cli/utils/client';

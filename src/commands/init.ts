@@ -24,10 +24,6 @@ module.exports = {
       url: 'wss://s.devnet.rippletest.net:51233',
       name: 'XRPL Devnet',
     },
-    mainnet: {
-      url: 'wss://xrplcluster.com',
-      name: 'XRPL Mainnet',
-    },
   },
   defaultNetwork: '${defaultNetwork}',
   accounts: {
@@ -83,7 +79,7 @@ const TSCONFIG_TEMPLATE = JSON.stringify(
   2
 );
 
-/* ── Example scripts — remote (testnet/devnet/mainnet) ────────────────────── */
+/* ── Example scripts — remote (testnet/devnet) ────────────────────────────── */
 
 const EXAMPLE_PAYMENT_SCRIPT = `// scripts/example-payment.ts
 // Send XRP between two wallets on XRPL testnet and verify balances.
@@ -1121,7 +1117,6 @@ export async function initCommand(options: InitOptions = {}): Promise<void> {
         { name: 'local    — local rippled via Docker (xrpl-up start --local)', value: 'local'   },
         { name: 'testnet  — XRPL Testnet',                                    value: 'testnet' },
         { name: 'devnet   — XRPL Devnet',                                     value: 'devnet'  },
-        { name: 'mainnet  — XRPL Mainnet',                                    value: 'mainnet' },
       ],
       default: 'local',
     },

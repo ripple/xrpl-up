@@ -48,7 +48,7 @@ xrpl-up amm create XRP USD
 xrpl-up nft mint --uri https://example.com/meta.json --transferable
 
 # Create an MPT issuance (Multi-Purpose Token)
-xrpl-up mptoken issuance create --node ws://localhost:6006 --max-amount 1000000 --asset-scale 6
+xrpl-up mptoken issuance create --node local --max-amount 1000000 --asset-scale 6
 
 # Open a payment channel
 xrpl-up channel create rDestination... 10
@@ -65,32 +65,33 @@ xrpl-up channel create rDestination... 10
 
 XRPL interaction commands are intentionally non-exhaustive. For complex or production-grade flows, use `xrpl.js` directly or call `rippled` RPC endpoints.
 
-> **⚠️ Mainnet safety:** XRPL interaction commands (`wallet`, `account`, `payment`, `trust`, `offer`, `amm`, `nft`, `mptoken`, `escrow`, `check`, `channel`, `ticket`, `clawback`, `credential`, `did`, `multisig`, `oracle`, `deposit-preauth`, `permissioned-domain`, `vault`) have **no mainnet guard**. Passing `--node mainnet` (or a mainnet WebSocket URL) will submit real transactions. These commands are intended for local and testnet development only.
-
 ### Global flag: `--node`
 
 All XRPL interaction commands accept a global `--node` option that sets the network target:
 
 | Value | Connects to |
 |-------|-------------|
-| `local` (default) | Local sandbox (`ws://localhost:6006`) |
-| `testnet` | XRPL Testnet |
-| `devnet` | XRPL Devnet |
-| `mainnet` | XRPL Mainnet (caution) |
+| `testnet` (default) | XRPL Testnet |
+| `devnet` | XRPL Devnet (may include pre-release amendments not yet supported by this tool) |
+| `local` | Local sandbox (`ws://localhost:6006`) |
+| `wss://...` | Any custom WebSocket URL |
 
 ```bash
-# Use local sandbox (default — start first with: xrpl-up start)
+# Use local sandbox (start first with: xrpl-up start)
+xrpl-up account info rMyAddress --node local
+
+# Use testnet (default — no --node needed)
 xrpl-up account info rMyAddress
 
-# Use testnet
-xrpl-up wallet fund --account rMyAddress -n testnet
+# Use a custom WebSocket URL
+xrpl-up account info rMyAddress --node ws://my-node:6006
 
 # Set via environment variable
-export XRPL_NODE=ws://localhost:6006
+export XRPL_NODE=local
 xrpl-up payment --to rDest --amount 10
 ```
 
-`--node` only applies to XRPL interaction commands; sandbox lifecycle commands (`start`, `stop`, `reset`, etc.) use `--network` to target remote networks (also default to local when omitted).
+`--node` only applies to XRPL interaction commands; sandbox lifecycle commands (`start`, `stop`, `reset`, etc.) use `--local` / `--local-network` for the local sandbox and `--network` for remote networks.
 
 ### `xrpl-up start`
 
@@ -137,7 +138,7 @@ xrpl-up start --network devnet
 | `--exit-on-crash` | — | Exit with code 134 when rippled crashes (SIGABRT); disables container auto-restart |
 | `-a, --accounts <n>` | `10` | Number of accounts to pre-fund |
 
-> **Note:** The local sandbox is a clean-room environment — ledger starts at index 1 with only the genesis wallet. It is not a mirror of mainnet state. What matters is that transaction validation rules match the rippled version in use.
+> **Note:** The local sandbox is a clean-room environment — ledger starts at index 1 with only the genesis wallet. It is not a mirror of the public ledger. What matters is that transaction validation rules match the rippled version in use.
 >
 > **AMM / XLS-30 and MPT / XLS-33:** Both AMM and MPT (Multi-Purpose Token) are enabled by default in the local sandbox. xrpl-up uses the `[amendments]` section in `rippled.cfg` to force-enable the required amendments at genesis creation. No voting or ledger advancement is needed.
 
@@ -169,7 +170,7 @@ xrpl-up reset --snapshots
 
 What `xrpl-up reset` removes:
 - Running Docker containers (`docker compose down`)
-- The ledger volume (`xrpl-up-local-db`)
+- Ledger volumes (`xrpl-up-local-db` and `xrpl-up-local-peer-db` in consensus mode)
 - `~/.xrpl-up/local-accounts.json`
 - With `--snapshots`: `~/.xrpl-up/snapshots/` and all snapshot files
 
@@ -490,7 +491,7 @@ xrpl-up channel claim ABC123... --seed sDestSeed... \
 
 ### `xrpl-up mptoken`
 
-Multi-Purpose Token (MPT / XLS-33) operations. MPT is enabled automatically in the local sandbox. Use `--node ws://localhost:6006` to target the local sandbox, or `--node testnet` for Testnet.
+Multi-Purpose Token (MPT / XLS-33) operations. MPT is enabled automatically in the local sandbox. Use `--node local` to target the local sandbox, or `--node testnet` for Testnet.
 
 #### `xrpl-up mptoken issuance create`
 
@@ -498,11 +499,11 @@ Creates a new MPT issuance.
 
 ```bash
 # Local sandbox
-xrpl-up mptoken issuance create --node ws://localhost:6006 --seed sIssuerSeed... \
+xrpl-up mptoken issuance create --node local --seed sIssuerSeed... \
   --max-amount 1000000 --asset-scale 6 --transfer-fee 100 --metadata "My Token"
 
 # Minimal (no supply cap, non-transferable by default)
-xrpl-up mptoken issuance create --node ws://localhost:6006 --seed sIssuerSeed...
+xrpl-up mptoken issuance create --node local --seed sIssuerSeed...
 ```
 
 | Flag | Default | Description |
@@ -518,7 +519,7 @@ xrpl-up mptoken issuance create --node ws://localhost:6006 --seed sIssuerSeed...
 Destroys an MPT issuance. Outstanding supply must be zero.
 
 ```bash
-xrpl-up mptoken issuance destroy 00070C44... --node ws://localhost:6006 --seed sIssuerSeed...
+xrpl-up mptoken issuance destroy 00070C44... --node local --seed sIssuerSeed...
 ```
 
 #### `xrpl-up mptoken authorize <issuanceId>`
@@ -528,14 +529,14 @@ Authorizes (or unauthorizes) a holder to hold the token.
 ```bash
 # Issuer side: authorize a holder
 xrpl-up mptoken authorize 00070C44... --holder rHolderAddress... \
-  --node ws://localhost:6006 --seed sIssuerSeed...
+  --node local --seed sIssuerSeed...
 
 # Holder side: opt in (no --holder flag)
-xrpl-up mptoken authorize 00070C44... --node ws://localhost:6006 --seed sHolderSeed...
+xrpl-up mptoken authorize 00070C44... --node local --seed sHolderSeed...
 
 # Revoke authorization
 xrpl-up mptoken authorize 00070C44... --holder rHolderAddress... --unauthorize \
-  --node ws://localhost:6006 --seed sIssuerSeed...
+  --node local --seed sIssuerSeed...
 ```
 
 #### `xrpl-up mptoken issuance set <issuanceId>`
@@ -543,9 +544,9 @@ xrpl-up mptoken authorize 00070C44... --holder rHolderAddress... --unauthorize \
 Locks or unlocks an MPT issuance or a specific holder's balance. Requires the issuance to have been created with `--can-lock`.
 
 ```bash
-xrpl-up mptoken issuance set 00070C44... --lock --node ws://localhost:6006 --seed sIssuerSeed...
-xrpl-up mptoken issuance set 00070C44... --lock --holder rAddr... --node ws://localhost:6006 --seed sIssuerSeed...
-xrpl-up mptoken issuance set 00070C44... --unlock --node ws://localhost:6006 --seed sIssuerSeed...
+xrpl-up mptoken issuance set 00070C44... --lock --node local --seed sIssuerSeed...
+xrpl-up mptoken issuance set 00070C44... --lock --holder rAddr... --node local --seed sIssuerSeed...
+xrpl-up mptoken issuance set 00070C44... --unlock --node local --seed sIssuerSeed...
 ```
 
 #### `xrpl-up mptoken issuance get <issuanceId>`
@@ -553,7 +554,7 @@ xrpl-up mptoken issuance set 00070C44... --unlock --node ws://localhost:6006 --s
 Shows on-ledger details of an MPT issuance: issuer, outstanding supply, flags, and metadata.
 
 ```bash
-xrpl-up mptoken issuance get 00070C4495F14B0E... --node ws://localhost:6006
+xrpl-up mptoken issuance get 00070C4495F14B0E... --node local
 ```
 
 #### `xrpl-up mptoken issuance list <address>`
@@ -561,7 +562,7 @@ xrpl-up mptoken issuance get 00070C4495F14B0E... --node ws://localhost:6006
 Lists MPT issuances created by an account.
 
 ```bash
-xrpl-up mptoken issuance list rMyAddress... --node ws://localhost:6006
+xrpl-up mptoken issuance list rMyAddress... --node local
 ```
 
 #### Sending MPT payments
@@ -570,7 +571,7 @@ Use the `payment` command with an MPT amount format `<amount>/<issuanceId>`:
 
 ```bash
 xrpl-up payment --to rDestAddress --amount "500/00070C44..." \
-  --node ws://localhost:6006 --seed sHolderSeed...
+  --node local --seed sHolderSeed...
 ```
 
 For querying MPT balances held by an account, use `xrpl-up account mptokens`.
@@ -635,19 +636,19 @@ Creates or updates a trust line.
 ```bash
 # Set a USD trust line with a 1000 limit (local sandbox)
 xrpl-up trust set --currency USD --issuer rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh \
-  --limit 1000 --node ws://localhost:6006 --seed sn3nxiW7...
+  --limit 1000 --node local --seed sn3nxiW7...
 
 # With NoRipple flag
 xrpl-up trust set --currency USD --issuer rHb9... --limit 1000 \
-  --no-ripple --node ws://localhost:6006 --seed sn3nxiW7...
+  --no-ripple --node local --seed sn3nxiW7...
 
 # Freeze a trust line (issuer only)
 xrpl-up trust set --currency USD --issuer rHolderAddress... \
-  --limit 0 --freeze --node ws://localhost:6006 --seed sIssuerSeed...
+  --limit 0 --freeze --node local --seed sIssuerSeed...
 
 # Unfreeze
 xrpl-up trust set --currency USD --issuer rHolderAddress... \
-  --limit 0 --unfreeze --node ws://localhost:6006 --seed sIssuerSeed...
+  --limit 0 --unfreeze --node local --seed sIssuerSeed...
 ```
 
 | Flag | Description |
@@ -664,7 +665,7 @@ xrpl-up trust set --currency USD --issuer rHolderAddress... \
 #### Query trust lines
 
 ```bash
-xrpl-up account trust-lines rMyAddress... --node ws://localhost:6006
+xrpl-up account trust-lines rMyAddress... --node local
 ```
 
 To enable `DefaultRipple` (rippling on all new trust lines), use `xrpl-up account set defaultRipple`.
@@ -775,8 +776,8 @@ xrpl-up check list --account rSomeAddress...
 Enable or disable account flags (replaces the old `accountset` command).
 
 ```bash
-xrpl-up account set requireDest --node ws://localhost:6006 --seed sn3nxiW7...
-xrpl-up account set requireDest --clear --node ws://localhost:6006 --seed sn3nxiW7...
+xrpl-up account set requireDest --node local --seed sn3nxiW7...
+xrpl-up account set requireDest --clear --node local --seed sn3nxiW7...
 ```
 
 | Flag name | Description |
@@ -798,7 +799,7 @@ xrpl-up account set requireDest --clear --node ws://localhost:6006 --seed sn3nxi
 The `tx` command has been removed. Use `xrpl-up account transactions`:
 
 ```bash
-xrpl-up account transactions rMyAddress... --node ws://localhost:6006
+xrpl-up account transactions rMyAddress... --node local
 xrpl-up account transactions rMyAddress... --node testnet
 ```
 
@@ -810,18 +811,18 @@ Manage DepositPreauth entries (renamed from `depositpreauth`). Required when an 
 
 ```bash
 # Enable deposit authorization on your account first
-xrpl-up account set depositAuth --node ws://localhost:6006 --seed sn3nxiW7...
+xrpl-up account set depositAuth --node local --seed sn3nxiW7...
 
 # Pre-authorize a specific sender
 xrpl-up deposit-preauth set --authorize rSender... \
-  --node ws://localhost:6006 --seed sn3nxiW7...
+  --node local --seed sn3nxiW7...
 
 # Revoke a pre-authorization
 xrpl-up deposit-preauth set --unauthorize rSender... \
-  --node ws://localhost:6006 --seed sn3nxiW7...
+  --node local --seed sn3nxiW7...
 
 # List all pre-authorizations
-xrpl-up deposit-preauth list rMyAddress... --node ws://localhost:6006
+xrpl-up deposit-preauth list rMyAddress... --node local
 ```
 
 ---
@@ -859,7 +860,7 @@ xrpl-up ticket list rSomeAddress...
 Issuer clawback operations. The issuer account must have clawback enabled before use.
 
 > **Prerequisites:**
-> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set allowClawback --node ws://localhost:6006 --seed <issuer-seed>`
+> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set allowClawback --node local --seed <issuer-seed>`
 > - **MPT clawback:** The issuance must have been created with `xrpl-up mptoken issuance create --can-clawback`
 
 #### `xrpl-up clawback iou <amount> <currency> <holder>`
@@ -928,9 +929,9 @@ Account query and management. The `account` command provides both query subcomma
 | `delete` | Delete the account |
 
 ```bash
-xrpl-up account info rMyAddress --node ws://localhost:6006
-xrpl-up account transactions rMyAddress --node ws://localhost:6006
-xrpl-up account trust-lines rMyAddress --node ws://localhost:6006
+xrpl-up account info rMyAddress --node local
+xrpl-up account transactions rMyAddress --node local
+xrpl-up account trust-lines rMyAddress --node local
 xrpl-up account balance rMyAddress --node testnet
 ```
 
@@ -942,15 +943,15 @@ Send a Payment transaction. Alias: `xrpl-up send`.
 
 ```bash
 # Send XRP
-xrpl-up payment --to rDest... --amount 10 --node ws://localhost:6006 --seed sSrc...
+xrpl-up payment --to rDest... --amount 10 --node local --seed sSrc...
 
 # Send IOU
 xrpl-up payment --to rDest... --amount "10/USD/rIssuer..." \
-  --node ws://localhost:6006 --seed sSrc...
+  --node local --seed sSrc...
 
 # Send MPT
 xrpl-up payment --to rDest... --amount "500/00070C44..." \
-  --node ws://localhost:6006 --seed sSrc...
+  --node local --seed sSrc...
 ```
 
 | Flag | Description |
@@ -1030,7 +1031,9 @@ xrpl-up vault --help
 
 Inspect and manage XRPL amendments in the local sandbox. The local sandbox starts with a set of amendments baked into its genesis config; use `enable` to queue additional amendments (takes effect after `xrpl-up reset && xrpl-up start`).
 
-> **Local only for mutations:** `enable` and `disable` write to the genesis config and only apply to the local sandbox. `list` and `info` work on any network.
+> **Devnet compatibility:** XRPL Devnet may enable pre-release amendments that are not yet supported by the rippled version bundled with this tool. If you encounter unsupported transaction types or behaviors on devnet, check whether the amendment is available in the local sandbox with `xrpl-up amendment list --local --diff devnet`.
+
+> **Local only for mutations:** `enable` writes to the genesis config and only applies to the local sandbox. `list` and `info` work on any network.
 
 #### `xrpl-up amendment list`
 
@@ -1043,8 +1046,8 @@ xrpl-up amendment list --local
 # List disabled amendments only
 xrpl-up amendment list --local --disabled
 
-# Side-by-side diff: local vs mainnet
-xrpl-up amendment list --local --diff mainnet
+# Side-by-side diff: local vs testnet
+xrpl-up amendment list --local --diff testnet
 
 # List amendments on testnet
 xrpl-up amendment list --network testnet
@@ -1056,7 +1059,7 @@ Shows full details for a single amendment. Accepts the amendment name or a hash 
 
 ```bash
 xrpl-up amendment info PermissionedDomains --local
-xrpl-up amendment info AMM --network mainnet
+xrpl-up amendment info AMM --network testnet
 xrpl-up amendment info A730EB18 --local   # hash prefix lookup
 ```
 
@@ -1074,7 +1077,7 @@ xrpl-up amendment enable PermissionedDomains --local
 xrpl-up amendment enable PermissionedDomains --local --auto-reset
 ```
 
-> **Standalone mode only.** `enable` modifies the genesis config and only takes effect after a reset — it requires standalone mode (`xrpl-up start` without `--local-network`). In `--local-network` (consensus) mode, all mainnet amendments are pre-activated in the genesis ledger and cannot be changed — just like mainnet, activated amendments are permanent. To undo an `enable`, simply run `xrpl-up reset` without re-enabling the amendment.
+> **Standalone mode only.** `enable` modifies the genesis config and only takes effect after a reset — it requires standalone mode (`xrpl-up start` without `--local-network`). In `--local-network` (consensus) mode, all production amendments are pre-activated in the genesis ledger and cannot be changed — once activated, amendments are permanent. To undo an `enable`, simply run `xrpl-up reset` without re-enabling the amendment.
 
 ---
 
@@ -1127,7 +1130,7 @@ xrpl-up snapshot list
 xrpl-up snapshot restore before-amm
 ```
 
-Each snapshot saves both the ledger volume **and** the account store (`local-accounts.json`), so `xrpl-up accounts` reflects the correct set of accounts after a restore. The `snapshot list` output shows `+accounts` for any snapshot that includes the account sidecar.
+Each snapshot saves both the ledger volume **and** a copy of the account store (`local-accounts.json`), so `xrpl-up accounts` reflects the accounts that existed at snapshot time. The account store sidecar is copied as-is — it is not validated against the ledger. The `snapshot list` output shows `+accounts` for any snapshot that includes the account sidecar.
 
 **Typical workflow:**
 
@@ -1136,6 +1139,9 @@ xrpl-up start --local-network --detach
 
 # Run expensive setup (fund accounts, create AMM pool, set trust lines...)
 xrpl-up faucet --network local
+# Wait for funded accounts to appear on the validated ledger (~4s consensus close).
+# Snapshot save stops services before archiving — unvalidated transactions may be lost.
+xrpl-up accounts --local                        # confirm accounts are on-ledger
 xrpl-up snapshot save after-setup
 
 # Run tests, mutate state...
@@ -1154,12 +1160,10 @@ xrpl-up snapshot restore after-setup             # restore saved state
 xrpl-up accounts --local                         # snapshot accounts restored
 ```
 
-Snapshots are stored at `~/.xrpl-up/snapshots/`. Each snapshot is a pair of files:
-- `<name>.tar.gz` — compressed NuDB ledger volume (typically 5–100 MB)
+Snapshots are stored at `~/.xrpl-up/snapshots/` and are portable — copy them to any machine and restore. Each snapshot produces three files:
+- `<name>.tar.gz` — compressed node DB volume (typically 5–100 MB)
 - `<name>-accounts.json` — account store at snapshot time
-
-Snapshots are stored at `~/.xrpl-up/snapshots/` and are portable — copy them to any machine and restore.
-```
+- `<name>-meta.json` — snapshot metadata (format version)
 
 ---
 
@@ -1296,10 +1300,12 @@ Account seeds, generated configs, and snapshots are stored at:
   docker-compose.yml          # generated on each start
   rippled.cfg                 # generated on each start (or custom via --config)
   snapshots/
-    before-amm.tar.gz         # ledger volume snapshot (--local-network mode)
+    before-amm.tar.gz         # node DB volume snapshot (--local-network mode)
     before-amm-accounts.json  # account store at snapshot time
+    before-amm-meta.json      # snapshot metadata
     after-setup.tar.gz
     after-setup-accounts.json
+    after-setup-meta.json
 ```
 
 `xrpl-up start` always recreates accounts fresh unless `--local-network` is used. `xrpl-up faucet` appends to the account store regardless of mode. `xrpl-up reset` clears the account store and Docker volume in one command.

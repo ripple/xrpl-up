@@ -12,6 +12,7 @@ import { spawnSync } from "child_process";
 import net from "net";
 import { resolve } from "path";
 import Socket from "@xrplf/isomorphic/ws";
+import { startStatsSampler, stopStatsSampler, formatPeakStats, formatProcessMemory } from "./docker-stats";
 
 const LOCAL_WS_PORT = 6006;
 const LOCAL_FAUCET_HEALTH = "http://localhost:3001/health";
@@ -165,6 +166,7 @@ async function prefundWorkerMasters(): Promise<void> {
 let setupSeq = 0;
 let setupTime = 0;
 
+
 async function getLedgerSeq(): Promise<number> {
   return new Promise((resolve) => {
     const ws = new Socket(`ws://127.0.0.1:${LOCAL_WS_PORT}`);
@@ -224,6 +226,9 @@ export async function setup(): Promise<void> {
   // Pre-fund one master wallet per worker fork. Each fork gets its own account,
   // eliminating cross-process genesis sequence conflicts when maxForks > 1.
   await prefundWorkerMasters();
+
+  // Start background Docker stats sampler to track peak resource usage
+  startStatsSampler();
 }
 
 export async function teardown(): Promise<void> {
@@ -237,6 +242,14 @@ export async function teardown(): Promise<void> {
       `[local-network-node] Ledger close rate: ${ledgersClosed} ledgers in ${elapsedS.toFixed(0)}s (avg ${avgCloseS}s/ledger)`
     );
   }
+
+  // Stop the background stats sampler and print peak resource usage
+  stopStatsSampler();
+  const peakStats = formatPeakStats();
+  if (peakStats) {
+    console.log(`[local-network-node] Peak container resource usage:\n${peakStats}`);
+  }
+  console.log(`[local-network-node] Test process memory: ${formatProcessMemory()}`);
 
   if (process.env.XRPL_LOCAL_TEARDOWN === "1") {
     console.log("[local-network-node] Stopping local stack…");

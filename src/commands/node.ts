@@ -20,7 +20,6 @@ import {
 } from '../core/compose';
 import { validateConfig, printValidationResult } from './config';
 import { GENESIS_ADDRESS } from '../core/standalone';
-import { fetchForkAccounts, fetchActiveAccountsInLedger, applyForkAccounts, ForkAccount } from '../core/fork';
 import { tecMessage } from '../utils/tec-codes';
 
 export interface NodeOptions {
@@ -30,11 +29,6 @@ export interface NodeOptions {
   localNetwork?: boolean;
   image?: string;
   ledgerInterval?: number;
-  fork?: boolean;
-  forkAccounts?: string;        // comma-separated addresses
-  accountsFromLedger?: number;  // scan this ledger for active accounts
-  forkAtLedger?: number;        // snapshot balances at this ledger (default: accountsFromLedger-1 or latest)
-  forkSource?: string;
   noAutoAdvance?: boolean;
   noSecrets?: boolean;  // suppress private key output (auto-enabled with --detach)
   debug?: boolean;
@@ -128,41 +122,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     }
   }
 
-  // ── Validate fork options ──────────────────────────────────────────────────
-  if (options.fork && !isLocal) {
-    logger.error('--fork requires --local mode.');
-    process.exit(1);
-  }
-
-  if (options.fork) {
-    const hasAccounts = (options.forkAccounts ?? '').split(',').map(a => a.trim()).filter(Boolean).length > 0;
-    const hasLedger = options.accountsFromLedger != null;
-    if (!hasAccounts && !hasLedger) {
-      logger.error('--fork requires --fork-accounts <addr1,...> or --add-accounts-from-ledger <index>');
-      process.exit(1);
-    }
-  }
-
-  // ── Confirm previous state removal (fork mode) ────────────────────────────
   const store = new WalletStore(networkName);
-
-  if (isLocal && options.fork) {
-    const existing = store.all();
-    if (existing.length > 0) {
-      const { confirmed } = await inquirer.prompt<{ confirmed: boolean }>([
-        {
-          type: 'confirm',
-          name: 'confirmed',
-          message: `Previous state found (${existing.length} accounts). Remove and start fresh?`,
-          default: true,
-        },
-      ]);
-      if (!confirmed) {
-        logger.info('Keeping previous state. Exiting.');
-        process.exit(0);
-      }
-    }
-  }
 
   // ── Start Docker Compose stack (local mode only) ───────────────────────────
   const localNetwork = isLocal && (options.localNetwork ?? false);
@@ -333,7 +293,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   if (!persist) store.clear();
 
   const existingAccounts = store.all();
-  const count = options.accountCount ?? (options.fork ? 0 : (config.accounts?.count ?? 10));
+  const count = options.accountCount ?? (config.accounts?.count ?? 10);
 
   // In persist mode with existing accounts, skip funding and reload from store.
   if (persist && existingAccounts.length > 0) {
@@ -354,7 +314,6 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   }).start() : null;
 
   const funded: Array<{ wallet: Wallet; balance: number }> = shouldFund ? [] : existingAccounts
-    .filter(a => !a.forked)
     .map(a => ({
       wallet: store.toWallet(a)!,
       balance: a.balance,
@@ -399,81 +358,10 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     logger.blank();
   }
 
-  // ── Fork mainnet accounts (--fork only) ────────────────────────────────────
-  let forkedAccounts: ForkAccount[] = [];
-
-  if (isLocal && options.fork) {
-    const forkSource = options.forkSource ?? 'wss://xrplcluster.com';
-    const explicitAddresses = (options.forkAccounts ?? '')
-      .split(',')
-      .map(a => a.trim())
-      .filter(Boolean);
-
-    const forkSpinner = ora({ color: 'cyan', indent: 2 }).start();
-    const forkStartMs = Date.now();
-
-    try {
-      let addresses: string[] = explicitAddresses;
-      // Determine which ledger to snapshot balances from:
-      //   1. --fork-at-ledger (explicit) always wins
-      //   2. When --add-accounts-from-ledger is used, default to N-1 (state before that ledger)
-      //   3. Otherwise undefined → latest validated
-      let balanceLedger: number | undefined =
-        options.forkAtLedger ??
-        (options.accountsFromLedger != null ? options.accountsFromLedger - 1 : undefined);
-
-      // Auto-discover accounts from the specified ledger
-      if (options.accountsFromLedger != null) {
-        forkSpinner.text = `Scanning ledger #${options.accountsFromLedger.toLocaleString()} for active accounts…`;
-        const discovered = await fetchActiveAccountsInLedger(forkSource, options.accountsFromLedger);
-        // Merge with any explicit addresses, deduplicate
-        const merged = new Set([...addresses, ...discovered]);
-        addresses = Array.from(merged);
-        forkSpinner.text = `Found ${chalk.cyan(String(addresses.length))} account(s)  ${chalk.dim(`(ledger #${options.accountsFromLedger.toLocaleString()})`)} — fetching balances at ledger #${(balanceLedger ?? 0).toLocaleString()}…`;
-      } else {
-        forkSpinner.text = `Fetching state for ${chalk.cyan(String(addresses.length))} account(s) from ${chalk.dim(forkSource)}…`;
-      }
-
-      forkedAccounts = await fetchForkAccounts(forkSource, addresses, balanceLedger);
-
-      if (forkedAccounts.length === 0) {
-        forkSpinner.warn('No accounts found — check addresses or ledger index');
-      } else {
-        await applyForkAccounts(manager.client, forkedAccounts, (done, total) => {
-          forkSpinner.text = `Forking accounts ${chalk.cyan(String(done))}/${total}…`;
-        });
-
-        const forkElapsed = ((Date.now() - forkStartMs) / 1000).toFixed(1);
-        const snapshotLedger = forkedAccounts[0]?.ledgerIndex;
-        const ledgerLabel = snapshotLedger
-          ? chalk.dim(` (state at ledger #${snapshotLedger.toLocaleString()})`)
-          : '';
-        forkSpinner.succeed(
-          `Forked ${chalk.cyan(String(forkedAccounts.length))} account(s) from ${chalk.dim(forkSource)}${ledgerLabel} ${chalk.dim(`(${forkElapsed}s)`)}`
-        );
-
-        for (const fa of forkedAccounts) {
-          store.addForked(fa.address, fa.xrpBalance);
-        }
-      }
-    } catch (err: unknown) {
-      forkSpinner.fail('Failed to fork accounts');
-      logger.error(err instanceof Error ? err.message : String(err));
-      await manager.disconnect();
-      composeDown();
-      process.exit(1);
-    }
-
-    logger.blank();
-  }
-
   // ── Address → friendly name map (used by transaction log) ─────────────────
   const addressMap = new Map<string, string>();
   for (const [i, { wallet }] of funded.entries()) {
     addressMap.set(wallet.address, `Account #${i}`);
-  }
-  for (const [i, fa] of forkedAccounts.entries()) {
-    addressMap.set(fa.address, `Fork #${i}`);
   }
   function labelAddress(addr: string): string {
     return addressMap.get(addr) ?? addr.slice(0, 8) + '…';
@@ -488,39 +376,6 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     chalk.yellow('           Any funds sent to them on Mainnet WILL BE LOST.')
   );
   logger.blank();
-
-  // ── Forked accounts table ──────────────────────────────────────────────────
-  if (forkedAccounts.length > 0) {
-    const forkSource = options.forkSource ?? 'wss://xrplcluster.com';
-    const snapshotLedger = forkedAccounts[0]?.ledgerIndex;
-    const scanLedger = options.accountsFromLedger ?? null;
-    const ledgerLabel = snapshotLedger
-      ? `  ${chalk.dim('state at ledger #' + snapshotLedger.toLocaleString())}` +
-        (scanLedger ? chalk.dim(`  (scanned from ledger #${scanLedger.toLocaleString()})`) : '')
-      : '';
-    logger.section(`Fork  ${chalk.dim(forkSource)}${ledgerLabel}`);
-
-    const forkTable = new Table({
-      head: [chalk.cyan('#'), chalk.cyan('Address'), chalk.cyan('Balance'), chalk.cyan('Mainnet Seq')],
-      style: { head: [], border: [] },
-      chars: TABLE_CHARS,
-      colWidths: [4, 38, 16, 14],
-    });
-
-    for (const [i, fa] of forkedAccounts.entries()) {
-      forkTable.push([
-        chalk.dim(String(i)),
-        chalk.white(fa.address),
-        chalk.green(`${fa.xrpBalance.toLocaleString()} XRP`),
-        chalk.dim(fa.sequence.toLocaleString()),
-      ]);
-    }
-
-    printTable(forkTable.toString());
-    logger.blank();
-    logger.dim('  Note: forked accounts have no known seed — use your mainnet key to sign.');
-    logger.blank();
-  }
 
   // ── Accounts table ─────────────────────────────────────────────────────────
   logger.section('Accounts');

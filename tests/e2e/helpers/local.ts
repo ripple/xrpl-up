@@ -3,6 +3,35 @@ import { Client, Wallet, xrpToDrops } from "xrpl";
 export const XRPL_WS = "ws://localhost:6006";
 export const XRPL_WS_FALLBACK = "ws://localhost:6006";
 
+/**
+ * Connect a Client with retry. Under CI load (multiple forks hitting the same
+ * rippled), a single connect() can hang. Retry with a fresh Client if it
+ * doesn't resolve within `perAttemptMs`.
+ */
+export async function connectWithRetry(
+  clientRef: { client: Client },
+  maxAttempts = 3,
+  perAttemptMs = 30_000,
+): Promise<void> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      await Promise.race([
+        clientRef.client.connect(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("connect timeout")), perAttemptMs),
+        ),
+      ]);
+      return;
+    } catch {
+      try { await clientRef.client.disconnect(); } catch { /* ignore */ }
+      if (i < maxAttempts - 1) {
+        clientRef.client = new Client(XRPL_WS, { timeout: 60_000 });
+      }
+    }
+  }
+  throw new Error(`Failed to connect to ${XRPL_WS} after ${maxAttempts} attempts`);
+}
+
 // Amount to fund each test wallet. Well above the 10 XRP base reserve on standalone.
 const FUND_AMOUNT_XRP = 100;
 
@@ -59,6 +88,12 @@ async function withGenesisLock<T>(fn: () => Promise<T>): Promise<T> {
 // Does NOT call ledger_accept — the 1-second periodic timer advances the ledger,
 // keeping close_time tracking wall-clock time.
 
+async function ensureConnected(client: Client): Promise<void> {
+  if (!client.isConnected()) {
+    await client.connect();
+  }
+}
+
 async function masterPayment(client: Client, destination: string): Promise<void> {
   await withGenesisLock(async () => {
     const master = getWorkerWallet();
@@ -66,6 +101,7 @@ async function masterPayment(client: Client, destination: string): Promise<void>
     for (let attempt = 0; attempt < 3; attempt++) {
       if (attempt > 0) await new Promise((r) => setTimeout(r, 1_000));
       try {
+        await ensureConnected(client);
         // Re-autofill on every attempt: if the previous submit timed out but
         // the tx was actually accepted, the sequence will have advanced.
         const tx = await client.autofill({
@@ -256,6 +292,7 @@ async function waitForAccount(
 ): Promise<void> {
   for (let i = 0; i < retries; i++) {
     try {
+      await ensureConnected(client);
       await client.request({
         command: "account_info",
         account: address,

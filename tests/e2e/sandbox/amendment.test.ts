@@ -102,6 +102,29 @@ describe("sandbox amendment info --local (known amendment)", () => {
   });
 });
 
+describe("sandbox amendment list --local --diff testnet", () => {
+  it("exits 0 and shows side-by-side columns", () => {
+    const result = runXrplUp(
+      ["amendment", "list", "--local", "--diff", "testnet"],
+      {},
+      60_000,
+    );
+    expect(result.status).toBe(0);
+    // Diff view prints the target and diff network as column headers
+    expect(result.stdout).toContain("local");
+    expect(result.stdout).toContain("testnet");
+  });
+
+  it("accepts a raw WebSocket URL for --diff", () => {
+    const result = runXrplUp(
+      ["amendment", "list", "--local", "--diff", "wss://s.altnet.rippletest.net:51233"],
+      {},
+      60_000,
+    );
+    expect(result.status).toBe(0);
+  });
+});
+
 describe("sandbox amendments match mainnet", () => {
   it("no mainnet-enabled amendment is missing from the configured set", () => {
     // Query the local node's feature list — it reports ALL amendments the
