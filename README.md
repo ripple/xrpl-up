@@ -1130,7 +1130,7 @@ xrpl-up snapshot list
 xrpl-up snapshot restore before-amm
 ```
 
-Each snapshot saves both the ledger volume **and** the account store (`local-accounts.json`), so `xrpl-up accounts` reflects the correct set of accounts after a restore. The `snapshot list` output shows `+accounts` for any snapshot that includes the account sidecar.
+Each snapshot saves both the ledger volume **and** a copy of the account store (`local-accounts.json`), so `xrpl-up accounts` reflects the accounts that existed at snapshot time. The account store sidecar is copied as-is — it is not validated against the ledger. The `snapshot list` output shows `+accounts` for any snapshot that includes the account sidecar.
 
 **Typical workflow:**
 
@@ -1139,6 +1139,9 @@ xrpl-up start --local-network --detach
 
 # Run expensive setup (fund accounts, create AMM pool, set trust lines...)
 xrpl-up faucet --network local
+# Wait for funded accounts to appear on the validated ledger (~4s consensus close).
+# Snapshot save stops services before archiving — unvalidated transactions may be lost.
+xrpl-up accounts --local                        # confirm accounts are on-ledger
 xrpl-up snapshot save after-setup
 
 # Run tests, mutate state...
@@ -1158,7 +1161,7 @@ xrpl-up accounts --local                         # snapshot accounts restored
 ```
 
 Snapshots are stored at `~/.xrpl-up/snapshots/` and are portable — copy them to any machine and restore. Each snapshot produces three files:
-- `<name>.tar.gz` — compressed node DB volume: NuDB, SQLite (`ledger.db`, `transaction.db`), and `wallet.db` (typically 5–100 MB)
+- `<name>.tar.gz` — compressed node DB volume (typically 5–100 MB)
 - `<name>-accounts.json` — account store at snapshot time
 - `<name>-meta.json` — snapshot metadata (format version)
 
