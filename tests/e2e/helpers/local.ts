@@ -88,6 +88,12 @@ async function withGenesisLock<T>(fn: () => Promise<T>): Promise<T> {
 // Does NOT call ledger_accept — the 1-second periodic timer advances the ledger,
 // keeping close_time tracking wall-clock time.
 
+async function ensureConnected(client: Client): Promise<void> {
+  if (!client.isConnected()) {
+    await client.connect();
+  }
+}
+
 async function masterPayment(client: Client, destination: string): Promise<void> {
   await withGenesisLock(async () => {
     const master = getWorkerWallet();
@@ -95,6 +101,7 @@ async function masterPayment(client: Client, destination: string): Promise<void>
     for (let attempt = 0; attempt < 3; attempt++) {
       if (attempt > 0) await new Promise((r) => setTimeout(r, 1_000));
       try {
+        await ensureConnected(client);
         // Re-autofill on every attempt: if the previous submit timed out but
         // the tx was actually accepted, the sequence will have advanced.
         const tx = await client.autofill({
@@ -285,6 +292,7 @@ async function waitForAccount(
 ): Promise<void> {
   for (let i = 0; i < retries; i++) {
     try {
+      await ensureConnected(client);
       await client.request({
         command: "account_info",
         account: address,
