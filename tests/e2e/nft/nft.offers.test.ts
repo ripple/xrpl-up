@@ -450,6 +450,15 @@ describe("nft offer accept", () => {
 // ─── nft offer list ──────────────────────────────────────────────────────────
 
 describe("nft offer list", () => {
+  // Reconnect: earlier describe blocks use heavy spawnSync calls that block
+  // the event loop for 100s+, starving xrpl.js WebSocket pings. By the time
+  // this last block runs, the connection is often dead.
+  beforeAll(async () => {
+    try { await client.disconnect(); } catch { /* ignore */ }
+    client = new Client(XRPL_WS, { timeout: 60_000 });
+    await client.connect();
+  }, 30_000);
+
   it.concurrent("lists both sell and buy offers in human-readable output", async () => {
     const [seller, buyer] = await createFunded(client, master, 2, FUND_AMOUNT);
     const nftokenId = mintNFT(seller);
