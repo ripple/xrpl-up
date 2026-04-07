@@ -29,7 +29,7 @@ jobs:
       fail-fast: false
       matrix:
         node-version: [20, 22, 24]
-        mode: [standalone, local-network, snapshot]
+        mode: [standalone, local-network, snapshot, testnet]
         include:
           - mode: standalone
             test-script: test:e2e:local
@@ -37,6 +37,8 @@ jobs:
             test-script: test:e2e:local-network
           - mode: snapshot
             test-script: test:e2e:snapshot
+          - mode: testnet
+            test-script: test:e2e
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,19 +64,3 @@ jobs:
           name: dist
           path: dist/
 
-  testnet:
-    name: e2e (node-22, testnet)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
-      - name: Run testnet e2e tests
-        run: npm run test:e2e
