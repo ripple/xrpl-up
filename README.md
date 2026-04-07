@@ -48,7 +48,7 @@ xrpl-up amm create XRP USD
 xrpl-up nft mint --uri https://example.com/meta.json --transferable
 
 # Create an MPT issuance (Multi-Purpose Token)
-xrpl-up mptoken issuance create --node ws://localhost:6006 --max-amount 1000000 --asset-scale 6
+xrpl-up mptoken issuance create --node local --max-amount 1000000 --asset-scale 6
 
 # Open a payment channel
 xrpl-up channel create rDestination... 10
@@ -73,24 +73,27 @@ All XRPL interaction commands accept a global `--node` option that sets the netw
 
 | Value | Connects to |
 |-------|-------------|
-| `local` (default) | Local sandbox (`ws://localhost:6006`) |
-| `testnet` | XRPL Testnet |
+| `testnet` (default) | XRPL Testnet |
 | `devnet` | XRPL Devnet |
 | `mainnet` | XRPL Mainnet (caution) |
+| `local` | Local sandbox (`ws://localhost:6006`) |
 
 ```bash
-# Use local sandbox (default — start first with: xrpl-up start)
+# Use local sandbox (start first with: xrpl-up start)
+xrpl-up account info rMyAddress --node local
+
+# Use testnet (default — no --node needed)
 xrpl-up account info rMyAddress
 
-# Use testnet
-xrpl-up wallet fund --account rMyAddress -n testnet
+# Use a custom WebSocket URL
+xrpl-up account info rMyAddress --node ws://my-node:6006
 
 # Set via environment variable
-export XRPL_NODE=ws://localhost:6006
+export XRPL_NODE=local
 xrpl-up payment --to rDest --amount 10
 ```
 
-`--node` only applies to XRPL interaction commands; sandbox lifecycle commands (`start`, `stop`, `reset`, etc.) use `--network` to target remote networks (also default to local when omitted).
+`--node` only applies to XRPL interaction commands; sandbox lifecycle commands (`start`, `stop`, `reset`, etc.) use `--local` / `--local-network` for the local sandbox and `--network` for remote networks.
 
 ### `xrpl-up start`
 
@@ -490,7 +493,7 @@ xrpl-up channel claim ABC123... --seed sDestSeed... \
 
 ### `xrpl-up mptoken`
 
-Multi-Purpose Token (MPT / XLS-33) operations. MPT is enabled automatically in the local sandbox. Use `--node ws://localhost:6006` to target the local sandbox, or `--node testnet` for Testnet.
+Multi-Purpose Token (MPT / XLS-33) operations. MPT is enabled automatically in the local sandbox. Use `--node local` to target the local sandbox, or `--node testnet` for Testnet.
 
 #### `xrpl-up mptoken issuance create`
 
@@ -498,11 +501,11 @@ Creates a new MPT issuance.
 
 ```bash
 # Local sandbox
-xrpl-up mptoken issuance create --node ws://localhost:6006 --seed sIssuerSeed... \
+xrpl-up mptoken issuance create --node local --seed sIssuerSeed... \
   --max-amount 1000000 --asset-scale 6 --transfer-fee 100 --metadata "My Token"
 
 # Minimal (no supply cap, non-transferable by default)
-xrpl-up mptoken issuance create --node ws://localhost:6006 --seed sIssuerSeed...
+xrpl-up mptoken issuance create --node local --seed sIssuerSeed...
 ```
 
 | Flag | Default | Description |
@@ -518,7 +521,7 @@ xrpl-up mptoken issuance create --node ws://localhost:6006 --seed sIssuerSeed...
 Destroys an MPT issuance. Outstanding supply must be zero.
 
 ```bash
-xrpl-up mptoken issuance destroy 00070C44... --node ws://localhost:6006 --seed sIssuerSeed...
+xrpl-up mptoken issuance destroy 00070C44... --node local --seed sIssuerSeed...
 ```
 
 #### `xrpl-up mptoken authorize <issuanceId>`
@@ -528,14 +531,14 @@ Authorizes (or unauthorizes) a holder to hold the token.
 ```bash
 # Issuer side: authorize a holder
 xrpl-up mptoken authorize 00070C44... --holder rHolderAddress... \
-  --node ws://localhost:6006 --seed sIssuerSeed...
+  --node local --seed sIssuerSeed...
 
 # Holder side: opt in (no --holder flag)
-xrpl-up mptoken authorize 00070C44... --node ws://localhost:6006 --seed sHolderSeed...
+xrpl-up mptoken authorize 00070C44... --node local --seed sHolderSeed...
 
 # Revoke authorization
 xrpl-up mptoken authorize 00070C44... --holder rHolderAddress... --unauthorize \
-  --node ws://localhost:6006 --seed sIssuerSeed...
+  --node local --seed sIssuerSeed...
 ```
 
 #### `xrpl-up mptoken issuance set <issuanceId>`
@@ -543,9 +546,9 @@ xrpl-up mptoken authorize 00070C44... --holder rHolderAddress... --unauthorize \
 Locks or unlocks an MPT issuance or a specific holder's balance. Requires the issuance to have been created with `--can-lock`.
 
 ```bash
-xrpl-up mptoken issuance set 00070C44... --lock --node ws://localhost:6006 --seed sIssuerSeed...
-xrpl-up mptoken issuance set 00070C44... --lock --holder rAddr... --node ws://localhost:6006 --seed sIssuerSeed...
-xrpl-up mptoken issuance set 00070C44... --unlock --node ws://localhost:6006 --seed sIssuerSeed...
+xrpl-up mptoken issuance set 00070C44... --lock --node local --seed sIssuerSeed...
+xrpl-up mptoken issuance set 00070C44... --lock --holder rAddr... --node local --seed sIssuerSeed...
+xrpl-up mptoken issuance set 00070C44... --unlock --node local --seed sIssuerSeed...
 ```
 
 #### `xrpl-up mptoken issuance get <issuanceId>`
@@ -553,7 +556,7 @@ xrpl-up mptoken issuance set 00070C44... --unlock --node ws://localhost:6006 --s
 Shows on-ledger details of an MPT issuance: issuer, outstanding supply, flags, and metadata.
 
 ```bash
-xrpl-up mptoken issuance get 00070C4495F14B0E... --node ws://localhost:6006
+xrpl-up mptoken issuance get 00070C4495F14B0E... --node local
 ```
 
 #### `xrpl-up mptoken issuance list <address>`
@@ -561,7 +564,7 @@ xrpl-up mptoken issuance get 00070C4495F14B0E... --node ws://localhost:6006
 Lists MPT issuances created by an account.
 
 ```bash
-xrpl-up mptoken issuance list rMyAddress... --node ws://localhost:6006
+xrpl-up mptoken issuance list rMyAddress... --node local
 ```
 
 #### Sending MPT payments
@@ -570,7 +573,7 @@ Use the `payment` command with an MPT amount format `<amount>/<issuanceId>`:
 
 ```bash
 xrpl-up payment --to rDestAddress --amount "500/00070C44..." \
-  --node ws://localhost:6006 --seed sHolderSeed...
+  --node local --seed sHolderSeed...
 ```
 
 For querying MPT balances held by an account, use `xrpl-up account mptokens`.
@@ -635,19 +638,19 @@ Creates or updates a trust line.
 ```bash
 # Set a USD trust line with a 1000 limit (local sandbox)
 xrpl-up trust set --currency USD --issuer rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh \
-  --limit 1000 --node ws://localhost:6006 --seed sn3nxiW7...
+  --limit 1000 --node local --seed sn3nxiW7...
 
 # With NoRipple flag
 xrpl-up trust set --currency USD --issuer rHb9... --limit 1000 \
-  --no-ripple --node ws://localhost:6006 --seed sn3nxiW7...
+  --no-ripple --node local --seed sn3nxiW7...
 
 # Freeze a trust line (issuer only)
 xrpl-up trust set --currency USD --issuer rHolderAddress... \
-  --limit 0 --freeze --node ws://localhost:6006 --seed sIssuerSeed...
+  --limit 0 --freeze --node local --seed sIssuerSeed...
 
 # Unfreeze
 xrpl-up trust set --currency USD --issuer rHolderAddress... \
-  --limit 0 --unfreeze --node ws://localhost:6006 --seed sIssuerSeed...
+  --limit 0 --unfreeze --node local --seed sIssuerSeed...
 ```
 
 | Flag | Description |
@@ -664,7 +667,7 @@ xrpl-up trust set --currency USD --issuer rHolderAddress... \
 #### Query trust lines
 
 ```bash
-xrpl-up account trust-lines rMyAddress... --node ws://localhost:6006
+xrpl-up account trust-lines rMyAddress... --node local
 ```
 
 To enable `DefaultRipple` (rippling on all new trust lines), use `xrpl-up account set defaultRipple`.
@@ -775,8 +778,8 @@ xrpl-up check list --account rSomeAddress...
 Enable or disable account flags (replaces the old `accountset` command).
 
 ```bash
-xrpl-up account set requireDest --node ws://localhost:6006 --seed sn3nxiW7...
-xrpl-up account set requireDest --clear --node ws://localhost:6006 --seed sn3nxiW7...
+xrpl-up account set requireDest --node local --seed sn3nxiW7...
+xrpl-up account set requireDest --clear --node local --seed sn3nxiW7...
 ```
 
 | Flag name | Description |
@@ -798,7 +801,7 @@ xrpl-up account set requireDest --clear --node ws://localhost:6006 --seed sn3nxi
 The `tx` command has been removed. Use `xrpl-up account transactions`:
 
 ```bash
-xrpl-up account transactions rMyAddress... --node ws://localhost:6006
+xrpl-up account transactions rMyAddress... --node local
 xrpl-up account transactions rMyAddress... --node testnet
 ```
 
@@ -810,18 +813,18 @@ Manage DepositPreauth entries (renamed from `depositpreauth`). Required when an 
 
 ```bash
 # Enable deposit authorization on your account first
-xrpl-up account set depositAuth --node ws://localhost:6006 --seed sn3nxiW7...
+xrpl-up account set depositAuth --node local --seed sn3nxiW7...
 
 # Pre-authorize a specific sender
 xrpl-up deposit-preauth set --authorize rSender... \
-  --node ws://localhost:6006 --seed sn3nxiW7...
+  --node local --seed sn3nxiW7...
 
 # Revoke a pre-authorization
 xrpl-up deposit-preauth set --unauthorize rSender... \
-  --node ws://localhost:6006 --seed sn3nxiW7...
+  --node local --seed sn3nxiW7...
 
 # List all pre-authorizations
-xrpl-up deposit-preauth list rMyAddress... --node ws://localhost:6006
+xrpl-up deposit-preauth list rMyAddress... --node local
 ```
 
 ---
@@ -859,7 +862,7 @@ xrpl-up ticket list rSomeAddress...
 Issuer clawback operations. The issuer account must have clawback enabled before use.
 
 > **Prerequisites:**
-> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set allowClawback --node ws://localhost:6006 --seed <issuer-seed>`
+> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set allowClawback --node local --seed <issuer-seed>`
 > - **MPT clawback:** The issuance must have been created with `xrpl-up mptoken issuance create --can-clawback`
 
 #### `xrpl-up clawback iou <amount> <currency> <holder>`
@@ -928,9 +931,9 @@ Account query and management. The `account` command provides both query subcomma
 | `delete` | Delete the account |
 
 ```bash
-xrpl-up account info rMyAddress --node ws://localhost:6006
-xrpl-up account transactions rMyAddress --node ws://localhost:6006
-xrpl-up account trust-lines rMyAddress --node ws://localhost:6006
+xrpl-up account info rMyAddress --node local
+xrpl-up account transactions rMyAddress --node local
+xrpl-up account trust-lines rMyAddress --node local
 xrpl-up account balance rMyAddress --node testnet
 ```
 
@@ -942,15 +945,15 @@ Send a Payment transaction. Alias: `xrpl-up send`.
 
 ```bash
 # Send XRP
-xrpl-up payment --to rDest... --amount 10 --node ws://localhost:6006 --seed sSrc...
+xrpl-up payment --to rDest... --amount 10 --node local --seed sSrc...
 
 # Send IOU
 xrpl-up payment --to rDest... --amount "10/USD/rIssuer..." \
-  --node ws://localhost:6006 --seed sSrc...
+  --node local --seed sSrc...
 
 # Send MPT
 xrpl-up payment --to rDest... --amount "500/00070C44..." \
-  --node ws://localhost:6006 --seed sSrc...
+  --node local --seed sSrc...
 ```
 
 | Flag | Description |

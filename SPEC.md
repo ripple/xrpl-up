@@ -469,8 +469,8 @@ Subcommands: `create <destination> <sendMax>`, `cash <checkId> [amount]`, `cance
 Replaces `accountset set/clear`. Flag names unchanged: `requireDest`, `requireAuth`, `disallowXRP`, `disableMaster`, `defaultRipple`, `depositAuth`, `allowClawback`.
 
 ```bash
-xrpl-up account set requireDest --node ws://localhost:6006 --seed s...
-xrpl-up account set requireDest --clear --node ws://localhost:6006 --seed s...
+xrpl-up account set requireDest --node local --seed s...
+xrpl-up account set requireDest --clear --node local --seed s...
 ```
 
 `accountset signer-list` → `multisig` command. `accountset info` → `account info`.
@@ -480,7 +480,7 @@ xrpl-up account set requireDest --clear --node ws://localhost:6006 --seed s...
 `tx` has been removed. Use `account transactions`:
 
 ```bash
-xrpl-up account transactions <address> --node ws://localhost:6006
+xrpl-up account transactions <address> --node local
 ```
 
 #### `xrpl-up deposit-preauth`
