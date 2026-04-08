@@ -13,10 +13,7 @@
       "author": {
         "name": "ripple"
       },
-      "source": {
-        "source": "github",
-        "repo": "ripple/xrpl-up"
-      },
+      "source": "./",
       "category": "development",
       "homepage": "https://github.com/ripple/xrpl-up",
       "repository": "https://github.com/ripple/xrpl-up",
