@@ -38,10 +38,8 @@ jobs:
 
       # Start a local rippled node so we can query which amendments the
       # pinned Docker image (xrpllabsofficial/xrpld:latest) supports.
-      # The node --local --persist --detach command blocks until rippled
-      # is accepting connections, then exits 0.
       - name: Start local rippled
-        run: npx tsx src/cli.ts node --local --persist --detach
+        run: npx tsx src/cli.ts start --detach
         timeout-minutes: 5
 
       # The faucet container starts after rippled; wait for its health endpoint
@@ -60,6 +58,10 @@ jobs:
         env:
           MAINNET_WS: wss://xrplcluster.com
           LOCAL_WS: ws://localhost:6006
+
+      - name: Stop local sandbox
+        if: always()
+        run: npx tsx src/cli.ts stop
 
       - name: Check for changes
         id: diff
@@ -101,25 +103,31 @@ jobs:
             exit 0
           fi
 
+          PR_BODY=$(cat <<'BODY'
+          ## Summary
+
+          Automated monthly sync of the `[amendments]` genesis list in `src/core/compose.ts`.
+
+          - **Source:** mainnet via `feature` RPC (`wss://xrplcluster.com`)
+          - **Filter:** amendments enabled on mainnet AND supported by `xrpllabsofficial/xrpld:latest`
+          - **New entries:** __NEW_COUNT__
+
+          Amendments that are enabled on mainnet but _not yet supported_ by the local rippled binary are listed in the workflow log and skipped — they will appear automatically on the next run after the Docker image is upgraded.
+
+          ## Review checklist
+
+          - [ ] Cross-check each new hash against [XRPL Known Amendments](https://xrpl.org/resources/known-amendments) or the rippled changelog
+          - [ ] Confirm the amendment name in the diff matches the hash (names in the RPC response can alias; hash is canonical)
+          - [ ] Start a fresh local node (`xrpl-up reset && xrpl-up start`) and verify `xrpl-up amendment list` shows all new amendments as enabled
+          - [ ] Run `npm run test:e2e:local` to confirm the sandbox starts cleanly with the updated genesis list
+
+          > Do not auto-merge. Human review required before this lands in `main`.
+          BODY
+          )
+          PR_BODY="${PR_BODY//__NEW_COUNT__/$NEW_COUNT}"
+
           gh pr create \
             --title "chore: sync [amendments] genesis list from mainnet (${DATE})" \
             --base main \
             --head "$BRANCH" \
-            --body "## Summary
-
-Automated monthly sync of the \`[amendments]\` genesis list in \`src/core/compose.ts\`.
-
-- **Source:** mainnet via \`feature\` RPC (\`wss://xrplcluster.com\`)
-- **Filter:** amendments enabled on mainnet AND supported by \`xrpllabsofficial/xrpld:latest\`
-- **New entries:** ${NEW_COUNT}
-
-Amendments that are enabled on mainnet but _not yet supported_ by the local rippled binary are listed in the workflow log and skipped — they will appear automatically on the next run after the Docker image is upgraded.
-
-## Review checklist
-
-- [ ] Cross-check each new hash against [XRPL Known Amendments](https://xrpl.org/resources/known-amendments) or the rippled changelog
-- [ ] Confirm the amendment name in the diff matches the hash (names in the RPC response can alias; hash is canonical)
-- [ ] Start a fresh local node (\`xrpl-up reset && xrpl-up node\`) and verify \`xrpl-up amendment list\` shows all new amendments as enabled
-- [ ] Run \`npm run test:e2e:local\` to confirm the sandbox starts cleanly with the updated genesis list
-
-> ⚠️ Do not auto-merge. Human review required before this lands in \`main\`."
+            --body "$PR_BODY"
