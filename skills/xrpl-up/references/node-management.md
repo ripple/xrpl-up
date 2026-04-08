@@ -1,53 +1,62 @@
 ## xrpl-up Local Node Management
 
-These commands are unique to xrpl-up and manage the local rippled Docker sandbox.
+These commands manage the local rippled Docker sandbox. They use their own
+`--network` / `--local-network` flags — **not** the global `--node` flag used by
+transaction commands (payment, trust, amm, etc.).
 
-### `node` — Start local sandbox
+### `start` — Start local sandbox
+
+By default `start` launches a local rippled node. Use `--network` only to
+connect to testnet/devnet instead.
 
 ```bash
-# Start local rippled node with 10 pre-funded accounts
-xrpl-up start --local
+# Start local rippled node (default — no flags needed)
+xrpl-up start
 
 # Run in background (detached)
-xrpl-up start --local --detach
+xrpl-up start --detach
 
-# Persist ledger state across restarts
-xrpl-up start --local --local-network
+# 2-node consensus network with persistent state and snapshot support
+xrpl-up start --local-network
 
 # Custom ledger interval
-xrpl-up start --local --ledger-interval 500
+xrpl-up start --ledger-interval 500
 
 # Use a specific Docker image
-xrpl-up start --local --image xrpllabsofficial/xrpld:2.3.0
+xrpl-up start --image xrpllabsofficial/xrpld:2.3.0
 ```
 
 ### `status` — Show node health
 
 ```bash
-xrpl-up status --local
-xrpl-up status --network testnet
+xrpl-up status                    # local sandbox (default)
+xrpl-up status --network testnet  # remote network
 ```
 
 ### `accounts` — List sandbox accounts
 
 ```bash
 # List all local sandbox accounts and their balances
-xrpl-up accounts --local
+xrpl-up accounts
 
 # Query a specific address
-xrpl-up accounts --local --address rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+xrpl-up accounts --address rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# Remote network
+xrpl-up accounts --network testnet
 ```
 
 ### `faucet` — Fund an account
 
 ```bash
-# Fund a new random wallet on testnet
+# Fund a new random wallet on the local sandbox (default)
 xrpl-up faucet
 
-# Fund a specific seed on the local sandbox
-xrpl-up faucet --local --seed sEdXXXXXXXXXXXXXXXXXXXXXXXXXX
+# Fund a specific seed
+xrpl-up faucet --seed sEdXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# Fund on devnet
+# Fund on testnet or devnet
+xrpl-up faucet --network testnet
 xrpl-up faucet --network devnet
 ```
 
@@ -98,22 +107,30 @@ xrpl-up config validate ./rippled.cfg
 ### `amendment` — Inspect and manage amendments
 
 ```bash
-# List all amendments and their enabled/disabled status
-xrpl-up amendment list --local
+# List all amendments and their enabled/disabled status (local sandbox, default)
+xrpl-up amendment list
+
+# Query a remote network
+xrpl-up amendment list --network testnet
+
+# Compare local vs testnet amendments
+xrpl-up amendment list --diff testnet
+
+# Show only disabled amendments
+xrpl-up amendment list --disabled
 
 # Show details for a specific amendment
-xrpl-up amendment info DynamicNFT --local
-xrpl-up amendment info C1CE18F2A268E --local
+xrpl-up amendment info DynamicNFT
+xrpl-up amendment info C1CE18F2A268E
 
 # Force-enable an amendment (local sandbox only)
-xrpl-up amendment enable DynamicNFT --local
+xrpl-up amendment enable DynamicNFT
 ```
 
 ### `run` — Run a script against an XRPL network
 
 ```bash
 xrpl-up run ./my-script.ts
-xrpl-up run --local ./my-script.ts
 xrpl-up run --network devnet ./my-script.ts arg1 arg2
 ```
 

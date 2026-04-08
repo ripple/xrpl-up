@@ -41,6 +41,11 @@ If `$ARGUMENTS` is empty, ask the user what they'd like to do on the XRP Ledger.
 
 Network shorthands: `local` → localhost, `testnet` → altnet.rippletest.net, `devnet` → devnet.rippletest.net
 
+> **Two flag systems:** Transaction commands (payment, trust, amm, nft, etc.) use the
+> global `--node` flag above. Sandbox management commands (start, stop, accounts,
+> faucet, amendment, run) use their own `--network`/`--local-network` flags instead —
+> see `references/node-management.md`.
+
 ---
 
 ## Patterns
