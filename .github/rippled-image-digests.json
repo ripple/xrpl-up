@@ -7,6 +7,7 @@
   },
   "rippleci/rippled": {
     "known_tags": [
+      "3.1.2"
     ]
   }
 }
