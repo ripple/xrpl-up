@@ -68,16 +68,26 @@ jobs:
 
   # ── 2. Run e2e tests against each new image ────────────────────────────────
   e2e:
-    name: e2e (${{ matrix.image }}, node-${{ matrix.node-version }})
+    name: e2e (${{ matrix.image }}, node-${{ matrix.node-version }}, ${{ matrix.mode }})
     needs: detect
     if: needs.detect.outputs.images != '[]'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
         image: ${{ fromJson(needs.detect.outputs.images) }}
         node-version: [20, 22, 24]
+        mode: [standalone, local-network, snapshot, testnet]
+        include:
+          - mode: standalone
+            test-script: test:e2e:local
+          - mode: local-network
+            test-script: test:e2e:local-network
+          - mode: snapshot
+            test-script: test:e2e:snapshot
+          - mode: testnet
+            test-script: test:e2e
     steps:
       - uses: actions/checkout@v4
 
@@ -92,11 +102,11 @@ jobs:
       - name: Pull rippled image
         run: docker pull ${{ matrix.image }}
 
-      - name: Run e2e tests (standalone)
+      - name: Run e2e tests (${{ matrix.mode }})
         env:
           XRPL_RIPPLED_IMAGE: ${{ matrix.image }}
           XRPL_LOCAL_TEARDOWN: '1'
-        run: npm run test:e2e:local
+        run: npm run ${{ matrix.test-script }}
 
   # ── 3. Update digest file after successful tests ────────────────────────────
   update-digests:
