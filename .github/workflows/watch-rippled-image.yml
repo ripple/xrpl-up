@@ -1,0 +1,148 @@
+name: Watch rippled Docker Image
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily at 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      force_image:
+        description: 'Force-test a specific image (e.g. rippleci/rippled:3.1.2)'
+        required: false
+        type: string
+
+jobs:
+  # ── 1. Detect new images ───────────────────────────────────────────────────
+  detect:
+    name: Detect new rippled images
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.detect.outputs.images }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect new images
+        id: detect
+        run: |
+          DIGESTS=".github/rippled-image-digests.json"
+          IMAGES="[]"
+
+          # ── Force mode (manual dispatch) ──────────────────────────────────
+          if [ -n "${{ inputs.force_image }}" ]; then
+            IMAGES=$(jq -n --arg img "${{ inputs.force_image }}" '[$img]')
+            echo "Force-testing image: ${{ inputs.force_image }}"
+            echo "images=$IMAGES" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # ── xrpllabsofficial/xrpld:latest — digest change ─────────────────
+          CURRENT_DIGEST=$(curl -sf \
+            "https://hub.docker.com/v2/repositories/xrpllabsofficial/xrpld/tags/latest" \
+            | jq -r '.digest')
+          KNOWN_DIGEST=$(jq -r '."xrpllabsofficial/xrpld".latest.digest' "$DIGESTS")
+
+          if [ "$CURRENT_DIGEST" != "$KNOWN_DIGEST" ]; then
+            echo "New digest for xrpllabsofficial/xrpld:latest: $CURRENT_DIGEST"
+            IMAGES=$(echo "$IMAGES" | jq -c '. + ["xrpllabsofficial/xrpld:latest"]')
+          else
+            echo "xrpllabsofficial/xrpld:latest unchanged ($KNOWN_DIGEST)"
+          fi
+
+          # ── rippleci/rippled — new version tags ────────────────────────────
+          REMOTE_TAGS=$(curl -sf \
+            "https://hub.docker.com/v2/repositories/rippleci/rippled/tags?page_size=25&ordering=last_updated" \
+            | jq -r '[.results[] | select(.name | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name]')
+          KNOWN_TAGS=$(jq -r '."rippleci/rippled".known_tags[]' "$DIGESTS")
+
+          for TAG in $(echo "$REMOTE_TAGS" | jq -r '.[]'); do
+            if ! echo "$KNOWN_TAGS" | grep -qx "$TAG"; then
+              echo "New rippleci/rippled tag: $TAG"
+              IMAGES=$(echo "$IMAGES" | jq -c --arg t "rippleci/rippled:$TAG" '. + [$t]')
+            fi
+          done
+
+          echo "Images to test: $IMAGES"
+          echo "images=$IMAGES" >> $GITHUB_OUTPUT
+
+  # ── 2. Run e2e tests against each new image ────────────────────────────────
+  e2e:
+    name: e2e (${{ matrix.image }}, node-${{ matrix.node-version }})
+    needs: detect
+    if: needs.detect.outputs.images != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJson(needs.detect.outputs.images) }}
+        node-version: [22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Pull rippled image
+        run: docker pull ${{ matrix.image }}
+
+      - name: Run e2e tests (standalone)
+        env:
+          XRPL_RIPPLED_IMAGE: ${{ matrix.image }}
+          XRPL_LOCAL_TEARDOWN: '1'
+        run: npm run test:e2e:local
+
+  # ── 3. Update digest file after successful tests ────────────────────────────
+  update-digests:
+    name: Update known image digests
+    needs: [detect, e2e]
+    if: |
+      needs.e2e.result == 'success' &&
+      github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update digest file
+        run: |
+          DIGESTS=".github/rippled-image-digests.json"
+
+          # Update xrpllabsofficial/xrpld:latest digest
+          CURRENT_DIGEST=$(curl -sf \
+            "https://hub.docker.com/v2/repositories/xrpllabsofficial/xrpld/tags/latest" \
+            | jq -r '.digest')
+          LAST_UPDATED=$(curl -sf \
+            "https://hub.docker.com/v2/repositories/xrpllabsofficial/xrpld/tags/latest" \
+            | jq -r '.last_updated')
+          jq \
+            --arg d "$CURRENT_DIGEST" \
+            --arg u "$LAST_UPDATED" \
+            '."xrpllabsofficial/xrpld".latest = {digest: $d, last_updated: $u}' \
+            "$DIGESTS" > /tmp/digests.json && mv /tmp/digests.json "$DIGESTS"
+
+          # Update rippleci/rippled known tags
+          REMOTE_TAGS=$(curl -sf \
+            "https://hub.docker.com/v2/repositories/rippleci/rippled/tags?page_size=25&ordering=last_updated" \
+            | jq '[.results[] | select(.name | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) | .name]')
+          jq --argjson tags "$REMOTE_TAGS" \
+            '."rippleci/rippled".known_tags = $tags' \
+            "$DIGESTS" > /tmp/digests.json && mv /tmp/digests.json "$DIGESTS"
+
+          cat "$DIGESTS"
+
+      - name: Commit updated digests
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/rippled-image-digests.json
+          if git diff --cached --quiet; then
+            echo "No digest changes to commit"
+          else
+            git commit -m "chore: update known rippled image digests [skip ci]"
+            git push
+          fi

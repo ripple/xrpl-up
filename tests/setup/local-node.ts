@@ -123,7 +123,13 @@ async function startNode(): Promise<void> {
     timeout: 30_000,
     env: { ...process.env },
   });
-  const result = spawnSync(TSX, [CLI, "start", "--local", "--detach"], {
+  // Allow CI to test a specific rippled image (e.g. rippleci/rippled:3.1.2)
+  const customImage = process.env.XRPL_RIPPLED_IMAGE;
+  const imageArgs = customImage ? ["--image", customImage] : [];
+  if (customImage) {
+    console.log(`[local-node] Using custom rippled image: ${customImage}`);
+  }
+  const result = spawnSync(TSX, [CLI, "start", "--local", "--detach", ...imageArgs], {
     encoding: "utf-8",
     timeout: 120_000,   // standalone is fast but first run pulls Docker image
     env: { ...process.env },
