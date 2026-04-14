@@ -12,6 +12,8 @@ on:
         description: 'Force-test a specific image (e.g. rippleci/rippled:3.1.2)'
         required: false
         type: string
+  repository_dispatch:
+    types: [test-rippled-image]  # gh api repos/ripple/xrpl-up/dispatches -f event_type=test-rippled-image -f 'client_payload[force_image]=rippleci/rippled:3.1.2'
 
 jobs:
   # ── 1. Detect new images ───────────────────────────────────────────────────
@@ -29,10 +31,11 @@ jobs:
           DIGESTS=".github/rippled-image-digests.json"
           IMAGES="[]"
 
-          # ── Force mode (manual dispatch) ──────────────────────────────────
-          if [ -n "${{ inputs.force_image }}" ]; then
-            IMAGES=$(jq -n --arg img "${{ inputs.force_image }}" '[$img]')
-            echo "Force-testing image: ${{ inputs.force_image }}"
+          # ── Force mode (workflow_dispatch or repository_dispatch) ────────
+          FORCE_IMAGE="${{ inputs.force_image || github.event.client_payload.force_image }}"
+          if [ -n "$FORCE_IMAGE" ]; then
+            IMAGES=$(jq -n --arg img "$FORCE_IMAGE" '[$img]')
+            echo "Force-testing image: $FORCE_IMAGE"
             echo "images=$IMAGES" >> $GITHUB_OUTPUT
             exit 0
           fi
