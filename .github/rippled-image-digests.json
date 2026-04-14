@@ -6,6 +6,7 @@
     }
   },
   "rippleci/rippled": {
-    "known_tags": []
+    "known_tags": [
+    ]
   }
 }
