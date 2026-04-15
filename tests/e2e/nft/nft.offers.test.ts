@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { runCLI } from "../../helpers/cli";
+import { runCLI, runCLIWithRetry } from "../../helpers/cli";
 import { Client, Wallet } from "xrpl";
 import {
   XRPL_WS,
@@ -45,7 +45,7 @@ async function freshConnection(): Promise<void> {
 
 /** Mint a transferable NFT and return its NFTokenID */
 function mintNFT(wallet: Wallet): string {
-  const result = runCLI([
+  const result = runCLIWithRetry([
     "--node", XRPL_WS,
     "nft", "mint",
     "--taxon", "0",
@@ -61,7 +61,7 @@ function mintNFT(wallet: Wallet): string {
 
 /** Create a sell offer and return the offer ID */
 function createSellOffer(wallet: Wallet, nftokenId: string, amountXrp: string): string {
-  const result = runCLI([
+  const result = runCLIWithRetry([
     "--node", XRPL_WS,
     "nft", "offer", "create",
     "--nft", nftokenId,
@@ -78,7 +78,7 @@ function createSellOffer(wallet: Wallet, nftokenId: string, amountXrp: string): 
 
 /** Create a buy offer and return the offer ID */
 function createBuyOffer(wallet: Wallet, nftokenId: string, amountXrp: string, ownerAddress: string): string {
-  const result = runCLI([
+  const result = runCLIWithRetry([
     "--node", XRPL_WS,
     "nft", "offer", "create",
     "--nft", nftokenId,
