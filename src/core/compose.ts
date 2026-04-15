@@ -389,7 +389,7 @@ services:
       context: ${faucetContext}
       dockerfile: Dockerfile
     environment:
-      - RIPPLED_WS_URL=ws://host.docker.internal:${LOCAL_WS_PORT}
+      - RIPPLED_WS_URL=ws://rippled:${LOCAL_WS_PORT}
       - FAUCET_PORT=${FAUCET_PORT}
       - FUND_AMOUNT_XRP=1000
       - LEDGER_INTERVAL_MS=${ledgerIntervalMs}
@@ -397,8 +397,6 @@ services:
       - "127.0.0.1:${FAUCET_PORT}:${FAUCET_PORT}"
     networks:
       - xrpl-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       rippled:
         condition: service_healthy
@@ -474,7 +472,7 @@ services:
       context: ${faucetContext}
       dockerfile: Dockerfile
     environment:
-      - RIPPLED_WS_URL=ws://host.docker.internal:${LOCAL_WS_PORT}
+      - RIPPLED_WS_URL=ws://rippled:${LOCAL_WS_PORT}
       - FAUCET_PORT=${FAUCET_PORT}
       - FUND_AMOUNT_XRP=1000
       - LEDGER_INTERVAL_MS=${ledgerIntervalMs}
@@ -482,8 +480,6 @@ services:
       - "127.0.0.1:${FAUCET_PORT}:${FAUCET_PORT}"
     networks:
       - xrpl-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       rippled:
         condition: service_healthy
