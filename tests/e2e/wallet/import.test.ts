@@ -22,7 +22,8 @@ describe("wallet import", () => {
         "--password", "testpassword",
         "--keystore", tmpDir,
       ]);
-      expect(importResult.stderr).toContain("Warning: passing passwords via flag is insecure");
+      expect(importResult.stderr).toContain("Warning: passing key material via argument is insecure");
+      expect(importResult.stderr).toContain("Warning: passing password via flag is insecure");
       expect(importResult.status).toBe(0);
       expect(importResult.stdout).toContain(`Imported account ${address}`);
 

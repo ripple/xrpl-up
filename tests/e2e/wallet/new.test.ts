@@ -128,7 +128,7 @@ describe("wallet new", () => {
     try {
       const result = runCLI(["wallet", "new", "--save", "--keystore", tmpDir]);
       expect(result.status).toBe(1);
-      expect(result.stderr).toContain("--password is required");
+      expect(result.stderr).toContain("--password or $WALLET_PASSWORD is required");
     } finally {
       rmSync(tmpDir, { recursive: true });
     }
