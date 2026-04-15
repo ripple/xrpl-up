@@ -1,5 +1,31 @@
 import { createInterface } from "readline";
 
+/**
+ * Resolve a sensitive value from (in priority order):
+ *   1. The CLI flag value (if provided — warns user it's insecure)
+ *   2. An environment variable (safe — doesn't appear in ps output)
+ *   3. An interactive masked prompt (TTY only)
+ *
+ * @param flagValue  Value from the CLI flag (undefined if not passed)
+ * @param envVar     Name of the environment variable to check (e.g. "WALLET_PASSWORD")
+ * @param promptText Prompt text for interactive mode
+ */
+export async function resolveSecret(
+  flagValue: string | undefined,
+  envVar: string,
+  promptText: string
+): Promise<string> {
+  if (flagValue !== undefined) {
+    process.stderr.write(`Warning: passing ${promptText.toLowerCase().replace(": ", "")} via flag is insecure. Use $${envVar} env var instead.\n`);
+    return flagValue;
+  }
+  const envValue = process.env[envVar];
+  if (envValue !== undefined && envValue !== "") {
+    return envValue;
+  }
+  return promptPassword(promptText);
+}
+
 export async function promptPassword(prompt = "Password: "): Promise<string> {
   if (process.stdin.isTTY) {
     return new Promise((resolve) => {

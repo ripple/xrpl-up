@@ -170,10 +170,12 @@ program
   .description('Fund an account using the faucet')
   .option('--network <network>', 'Network: local | testnet | devnet — omit for local')
   .option('--local', '[deprecated] Alias for --network local')
-  .option('-s, --seed <seed>', 'Wallet seed to fund (omit to generate a new wallet)')
+  .option('-s, --seed <seed>', 'Wallet seed to fund (insecure, prefer $WALLET_SEED env var; omit to generate a new wallet)')
   .action((opts: { network?: string; local?: boolean; seed?: string }) => {
     const network = opts.local ? 'local' : (opts.network ?? 'local');
-    faucetCommand({ network, seed: opts.seed }).catch(handleError);
+    const seed = opts.seed ?? process.env['WALLET_SEED'];
+    if (opts.seed) process.stderr.write('Warning: passing seed via flag is insecure. Use $WALLET_SEED env var instead.\n');
+    faucetCommand({ network, seed }).catch(handleError);
   });
 
 // ── run ───────────────────────────────────────────────────────────────────────
