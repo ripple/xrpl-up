@@ -82,17 +82,23 @@ describe("permissioned-domain delete", () => {
     ]);
     expect(deleteResult.status, `stdout: ${deleteResult.stdout}\nstderr: ${deleteResult.stderr}`).toBe(0);
 
-    // Verify domain is gone on-chain
-    const res = await resilientRequest(client, {
-      command: "account_objects",
-      account: owner.address,
-      type: "permissioned_domain",
-      ledger_index: "validated",
-    } as AccountObjectsRequest);
+    // Poll until the domain disappears from the validated ledger.
+    // On testnet the delete tx may be validated a few ledgers after tesSUCCESS.
+    let domainObj: unknown;
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const res = await resilientRequest(client, {
+        command: "account_objects",
+        account: owner.address,
+        type: "permissioned_domain",
+        ledger_index: "validated",
+      } as AccountObjectsRequest);
 
-    const domainObj = res.result.account_objects.find(
-      (o) => (o as { index?: string }).index === domainId
-    );
+      domainObj = res.result.account_objects.find(
+        (o) => (o as { index?: string }).index === domainId
+      );
+      if (!domainObj) break;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
     expect(domainObj).toBeUndefined();
   }, 120_000);
 
