@@ -371,7 +371,7 @@ services:
   rippled:
     image: ${image}${platformLine}${restartLine}${entrypointLine}${commandLine}
     ports:
-      - "${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
+      - "127.0.0.1:${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
     volumes:
       - "${resolvedConfigPath}:/config/rippled.cfg:ro"
       - "${resolvedValidatorsPath}:/config/validators.txt:ro"
@@ -394,7 +394,7 @@ services:
       - FUND_AMOUNT_XRP=1000
       - LEDGER_INTERVAL_MS=${ledgerIntervalMs}
     ports:
-      - "${FAUCET_PORT}:${FAUCET_PORT}"
+      - "127.0.0.1:${FAUCET_PORT}:${FAUCET_PORT}"
     networks:
       - xrpl-net
     extra_hosts:
@@ -436,7 +436,7 @@ services:
     image: ${image}${platformLine}
     entrypoint: ${entrypointPrimary}
     ports:
-      - "${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
+      - "127.0.0.1:${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
     volumes:
       - "${RIPPLED_CFG_FILE_NODE1}:/config/rippled.cfg:ro"
       - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
@@ -479,7 +479,7 @@ services:
       - FUND_AMOUNT_XRP=1000
       - LEDGER_INTERVAL_MS=${ledgerIntervalMs}
     ports:
-      - "${FAUCET_PORT}:${FAUCET_PORT}"
+      - "127.0.0.1:${FAUCET_PORT}:${FAUCET_PORT}"
     networks:
       - xrpl-net
     extra_hosts:
