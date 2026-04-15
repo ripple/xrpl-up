@@ -121,6 +121,11 @@ program
     '--exit-on-crash',
     'Bypass the wrapper entrypoint so the container exits with rippled\'s code when it crashes (useful for observing exit code 134 on SIGABRT)'
   )
+  .option(
+    '--bind-address <ip>',
+    'IP address for Docker port bindings (default: 127.0.0.1, use 0.0.0.0 for remote access)',
+    '127.0.0.1'
+  )
   .action((opts: {
     network?: string;
     accounts?: string;
@@ -134,6 +139,7 @@ program
     secrets?: boolean;
     exitOnCrash?: boolean;
     config?: string;
+    bindAddress: string;
   }) => {
     const isLocal = opts.local || opts.localNetwork || !opts.network || opts.network === 'local';
     nodeCommand({
@@ -149,6 +155,7 @@ program
       detach: opts.detach,
       noRestart: opts.exitOnCrash,
       config: opts.config,
+      bindAddress: opts.bindAddress,
     }).catch(handleError);
   });
 

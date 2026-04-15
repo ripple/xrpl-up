@@ -35,6 +35,7 @@ export interface NodeOptions {
   detach?: boolean;
   noRestart?: boolean;  // bypass wrapper entrypoint so container exits with rippled's code
   config?: string;  // path to a custom rippled.cfg (local mode only)
+  bindAddress?: string;  // IP address for Docker port bindings (default: 127.0.0.1)
 }
 
 /** Call the local faucet HTTP server to fund a fresh wallet. */
@@ -157,7 +158,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
       const ledgerIntervalMs = noConsensus
         ? (options.detach ? (options.ledgerInterval ?? 1000) : 0)
         : 0;
-      await composeUp(image, noConsensus, options.debug ?? false, ledgerIntervalMs, options.config, options.noRestart ?? false);
+      await composeUp(image, noConsensus, options.debug ?? false, ledgerIntervalMs, options.config, options.noRestart ?? false, options.bindAddress);
       const dockerElapsed = ((Date.now() - dockerStartMs) / 1000).toFixed(1);
       const modeLabel = localNetwork ? 'Consensus network' : 'Standalone node';
       dockerSpinner.succeed(
