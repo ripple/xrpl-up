@@ -314,7 +314,7 @@ export function writeRippledConfig(debug = false, noConsensus = false): void {
  * @param configPath - optional path to a custom rippled.cfg; implies
  *   standalone mode (custom configs can't carry validator seeds).
  */
-export function writeComposeFile(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false): string {
+export function writeComposeFile(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1'): string {
   if (!fs.existsSync(XRPL_UP_DIR)) {
     fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
   }
@@ -328,8 +328,8 @@ export function writeComposeFile(image = DEFAULT_IMAGE, noConsensus = false, deb
   const faucetContext = getFaucetBuildContext();
 
   const yaml = noConsensus
-    ? generateStandaloneYaml(image, debug, ledgerIntervalMs, configPath, noRestart, platformLine, faucetContext)
-    : generateConsensusYaml(image, debug, ledgerIntervalMs, platformLine, faucetContext);
+    ? generateStandaloneYaml(image, debug, ledgerIntervalMs, configPath, noRestart, platformLine, faucetContext, bindAddress)
+    : generateConsensusYaml(image, debug, ledgerIntervalMs, platformLine, faucetContext, bindAddress);
 
   fs.writeFileSync(COMPOSE_FILE, yaml, 'utf-8');
   return COMPOSE_FILE;
@@ -340,7 +340,7 @@ export function writeComposeFile(image = DEFAULT_IMAGE, noConsensus = false, deb
 function generateStandaloneYaml(
   image: string, debug: boolean, ledgerIntervalMs: number,
   configPath: string | undefined, noRestart: boolean,
-  platformLine: string, faucetContext: string,
+  platformLine: string, faucetContext: string, bindAddress: string,
 ): string {
   const resolvedConfigPath = configPath ? path.resolve(configPath) : RIPPLED_CFG_FILE;
   if (!configPath) writeRippledConfig(debug, true);
@@ -371,7 +371,7 @@ services:
   rippled:
     image: ${image}${platformLine}${restartLine}${entrypointLine}${commandLine}
     ports:
-      - "${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
+      - "${bindAddress}:${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
     volumes:
       - "${resolvedConfigPath}:/config/rippled.cfg:ro"
       - "${resolvedValidatorsPath}:/config/validators.txt:ro"
@@ -389,16 +389,14 @@ services:
       context: ${faucetContext}
       dockerfile: Dockerfile
     environment:
-      - RIPPLED_WS_URL=ws://host.docker.internal:${LOCAL_WS_PORT}
+      - RIPPLED_WS_URL=ws://rippled:${LOCAL_WS_PORT}
       - FAUCET_PORT=${FAUCET_PORT}
       - FUND_AMOUNT_XRP=1000
       - LEDGER_INTERVAL_MS=${ledgerIntervalMs}
     ports:
-      - "${FAUCET_PORT}:${FAUCET_PORT}"
+      - "${bindAddress}:${FAUCET_PORT}:${FAUCET_PORT}"
     networks:
       - xrpl-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       rippled:
         condition: service_healthy
@@ -413,7 +411,7 @@ networks:
 
 function generateConsensusYaml(
   image: string, debug: boolean, ledgerIntervalMs: number,
-  platformLine: string, faucetContext: string,
+  platformLine: string, faucetContext: string, bindAddress: string,
 ): string {
   writeRippledConfig(debug, false);
 
@@ -436,7 +434,7 @@ services:
     image: ${image}${platformLine}
     entrypoint: ${entrypointPrimary}
     ports:
-      - "${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
+      - "${bindAddress}:${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
     volumes:
       - "${RIPPLED_CFG_FILE_NODE1}:/config/rippled.cfg:ro"
       - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
@@ -474,16 +472,14 @@ services:
       context: ${faucetContext}
       dockerfile: Dockerfile
     environment:
-      - RIPPLED_WS_URL=ws://host.docker.internal:${LOCAL_WS_PORT}
+      - RIPPLED_WS_URL=ws://rippled:${LOCAL_WS_PORT}
       - FAUCET_PORT=${FAUCET_PORT}
       - FUND_AMOUNT_XRP=1000
       - LEDGER_INTERVAL_MS=${ledgerIntervalMs}
     ports:
-      - "${FAUCET_PORT}:${FAUCET_PORT}"
+      - "${bindAddress}:${FAUCET_PORT}:${FAUCET_PORT}"
     networks:
       - xrpl-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       rippled:
         condition: service_healthy
@@ -621,8 +617,8 @@ function seedConsensusVolumes(): void {
  * Default (noConsensus=true): standalone rippled, torn down clean each start.
  * With --local-network (noConsensus=false): 2-node consensus network. Volumes preserved.
  */
-export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false): Promise<string> {
-  writeComposeFile(image, noConsensus, debug, ledgerIntervalMs, configPath, noRestart);
+export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1'): Promise<string> {
+  writeComposeFile(image, noConsensus, debug, ledgerIntervalMs, configPath, noRestart, bindAddress);
   if (noConsensus) composeDown(); // clean slate only in standalone mode
 
   // Pre-seed consensus volumes with genesis DB on first run

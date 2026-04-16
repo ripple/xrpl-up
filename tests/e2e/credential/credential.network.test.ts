@@ -328,16 +328,23 @@ describe("credential delete", () => {
     expect(deleteResult.status, `delete: ${deleteResult.stderr}`).toBe(0);
     expect(deleteResult.stdout).toContain("tesSUCCESS");
 
+    // Poll until the credential disappears from the validated ledger.
+    // On testnet the delete tx may be validated a few ledgers after tesSUCCESS.
     await ensureConnected();
-    const res = await resilientRequest(client, {
-      command: "account_objects",
-      account: subject.address,
-      type: "credential",
-      ledger_index: "validated",
-    });
-    const cred = (res.result.account_objects as Array<{ CredentialType?: string }>).find(
-      (o) => o.CredentialType === credTypeHex
-    );
+    let cred: unknown;
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const res = await resilientRequest(client, {
+        command: "account_objects",
+        account: subject.address,
+        type: "credential",
+        ledger_index: "validated",
+      });
+      cred = (res.result.account_objects as Array<{ CredentialType?: string }>).find(
+        (o) => o.CredentialType === credTypeHex
+      );
+      if (!cred) break;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
     expect(cred).toBeUndefined();
   }, 180_000);
 
@@ -375,15 +382,22 @@ describe("credential delete", () => {
     expect(deleteResult.status, `delete: ${deleteResult.stderr}`).toBe(0);
     expect(deleteResult.stdout).toContain("tesSUCCESS");
 
-    const res = await resilientRequest(client, {
-      command: "account_objects",
-      account: subject.address,
-      type: "credential",
-      ledger_index: "validated",
-    });
-    const cred = (res.result.account_objects as Array<{ CredentialType?: string }>).find(
-      (o) => o.CredentialType === credTypeHex
-    );
+    // Poll until the credential disappears from the validated ledger.
+    await ensureConnected();
+    let cred: unknown;
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const res = await resilientRequest(client, {
+        command: "account_objects",
+        account: subject.address,
+        type: "credential",
+        ledger_index: "validated",
+      });
+      cred = (res.result.account_objects as Array<{ CredentialType?: string }>).find(
+        (o) => o.CredentialType === credTypeHex
+      );
+      if (!cred) break;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
     expect(cred).toBeUndefined();
   }, 120_000);
 

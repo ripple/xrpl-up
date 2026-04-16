@@ -42,3 +42,18 @@ export function runCLI(args: string[], extraEnv: Record<string, string> = {}, ti
     timeout,
   });
 }
+
+const TRANSIENT_RE = /DisconnectedError|websocket was closed|ECONNRESET|ETIMEDOUT|ECONNREFUSED/i;
+
+/**
+ * Run a CLI command with automatic retries on transient network errors.
+ * Useful for testnet tests where websocket connections can drop mid-operation.
+ */
+export function runCLIWithRetry(args: string[], extraEnv: Record<string, string> = {}, retries = 3, timeout = 120_000) {
+  for (let i = 0; i < retries; i++) {
+    const result = runCLI(args, extraEnv, timeout);
+    if (result.status === 0) return result;
+    if (!TRANSIENT_RE.test(result.stderr) || i === retries - 1) return result;
+  }
+  return runCLI(args, extraEnv, timeout); // unreachable, satisfies TS
+}
