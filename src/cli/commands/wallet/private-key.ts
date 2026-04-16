@@ -23,8 +23,8 @@ function toAlgorithm(keyType: KeyType): ECDSA {
 export const privateKeyCommand = new Command("private-key")
   .alias("pk")
   .description("Derive private key from seed or mnemonic")
-  .option("--seed <seed>", "Family seed (sXXX...)")
-  .option("--mnemonic <phrase>", "BIP39 mnemonic phrase")
+  .option("--seed <seed>", "Family seed (insecure, prefer $WALLET_SEED env var)")
+  .option("--mnemonic <phrase>", "BIP39 mnemonic phrase (insecure, prefer $WALLET_MNEMONIC env var)")
   .option("--key-type <type>", "Key algorithm: secp256k1 or ed25519")
   .option(
     "--derivation-path <path>",
@@ -33,30 +33,33 @@ export const privateKeyCommand = new Command("private-key")
   )
   .option("--json", "Output as JSON", false)
   .action((options: PrivateKeyOptions) => {
-    const provided = [options.seed, options.mnemonic].filter(
-      (v) => v !== undefined
-    );
+    const effectiveSeed = options.seed ?? process.env["WALLET_SEED"];
+    const effectiveMnemonic = options.mnemonic ?? process.env["WALLET_MNEMONIC"];
+
+    const provided = [effectiveSeed, effectiveMnemonic].filter(Boolean);
 
     if (provided.length === 0) {
       process.stderr.write(
-        "Error: one of --seed or --mnemonic is required\n"
+        "Error: one of --seed, --mnemonic, $WALLET_SEED, or $WALLET_MNEMONIC is required\n"
       );
       process.exit(1);
     }
 
     if (provided.length > 1) {
       process.stderr.write(
-        "Error: only one of --seed or --mnemonic may be provided\n"
+        "Error: only one of --seed or --mnemonic may be provided (including env vars)\n"
       );
       process.exit(1);
     }
 
+    if (options.seed) process.stderr.write("Warning: passing seed via flag is insecure. Use $WALLET_SEED env var instead.\n");
+    if (options.mnemonic) process.stderr.write("Warning: passing mnemonic via flag is insecure. Use $WALLET_MNEMONIC env var instead.\n");
+
     let privateKey: string;
     let keyType: KeyType;
 
-    if (options.seed !== undefined) {
-      // Use ripple-keypairs directly so algorithm is inferred from seed encoding
-      const keypair = deriveKeypair(options.seed);
+    if (effectiveSeed !== undefined) {
+      const keypair = deriveKeypair(effectiveSeed);
       privateKey = keypair.privateKey;
       keyType =
         options.keyType ??
@@ -64,7 +67,7 @@ export const privateKeyCommand = new Command("private-key")
     } else {
       // mnemonic path
       keyType = options.keyType ?? "ed25519";
-      const wallet = Wallet.fromMnemonic(options.mnemonic!, {
+      const wallet = Wallet.fromMnemonic(effectiveMnemonic!, {
         mnemonicEncoding: "bip39",
         derivationPath: options.derivationPath,
         algorithm: toAlgorithm(keyType),

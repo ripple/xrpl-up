@@ -7,7 +7,7 @@ import type { ECDSA } from "xrpl";
 import { ed25519 } from "@noble/curves/ed25519";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { encryptKeystore, getKeystoreDir, type KeystoreFile } from "../../utils/keystore";
-import { promptPassword } from "../../utils/prompt";
+import { promptPassword, resolveSecret } from "../../utils/prompt";
 
 type KeyType = "ed25519" | "secp256k1";
 
@@ -125,28 +125,30 @@ interface ImportOptions {
 export const importCommand = new Command("import")
   .alias("i")
   .description("Import key material into encrypted keystore")
-  .argument("<key-material>", "Seed, mnemonic, or private key to import (use '-' to read from stdin)")
+  .argument("[key-material]", "Seed, mnemonic, or private key to import (use '-' to read from stdin, or set WALLET_KEY env var)")
   .option("--key-type <type>", "Key algorithm: secp256k1 or ed25519 (required for unprefixed hex private keys)")
-  .option("--password <password>", "Encryption password (insecure, prefer interactive prompt)")
+  .option("--password <password>", "Encryption password (insecure, prefer $WALLET_PASSWORD env var or interactive prompt)")
   .option(
     "--keystore <dir>",
     "Keystore directory (default: ~/.xrpl/keystore/; XRPL_KEYSTORE env var also accepted)"
   )
   .option("--force", "Overwrite existing keystore entry", false)
   .option("--alias <name>", "Set a human-readable alias for this wallet at import time")
-  .action(async (keyMaterial: string, options: ImportOptions) => {
-    let input = keyMaterial;
-    if (keyMaterial === "-") {
+  .action(async (keyMaterial: string | undefined, options: ImportOptions) => {
+    // Resolve key material: flag → env var → stdin pipe → interactive prompt
+    let input: string;
+    if (keyMaterial !== undefined && keyMaterial !== "-") {
+      process.stderr.write("Warning: passing key material via argument is insecure. Use $WALLET_KEY env var or '-' to read from stdin.\n");
+      input = keyMaterial;
+    } else if (keyMaterial === "-") {
       input = readFileSync("/dev/stdin", "utf-8").trim();
+    } else if (process.env["WALLET_KEY"]) {
+      input = process.env["WALLET_KEY"];
+    } else {
+      input = await promptPassword("Key material (seed/mnemonic/private key): ");
     }
 
-    let password: string;
-    if (options.password !== undefined) {
-      process.stderr.write("Warning: passing passwords via flag is insecure\n");
-      password = options.password;
-    } else {
-      password = await promptPassword();
-    }
+    const password = await resolveSecret(options.password, "WALLET_PASSWORD", "Password: ");
 
     const keyMaterialType = detectKeyMaterialType(input);
 

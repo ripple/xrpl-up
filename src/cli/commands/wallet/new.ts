@@ -4,7 +4,7 @@ import type { ECDSA } from "xrpl";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { encryptKeystore, getKeystoreDir, type KeystoreFile } from "../../utils/keystore";
-import { promptPasswordWithConfirmation } from "../../utils/prompt";
+import { promptPasswordWithConfirmation, resolveSecret } from "../../utils/prompt";
 
 type KeyType = "ed25519" | "secp256k1";
 
@@ -51,10 +51,12 @@ async function saveToKeystore(
 ): Promise<string> {
   let password: string;
   if (options.password !== undefined) {
-    process.stderr.write("Warning: passing passwords via flag is insecure\n");
+    process.stderr.write("Warning: passing passwords via flag is insecure. Use $WALLET_PASSWORD env var instead.\n");
     password = options.password;
+  } else if (process.env["WALLET_PASSWORD"]) {
+    password = process.env["WALLET_PASSWORD"];
   } else if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    process.stderr.write("Error: --password is required when --save is used in non-interactive mode\n");
+    process.stderr.write("Error: --password or $WALLET_PASSWORD is required when --save is used in non-interactive mode\n");
     process.exit(1);
   } else {
     password = await promptPasswordWithConfirmation();
@@ -87,7 +89,7 @@ export const newWalletCommand = new Command("new")
   .option("--json", "Output as JSON", false)
   .option("--save", "Encrypt and save the wallet to the keystore", false)
   .option("--show-secret", "Show the seed and private key (hidden by default)", false)
-  .option("--password <password>", "Encryption password for --save (insecure, prefer interactive prompt)")
+  .option("--password <password>", "Encryption password for --save (insecure, prefer $WALLET_PASSWORD env var or interactive prompt)")
   .option("--alias <name>", "Set a human-readable alias when saving to keystore")
   .option(
     "--keystore <dir>",

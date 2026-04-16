@@ -6,7 +6,7 @@ import { sign as rippleSign, deriveKeypair } from "ripple-keypairs";
 import { Wallet } from "xrpl";
 import type { ECDSA } from "xrpl";
 import { decryptKeystore, type KeystoreFile } from "../../utils/keystore";
-import { promptPassword } from "../../utils/prompt";
+import { promptPassword, resolveSecret } from "../../utils/prompt";
 
 type KeyType = "ed25519" | "secp256k1";
 
@@ -100,11 +100,11 @@ export const signCommand = new Command("sign")
   .option("--message <string>", "UTF-8 message to sign (use --from-hex for hex-encoded)")
   .option("--from-hex", "Treat --message value as already hex-encoded", false)
   .option("--tx <json-or-path>", "Transaction JSON (inline or file path) to sign")
-  .option("--seed <seed>", "Family seed for signing")
-  .option("--mnemonic <phrase>", "BIP39 mnemonic for signing")
-  .option("--account <address>", "Account address to load from keystore (requires --password)")
+  .option("--seed <seed>", "Family seed for signing (insecure, prefer $WALLET_SEED env var)")
+  .option("--mnemonic <phrase>", "BIP39 mnemonic for signing (insecure, prefer $WALLET_MNEMONIC env var)")
+  .option("--account <address>", "Account address to load from keystore (requires --password or $WALLET_PASSWORD)")
   .option("--key-type <type>", "Key algorithm: secp256k1 or ed25519 (used with --seed or --mnemonic)")
-  .option("--password <password>", "Keystore decryption password (insecure, prefer interactive prompt)")
+  .option("--password <password>", "Keystore decryption password (insecure, prefer $WALLET_PASSWORD env var or interactive prompt)")
   .option(
     "--keystore <dir>",
     "Keystore directory (default: ~/.xrpl/keystore/; XRPL_KEYSTORE env var also accepted)"
@@ -116,23 +116,32 @@ export const signCommand = new Command("sign")
       process.exit(1);
     }
 
-    const keyMaterialCount = [options.seed, options.mnemonic, options.account].filter(Boolean).length;
+    const keyMaterialCount = [
+      options.seed ?? process.env["WALLET_SEED"],
+      options.mnemonic ?? process.env["WALLET_MNEMONIC"],
+      options.account,
+    ].filter(Boolean).length;
     if (keyMaterialCount === 0) {
-      process.stderr.write("Error: provide key material via --seed, --mnemonic, or --account\n");
+      process.stderr.write("Error: provide key material via --seed, --mnemonic, --account, $WALLET_SEED, or $WALLET_MNEMONIC\n");
       process.exit(1);
     }
     if (keyMaterialCount > 1) {
-      process.stderr.write("Error: provide only one of --seed, --mnemonic, or --account\n");
+      process.stderr.write("Error: provide only one of --seed, --mnemonic, or --account (including env vars)\n");
       process.exit(1);
     }
 
     let signerWallet: Wallet;
 
-    if (options.seed) {
-      signerWallet = walletFromSeed(options.seed);
-    } else if (options.mnemonic) {
+    const effectiveSeed = options.seed ?? process.env["WALLET_SEED"];
+    const effectiveMnemonic = options.mnemonic ?? process.env["WALLET_MNEMONIC"];
+
+    if (effectiveSeed) {
+      if (options.seed) process.stderr.write("Warning: passing seed via flag is insecure. Use $WALLET_SEED env var instead.\n");
+      signerWallet = walletFromSeed(effectiveSeed);
+    } else if (effectiveMnemonic) {
+      if (options.mnemonic) process.stderr.write("Warning: passing mnemonic via flag is insecure. Use $WALLET_MNEMONIC env var instead.\n");
       const keyType: KeyType = (options.keyType as KeyType) ?? "ed25519";
-      signerWallet = walletFromMnemonic(options.mnemonic, keyType);
+      signerWallet = walletFromMnemonic(effectiveMnemonic, keyType);
     } else {
       // --account: load from keystore
       const keystoreDir = getKeystoreDir(options);
@@ -151,13 +160,7 @@ export const signCommand = new Command("sign")
         process.exit(1);
       }
 
-      let password: string;
-      if (options.password !== undefined) {
-        process.stderr.write("Warning: passing passwords via flag is insecure\n");
-        password = options.password;
-      } else {
-        password = await promptPassword();
-      }
+      const password = await resolveSecret(options.password, "WALLET_PASSWORD", "Password: ");
 
       let material: string;
       try {
