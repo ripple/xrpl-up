@@ -2,6 +2,8 @@
 
 CLI for XRPL local development and scripting. Spin up a local sandbox with pre-funded accounts, run scripts, manage snapshots, and interact with remote testnet/devnet endpoints from one tool.
 
+![demo](demo.gif)
+
 ## Prerequisites
 
 - **Node.js** v20 or later
