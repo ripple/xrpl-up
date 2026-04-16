@@ -201,9 +201,9 @@ describe("snapshot rollback", () => {
 
   it("wait for account B to be validated", async () => {
     // After snapshot save resumes the sandbox, consensus needs time to
-    // re-establish and produce validated ledgers. On CI (2 vCPU) this
-    // can take 30-40s. Use 60s timeout.
-    for (let i = 0; i < 30; i++) {
+    // re-establish and produce validated ledgers. On CI (2 vCPU) with
+    // Node 22 this can take 60-90s. Use 120s timeout.
+    for (let i = 0; i < 60; i++) {
       const result = runXrplUp(
         ["accounts", "--local", "--address", postSnapshotAddress],
         {},
@@ -212,7 +212,7 @@ describe("snapshot rollback", () => {
       if (result.status === 0) return;
       await new Promise(r => setTimeout(r, 2000));
     }
-    throw new Error(`Account B (${postSnapshotAddress}) not validated after 60s`);
+    throw new Error(`Account B (${postSnapshotAddress}) not validated after 120s`);
   });
 
   it("restore snapshot (rolls back to pre-B state)", () => {
