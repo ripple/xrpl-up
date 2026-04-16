@@ -218,7 +218,7 @@ jobs:
           curl -X POST \
             -H "X-Api-Key: ${OWASP_TOKEN}" \
             --form-string "autoCreate=true" \
-            --form-string "projectName=@shichengsh001/xrpl-up" \
+            --form-string "projectName=xrpl-up" \
             --form-string "projectVersion=${PKG_VERSION}" \
             -F "bom=@sbom.json" \
             https://owasp-dt-api.prod.ripplex.io/api/v1/bom
@@ -270,9 +270,9 @@ jobs:
           LABELS: security
         run: |
           set -euo pipefail
-          TITLE="🔒 Security vulnerabilities in @shichengsh001/xrpl-up@${PKG_VERSION}"
+          TITLE="🔒 Security vulnerabilities in xrpl-up@${PKG_VERSION}"
           : > issue_body.md
-          echo "The vulnerability scan has detected **CRITICAL/HIGH** vulnerabilities for \`@shichengsh001/xrpl-up@${PKG_VERSION}\` on branch \`${REL_BRANCH}\`." >> issue_body.md
+          echo "The vulnerability scan has detected **CRITICAL/HIGH** vulnerabilities for \`xrpl-up@${PKG_VERSION}\` on branch \`${REL_BRANCH}\`." >> issue_body.md
           echo "" >> issue_body.md
           echo "**Release Branch:** \`${REL_BRANCH}\`" >> issue_body.md
           echo "**Package Version:** \`${PKG_VERSION}\`" >> issue_body.md
@@ -288,7 +288,7 @@ jobs:
       - name: Pack tarball
         run: |
           set -euo pipefail
-          echo "Packaging @shichengsh001/xrpl-up"
+          echo "Packaging xrpl-up"
           find . -maxdepth 1 -name '*.tgz' -delete || true
           TARBALL=$(npm pack --json | jq -r '.[0].filename')
           echo "TARBALL=${TARBALL}" >> "$GITHUB_ENV"
@@ -306,7 +306,7 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          MESSAGE="❌ Build/pre-release failed for @shichengsh001/xrpl-up ${PKG_VERSION}. Check the logs: https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          MESSAGE="❌ Build/pre-release failed for xrpl-up ${PKG_VERSION}. Check the logs: https://github.com/${REPO}/actions/runs/${RUN_ID}"
           curl -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer ${SLACK_TOKEN}" \
             -H "Content-Type: application/json" \
@@ -393,7 +393,7 @@ jobs:
             exit 1
           fi
           echo "🔍 Please review the following details before proceeding:"
-          echo "📦 Package Name:    @shichengsh001/xrpl-up"
+          echo "📦 Package Name:    xrpl-up"
           echo "🔖 Package Version: ${PKG_VERSION}"
           echo "🌿 Release Branch:  ${RELEASE_BRANCH}"
           echo "🔢 Commit SHA:      ${COMMIT_SHA}"
@@ -412,7 +412,7 @@ jobs:
         run: |
           set -euo pipefail
           RUN_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
-          MSG="${EXECUTOR} is releasing @shichengsh001/xrpl-up@${PKG_VERSION}. A member from the dev team (${DEV_REVIEWERS}) needs to take the following actions: \n1) Review the release artifacts and approve/reject the release. (${RUN_URL})"
+          MSG="${EXECUTOR} is releasing xrpl-up@${PKG_VERSION}. A member from the dev team (${DEV_REVIEWERS}) needs to take the following actions: \n1) Review the release artifacts and approve/reject the release. (${RUN_URL})"
           if [ -n "${PR_URL:-}" ]; then
             MSG="${MSG} \n2) Review the package update PR and provide two approvals. DO NOT MERGE — ${EXECUTOR} will verify the package on npm and merge the approved PR. (${PR_URL})"
           fi
@@ -466,7 +466,7 @@ jobs:
         run: |
           set -euo pipefail
           RUN_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
-          MSG="${EXECUTOR} is releasing @shichengsh001/xrpl-up@${PKG_VERSION}. A sec reviewer from (${SEC_REVIEWERS}) needs to take the following action:\nReview the release artifacts and approve/reject the release. (${RUN_URL})"
+          MSG="${EXECUTOR} is releasing xrpl-up@${PKG_VERSION}. A sec reviewer from (${SEC_REVIEWERS}) needs to take the following action:\nReview the release artifacts and approve/reject the release. (${RUN_URL})"
           MSG=$(printf '%b' "$MSG")
           curl -sS -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer ${SLACK_TOKEN}" \
@@ -489,7 +489,7 @@ jobs:
         first_review,
         ask_for_sec_team_review
       ]
-    name: Release @shichengsh001/xrpl-up@${{ needs.get_version.outputs.package_version }}
+    name: Release xrpl-up@${{ needs.get_version.outputs.package_version }}
     env:
       PKG_VERSION: "${{ needs.get_version.outputs.package_version }}"
     environment:
@@ -545,7 +545,7 @@ jobs:
         id: create_tag
         run: |
           set -euo pipefail
-          TAG="shichengsh001-xrpl-up@${PKG_VERSION}"
+          TAG="xrpl-up@${PKG_VERSION}"
           git fetch --tags origin
           if git rev-parse "${TAG}" >/dev/null 2>&1; then
             echo "❌ Tag ${TAG} already exists. Failing."
@@ -576,7 +576,7 @@ jobs:
           set -euo pipefail
           enc_tag="$(printf '%s' "${TAG}" | jq -sRr @uri)"
           RELEASE_URL="https://github.com/${REPO}/releases/tag/${enc_tag}"
-          text="@shichengsh001/xrpl-up ${PKG_VERSION} has been successfully released and published to npm. Release URL: ${RELEASE_URL}"
+          text="xrpl-up ${PKG_VERSION} has been successfully released and published to npm. Release URL: ${RELEASE_URL}"
           curl -sS -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer ${SLACK_TOKEN}" \
             -H "Content-Type: application/json; charset=utf-8" \
@@ -621,7 +621,7 @@ jobs:
             echo "No failed jobs detected; skipping notification."
             exit 0
           fi
-          MESSAGE="❌ Workflow failure for @shichengsh001/xrpl-up@${PKG_VERSION}. Release failed at: ${FAILED_JOBS}. For details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MESSAGE="❌ Workflow failure for xrpl-up@${PKG_VERSION}. Release failed at: ${FAILED_JOBS}. For details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           curl -sS -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer $SLACK_TOKEN" \
             -H "Content-Type: application/json" \
