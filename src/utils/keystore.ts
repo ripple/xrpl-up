@@ -91,7 +91,11 @@ export function decryptKeystore(file: KeystoreFile, password: string): string {
     file.kdfparams.digest
   );
 
-  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  if (tag.length !== 16) {
+    throw new Error("Invalid authentication tag length");
+  }
+
+  const decipher = createDecipheriv("aes-256-gcm", key, iv, { authTagLength: 16 });
   decipher.setAuthTag(tag);
 
   try {
