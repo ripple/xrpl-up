@@ -287,7 +287,7 @@ export async function fundAddress(
 async function waitForAccount(
   client: Client,
   address: string,
-  retries = 20,
+  retries = 40,
   delayMs = 500,
 ): Promise<void> {
   for (let i = 0; i < retries; i++) {
