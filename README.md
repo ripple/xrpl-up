@@ -9,11 +9,11 @@ CLI for XRPL local development and scripting. Spin up a local sandbox with pre-f
 
 ## Installation
 
-~~**From npm (global):**~~
+**From npm (global):**
 
-~~`npm install -g xrpl-up`~~
-
-_Not available yet: package has not been published to npm._
+```bash
+npm install -g xrpl-up
+```
 
 **From source (development):**
 
@@ -24,6 +24,30 @@ npm install
 npm run build
 npm link
 ```
+
+## Claude Code Plugin
+
+xrpl-up includes a [Claude Code](https://claude.ai/code) plugin that lets an AI agent translate natural language into CLI commands.
+
+**Install the plugin:**
+
+```bash
+# Add the marketplace (one-time)
+claude plugin marketplace add ripple/xrpl-up
+
+# Install the plugin
+claude plugin install xrpl-up@xrpl-up --scope user
+```
+
+**Usage:** In a Claude Code session, type:
+
+```
+/xrpl-up:xrpl-up fund a new wallet on testnet
+/xrpl-up:xrpl-up show balance for rAddress...
+/xrpl-up:xrpl-up start local sandbox
+```
+
+Or invoke `/xrpl-up:xrpl-up` without arguments and describe what you want to do.
 
 ## Quick Start
 
@@ -1085,7 +1109,7 @@ xrpl-up amendment enable PermissionedDomains --local --auto-reset
 
 Scaffolds a new project with config, TypeScript setup, and example scripts. Prompts for a default network; choose `local` for local-sandbox-ready scripts out of the box.
 
-> **Prerequisite:** `xrpl-up` must be available on PATH. Until the package is published to npm, install from source with `npm link` (see [Installation](#installation)). The generated `package.json` scripts (`npm run start`, `npm run accounts`) call `xrpl-up` from PATH and do not re-install it locally.
+> **Prerequisite:** `xrpl-up` must be available on PATH. Install globally via `npm install -g xrpl-up` or from source with `npm link` (see [Installation](#installation)). The generated `package.json` scripts (`npm run start`, `npm run accounts`) call `xrpl-up` from PATH and do not re-install it locally.
 
 ```bash
 xrpl-up init
