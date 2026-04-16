@@ -1272,6 +1272,33 @@ steps:
 
 ---
 
+## Claude Code Plugin
+
+xrpl-up includes a [Claude Code](https://claude.ai/code) plugin that lets you interact with the XRP Ledger using natural language.
+
+**Install:**
+
+```bash
+claude plugin marketplace add ripple/xrpl-up
+claude plugin install xrpl-up@xrpl-up --scope user
+```
+
+**Usage:** In a Claude Code session, use `/xrpl-up:xrpl-up` followed by what you want to do:
+
+```
+/xrpl-up:xrpl-up start local sandbox
+/xrpl-up:xrpl-up show status
+/xrpl-up:xrpl-up list pre-funded accounts
+/xrpl-up:xrpl-up create an XRP/USD AMM trading pair on local
+/xrpl-up:xrpl-up swap 10 XRP for USD using account 2
+/xrpl-up:xrpl-up show balance for account 2
+/xrpl-up:xrpl-up stop the sandbox
+```
+
+Claude translates your request into the correct `xrpl-up` commands, executes them, and explains the result in plain language.
+
+---
+
 ## Configuration
 
 `xrpl-up.config.js` in your project root defines named networks used by `run`, `accounts`, `status`, and remote `start`/`faucet` flows:
