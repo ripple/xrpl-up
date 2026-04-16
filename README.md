@@ -65,17 +65,17 @@ xrpl-up accounts
 # Run a script against the local sandbox
 xrpl-up run scripts/example-payment.ts
 
-# Create an AMM pool in one command (local by default)
-xrpl-up amm create XRP USD
+# Create an XRP/USD AMM pool (100 XRP + 100 USD, 0.5% fee)
+xrpl-up amm create --asset XRP --asset2 USD/rIssuer... --amount 100000000 --amount2 100 --trading-fee 500 --node local --seed sEd...
 
 # Mint a transferable NFT
-xrpl-up nft mint --uri https://example.com/meta.json --transferable
+xrpl-up nft mint --taxon 0 --uri https://example.com/meta.json --transferable --seed sn3nxiW7...
 
 # Create an MPT issuance (Multi-Purpose Token)
 xrpl-up mptoken issuance create --node local --max-amount 1000000 --asset-scale 6
 
 # Open a payment channel
-xrpl-up channel create rDestination... 10
+xrpl-up channel create --to rDestination... --amount 10 --settle-delay 86400 --seed sSrc...
 ```
 
 ---
@@ -312,132 +312,142 @@ xrpl-up logs faucet    # faucet server only
 
 Manage AMM pools (XLS-30). AMM is enabled by default in the local sandbox — no extra configuration needed.
 
-#### `xrpl-up amm create <asset1> <asset2>`
+#### `xrpl-up amm create --asset <XRP|CURRENCY/issuer> --asset2 <XRP|CURRENCY/issuer>`
 
-Creates a ready-to-use AMM pool with fresh funded accounts. Automatically handles issuer creation, trust lines, token issuance, and pool creation.
+Creates an AMM liquidity pool. The signing account must already hold both assets.
+
+> **Prerequisite:** Enable `DefaultRipple` on the issuer account before creating the pool, otherwise the transaction will fail:
+> ```bash
+> xrpl-up account set --set-flag defaultRipple --node local --seed sEdIssuer...
+> ```
 
 ```bash
-# XRP/USD pool with defaults (100 XRP, 100 USD, 0.5% fee)
-xrpl-up amm create XRP USD
-
-# Custom amounts and fee
-xrpl-up amm create XRP USD --amount1 500 --amount2 1000 --fee 0.3
-
-# IOU/IOU pool (creates two separate issuers)
-xrpl-up amm create USD EUR --amount1 100 --amount2 100
-
-# On testnet
-xrpl-up amm create XRP USD -n testnet
+# XRP/USD pool — 100 XRP (in drops) + 100 USD, 0.5% fee
+xrpl-up amm create \
+  --asset XRP \
+  --asset2 USD/rIssuerAddress... \
+  --amount 100000000 \
+  --amount2 100 \
+  --trading-fee 500 \
+  --node local \
+  --seed sEdLP...
+# → AMM Account: rAMM...
+# → LP Token: 03930D...
 ```
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--amount1 <n>` | `100` | Amount of asset1 to deposit |
-| `--amount2 <n>` | `100` | Amount of asset2 to deposit |
-| `--fee <pct>` | `0.5` | Trading fee in % (max 1%) |
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--asset <spec>` | Yes | First asset: `XRP` or `CURRENCY/issuer` |
+| `--asset2 <spec>` | Yes | Second asset: `XRP` or `CURRENCY/issuer` |
+| `--amount <value>` | Yes | Amount of first asset (XRP: drops integer, IOU: decimal) |
+| `--amount2 <value>` | Yes | Amount of second asset (XRP: drops integer, IOU: decimal) |
+| `--trading-fee <n>` | Yes | Fee in units of 1/100000 (0–1000, where 1000 = 1%) |
+| `--seed / --mnemonic / --account` | Yes | Key material for signing |
 
-The command prints the exact `amm info` query to use afterward, with the issuer address filled in.
+> **XRP amounts are in drops:** 1 XRP = 1,000,000 drops. Use `--amount 100000000` for 100 XRP.
 
-> **Note:** For non-XRP assets, `amm create` mints a fresh token on your local ledger. The issuer address is randomly generated — it has no relation to any real-world or testnet issuer.
-
-#### `xrpl-up amm info <asset1> <asset2>`
+#### `xrpl-up amm info --asset <XRP|CURRENCY/issuer> --asset2 <XRP|CURRENCY/issuer>`
 
 Shows current pool state: reserves, LP token supply, trading fee, and AMM account.
 
 ```bash
-# Query by asset pair (use the issuer address printed by amm create)
-xrpl-up amm info XRP USD.rIssuerAddress
+# Query by asset pair
+xrpl-up amm info --asset XRP --asset2 USD/rIssuerAddress... --node local
 
-# Query by AMM account address
-xrpl-up amm info --account rAMMAccountAddress
-
-# Query on testnet
-xrpl-up amm info XRP USD.rHb9... -n testnet
+# JSON output
+xrpl-up amm info --asset XRP --asset2 USD/rIssuerAddress... --node local --json
 ```
 
-Asset format: `XRP` for native currency, `CURRENCY.rIssuerAddress` for IOUs (e.g. `USD.rHb9CJ...`).
+Asset format: `XRP` for native currency, `CURRENCY/rIssuerAddress` for IOUs (e.g. `USD/rHb9CJ...`).
 
 ---
 
 ### `xrpl-up nft`
 
-NFT lifecycle operations (XLS-20). Supports mint, list, buy/sell offers, and burn on local sandbox or remote networks.
+NFT lifecycle operations (XLS-20).
 
-#### `xrpl-up nft mint`
+#### `xrpl-up nft mint --taxon <n>`
 
-Mints a new NFT. When `--seed` is omitted a wallet is auto-funded — via the local genesis faucet by default, or the public testnet/devnet faucet on remote networks.
+Mints a new NFT. `--taxon` is required.
 
 ```bash
-# Mint a transferable NFT with a metadata URI (local by default, auto-funds wallet)
-xrpl-up nft mint --uri https://example.com/nft-meta.json --transferable
+# Mint a transferable NFT (taxon 0) with a metadata URI
+xrpl-up nft mint --taxon 0 --uri https://example.com/nft-meta.json --transferable --seed sn3nxiW7...
 
-# Mint on testnet
-xrpl-up nft mint -n testnet --uri https://example.com/meta.json \
-  --transferable --transfer-fee 5 --taxon 42
+# Mint on testnet with royalty fee (basis points, requires --transferable)
+xrpl-up nft mint --taxon 42 --uri https://example.com/meta.json \
+  --transferable --transfer-fee 500 --node testnet --seed sn3nxiW7...
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--taxon <n>` | **required** | NFToken taxon (UInt32) |
 | `--uri <uri>` | — | Metadata URI (hex-encoded automatically) |
 | `--transferable` | off | Allow the NFT to be transferred (`tfTransferable`) |
 | `--burnable` | off | Allow the issuer to burn it (`tfBurnable`) |
-| `--taxon <n>` | `0` | NFToken taxon |
-| `--transfer-fee <pct>` | `0` | Royalty fee percentage, 0–50 |
-| `-s, --seed <seed>` | — | Minter wallet seed (omit to auto-fund via faucet) |
+| `--mutable` | off | Allow URI modification via `nft modify` (`tfMutable`) |
+| `--transfer-fee <bps>` | `0` | Royalty in basis points (0–50000); requires `--transferable` |
 
-#### `xrpl-up nft list`
-
-Lists NFTs owned by an account.
-
-```bash
-# List NFTs for the first local account
-xrpl-up nft list
-
-# List NFTs for a specific address
-xrpl-up nft list --account rSomeAddress...
-```
-
-#### `xrpl-up nft offers <nftokenId>`
-
-Shows all open buy and sell offers for an NFT.
-
-```bash
-xrpl-up nft offers 000800006B9C0B...
-```
-
-#### `xrpl-up nft sell <nftokenId> <price>`
-
-Creates a sell offer for an NFT. Price is `"1"` for 1 XRP or `"10.USD.rIssuer"` for an IOU amount.
-
-```bash
-# Sell for 5 XRP
-xrpl-up nft sell 000800006B9C0B... 5 --seed sn3nxiW7...
-
-# Sell for 10 USD (IOU)
-xrpl-up nft sell 000800006B9C0B... 10.USD.rHb9CJA... --seed sn3nxiW7...
-```
-
-#### `xrpl-up nft accept <offerId>`
-
-Accepts a sell offer (or a buy offer with `--buy`). On local a buyer wallet is auto-funded if `--seed` is omitted.
-
-```bash
-xrpl-up nft accept A1B2C3D4...
-
-# Accept with an explicit buyer seed
-xrpl-up nft accept A1B2C3D4... --seed sBuyerSeed...
-
-# Accept a buy offer
-xrpl-up nft accept A1B2C3D4... --seed sHolderSeed... --buy
-```
-
-#### `xrpl-up nft burn <nftokenId>`
+#### `xrpl-up nft burn --nft <hex>`
 
 Permanently destroys an NFT.
 
 ```bash
-xrpl-up nft burn 000800006B9C0B... --seed sHolderSeed...
+xrpl-up nft burn --nft 000800006B9C0B... --seed sHolderSeed...
 ```
+
+#### `xrpl-up nft modify --nft <hex>`
+
+Updates the URI of a mutable NFT (created with `--mutable`).
+
+```bash
+xrpl-up nft modify --nft 000800006B9C0B... --uri https://example.com/new-meta.json --seed sHolderSeed...
+```
+
+#### `xrpl-up nft offer create --nft <hex> --amount <amount>`
+
+Creates a buy or sell offer for an NFT.
+
+```bash
+# Create a sell offer for 5 XRP
+xrpl-up nft offer create --nft 000800006B9C0B... --amount 5 --sell --seed sn3nxiW7...
+
+# Create a sell offer for 10 USD (IOU)
+xrpl-up nft offer create --nft 000800006B9C0B... --amount "10/USD/rHb9CJA..." --sell --seed sn3nxiW7...
+
+# Create a buy offer (requires --owner to identify the NFT holder)
+xrpl-up nft offer create --nft 000800006B9C0B... --amount 5 --owner rHolderAddress... --seed sBuyerSeed...
+```
+
+#### `xrpl-up nft offer accept --sell-offer <hex> | --buy-offer <hex>`
+
+Accepts a buy or sell offer.
+
+```bash
+# Accept a sell offer (buyer runs this)
+xrpl-up nft offer accept --sell-offer A1B2C3D4... --seed sBuyerSeed...
+
+# Accept a buy offer (NFT holder runs this)
+xrpl-up nft offer accept --buy-offer A1B2C3D4... --seed sHolderSeed...
+```
+
+#### `xrpl-up nft offer cancel --offer <hex>`
+
+Cancels one or more open NFT offers.
+
+```bash
+xrpl-up nft offer cancel --offer A1B2C3D4... --seed sn3nxiW7...
+```
+
+#### `xrpl-up nft offer list <nft-id>`
+
+Shows all open buy and sell offers for an NFT.
+
+```bash
+xrpl-up nft offer list 000800006B9C0B...
+```
+
+To list NFTs owned by an account, use `xrpl-up account nfts <address>`.
 
 ---
 
@@ -445,70 +455,69 @@ xrpl-up nft burn 000800006B9C0B... --seed sHolderSeed...
 
 Payment channel operations. Payment channels allow fast, off-chain micropayments with on-chain settlement.
 
-#### `xrpl-up channel create <destination> <amount>`
+#### `xrpl-up channel create --to <address> --amount <xrp> --settle-delay <s>`
 
-Opens a payment channel funded with `<amount>` XRP. The source wallet is auto-funded if `--seed` is omitted (local only).
+Opens a payment channel. All three flags are required.
 
 ```bash
-# Create a 10 XRP channel to a destination (local by default, auto-funds source)
-xrpl-up channel create rDestination... 10
+# Create a 10 XRP channel (settle-delay is required, in seconds)
+xrpl-up channel create --to rDestination... --amount 10 --settle-delay 86400 --seed sSourceSeed...
 
-# Create with a custom settle delay (1 hour)
-xrpl-up channel create rDestination... 10 --seed sSourceSeed... --settle-delay 3600
+# Create with a 1-hour settle delay
+xrpl-up channel create --to rDestination... --amount 10 --settle-delay 3600 --seed sSourceSeed...
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--settle-delay <s>` | `86400` | Settlement delay in seconds (default: 1 day) |
-| `-s, --seed <seed>` | — | Source wallet seed (omit to auto-fund on local) |
+| `--to <address>` | **required** | Destination address |
+| `--amount <xrp>` | **required** | Amount of XRP to lock (decimal) |
+| `--settle-delay <s>` | **required** | Seconds source must wait before closing with unclaimed funds |
 
-#### `xrpl-up channel list`
+#### `xrpl-up channel list <address>`
 
-Lists payment channels for an account.
+Lists open payment channels for an account.
 
 ```bash
-xrpl-up channel list
-xrpl-up channel list --account rSomeAddress...
+xrpl-up channel list rSomeAddress...
 ```
 
-#### `xrpl-up channel fund <channelId> <amount>`
+#### `xrpl-up channel fund --channel <hex> --amount <xrp>`
 
 Adds more XRP to an existing channel.
 
 ```bash
-xrpl-up channel fund ABC123... 5 --seed sSourceSeed...
+xrpl-up channel fund --channel ABC123... --amount 5 --seed sSourceSeed...
 ```
 
-#### `xrpl-up channel sign <channelId> <amount>`
+#### `xrpl-up channel sign --channel <hex> --amount <xrp>`
 
-Signs an off-chain claim authorizing the destination to claim up to `<amount>` XRP. No on-chain transaction — prints the signature, the signer's public key, and ready-to-use `verify` and `claim` commands.
+Signs an off-chain claim authorizing the destination to claim up to `--amount` XRP. No on-chain transaction — prints the signature and public key.
 
 ```bash
-xrpl-up channel sign ABC123... 3 --seed sSourceSeed...
+xrpl-up channel sign --channel ABC123... --amount 3 --seed sSourceSeed...
 ```
 
-The output includes the `--public-key` value needed for `channel claim`. Pass the signature and public key to the destination out-of-band; the destination then runs the printed claim command.
+The output includes the `--public-key` value needed for `channel claim`. Pass the signature and public key to the destination out-of-band.
 
-#### `xrpl-up channel verify <channelId> <amount> <signature> <publicKey>`
+#### `xrpl-up channel verify --channel <hex> --amount <xrp> --signature <hex> --public-key <hex>`
 
 Verifies an off-chain claim signature. Exits with code `1` if invalid.
 
 ```bash
-xrpl-up channel verify ABC123... 3 <hex-signature> <public-key>
+xrpl-up channel verify --channel ABC123... --amount 3 --signature <hex-signature> --public-key <public-key>
 ```
 
-#### `xrpl-up channel claim <channelId>`
+#### `xrpl-up channel claim --channel <hex>`
 
 Submits a `PaymentChannelClaim` on-chain. Optionally redeems an off-chain claim or closes the channel.
 
 ```bash
 # Close the channel (no claim amount)
-xrpl-up channel claim ABC123... --seed sDestSeed... --close
+xrpl-up channel claim --channel ABC123... --seed sDestSeed... --close
 
-# Redeem an off-chain claim
-# --public-key is the source wallet's public key (printed by channel sign)
-xrpl-up channel claim ABC123... --seed sDestSeed... \
-  --amount 3 --signature <hex-sig> --public-key <source-public-key>
+# Redeem an off-chain claim (--balance = total XRP delivered by this claim)
+xrpl-up channel claim --channel ABC123... --seed sDestSeed... \
+  --amount 3 --balance 3 --signature <hex-sig> --public-key <source-public-key>
 ```
 
 ---
@@ -653,7 +662,7 @@ xrpl-up offer list --account rSomeAddress...
 
 Trust line operations (renamed from `trustline`). Use `xrpl-up account trust-lines` to query existing trust lines.
 
-#### `xrpl-up trust set`
+#### `xrpl-up trust set --currency <code> --issuer <address> --limit <value>`
 
 Creates or updates a trust line.
 
@@ -692,7 +701,7 @@ xrpl-up trust set --currency USD --issuer rHolderAddress... \
 xrpl-up account trust-lines rMyAddress... --node local
 ```
 
-To enable `DefaultRipple` (rippling on all new trust lines), use `xrpl-up account set defaultRipple`.
+To enable `DefaultRipple` (rippling on all new trust lines), use `xrpl-up account set --set-flag defaultRipple`.
 
 ---
 
@@ -700,50 +709,49 @@ To enable `DefaultRipple` (rippling on all new trust lines), use `xrpl-up accoun
 
 Escrow operations. Escrows lock XRP until a time condition or crypto-condition is met.
 
-#### `xrpl-up escrow create <destination> <amount>`
+#### `xrpl-up escrow create --to <address> --amount <xrp>`
 
-Creates an escrow. At least one of `--finish-after`, `--cancel-after`, or `--condition` is required. When `--seed` is omitted a wallet is auto-funded.
+Creates an escrow. `--to` and `--amount` are required; at least one of `--finish-after`, `--cancel-after`, or `--condition` is also required.
 
-Time expressions: `+30m`, `+1h`, `+1d`, `+7d` (relative from now), or an absolute Unix timestamp.
+Time values are ISO 8601 datetimes (e.g. `2026-06-01T00:00:00Z`).
 
 ```bash
-# Time-locked: can finish after 1 hour, auto-cancels after 7 days
-xrpl-up escrow create rDest... 10 \
-  --finish-after +1h --cancel-after +7d
+# Time-locked: can finish after a specific time, auto-cancels after another
+xrpl-up escrow create --to rDest... --amount 10 \
+  --finish-after 2026-06-01T00:00:00Z --cancel-after 2026-12-01T00:00:00Z --seed sn3nxiW7...
 
 # Crypto-condition escrow
-xrpl-up escrow create rDest... 10 \
-  --condition A0258020... --cancel-after +7d --seed sn3nxiW7...
+xrpl-up escrow create --to rDest... --amount 10 \
+  --condition A0258020... --cancel-after 2026-12-01T00:00:00Z --seed sn3nxiW7...
 ```
 
-#### `xrpl-up escrow finish <owner> <sequence>`
+#### `xrpl-up escrow finish --owner <address> --sequence <n>`
 
-Releases the escrowed funds to the destination after the `FinishAfter` time has passed. For crypto-condition escrows, `--fulfillment` and `--condition` are required.
+Releases escrowed funds to the destination after the `FinishAfter` time. `--owner` and `--sequence` are required. For crypto-condition escrows, also provide `--fulfillment` and `--condition`.
 
 ```bash
 # Time-based finish
-xrpl-up escrow finish rOwner... 42 --seed sDestSeed...
+xrpl-up escrow finish --owner rOwner... --sequence 42 --seed sDestSeed...
 
 # Crypto-condition finish
-xrpl-up escrow finish rOwner... 42 --seed sDestSeed... \
+xrpl-up escrow finish --owner rOwner... --sequence 42 --seed sDestSeed... \
   --fulfillment A0228020... --condition A0258020...
 ```
 
-#### `xrpl-up escrow cancel <owner> <sequence>`
+#### `xrpl-up escrow cancel --owner <address> --sequence <n>`
 
 Cancels an expired escrow (after `CancelAfter` time) and returns XRP to the owner.
 
 ```bash
-xrpl-up escrow cancel rOwner... 42 --seed sn3nxiW7...
+xrpl-up escrow cancel --owner rOwner... --sequence 42 --seed sn3nxiW7...
 ```
 
-#### `xrpl-up escrow list`
+#### `xrpl-up escrow list <address>`
 
 Lists escrows for an account, showing amounts, times, and conditions.
 
 ```bash
-xrpl-up escrow list
-xrpl-up escrow list --account rSomeAddress...
+xrpl-up escrow list rSomeAddress...
 ```
 
 ---
@@ -752,45 +760,44 @@ xrpl-up escrow list --account rSomeAddress...
 
 Check operations. Checks are a deferred payment mechanism — the sender authorizes a maximum amount that the destination can cash at any time before expiry.
 
-#### `xrpl-up check create <destination> <sendMax>`
+#### `xrpl-up check create --to <address> --send-max <amount>`
 
-Creates a check. `<sendMax>` is the maximum the destination can receive.
+Creates a check. `--to` and `--send-max` are required; `--send-max` is the maximum the destination can receive.
 
 ```bash
-# Create a 5 XRP check (valid for 7 days)
-xrpl-up check create rDest... 5 --seed sn3nxiW7... --expiry +7d
+# Create a 5 XRP check (valid until a specific date)
+xrpl-up check create --to rDest... --send-max 5 --seed sn3nxiW7... --expiration 2026-12-31T00:00:00Z
 
 # Create an IOU check
-xrpl-up check create rDest... "10.USD.rHb9..." --seed sn3nxiW7...
+xrpl-up check create --to rDest... --send-max "10/USD/rHb9..." --seed sn3nxiW7...
 ```
 
-#### `xrpl-up check cash <checkId> [amount]`
+#### `xrpl-up check cash --check <id>`
 
-Cashes a check. Provide an exact `[amount]` or `--deliver-min` for a flexible minimum (the destination receives as much as possible up to `SendMax`).
+Cashes a check. Provide `--amount` for an exact amount or `--deliver-min` for a flexible minimum.
 
 ```bash
 # Cash exactly 5 XRP
-xrpl-up check cash ABC123... 5 --seed sDestSeed...
+xrpl-up check cash --check ABC123... --amount 5 --seed sDestSeed...
 
 # Cash flexibly — receive at least 3 XRP
-xrpl-up check cash ABC123... --deliver-min 3 --seed sDestSeed...
+xrpl-up check cash --check ABC123... --deliver-min 3 --seed sDestSeed...
 ```
 
-#### `xrpl-up check cancel <checkId>`
+#### `xrpl-up check cancel --check <id>`
 
 Cancels a check (sender or destination can cancel; anyone can cancel after expiry).
 
 ```bash
-xrpl-up check cancel ABC123... --seed sn3nxiW7...
+xrpl-up check cancel --check ABC123... --seed sn3nxiW7...
 ```
 
-#### `xrpl-up check list`
+#### `xrpl-up check list <address>`
 
 Lists outstanding checks for an account.
 
 ```bash
-xrpl-up check list
-xrpl-up check list --account rSomeAddress...
+xrpl-up check list rSomeAddress...
 ```
 
 ---
@@ -800,19 +807,20 @@ xrpl-up check list --account rSomeAddress...
 Enable or disable account flags (replaces the old `accountset` command).
 
 ```bash
-xrpl-up account set requireDest --node local --seed sn3nxiW7...
-xrpl-up account set requireDest --clear --node local --seed sn3nxiW7...
+xrpl-up account set --set-flag requireDestTag --node local --seed sn3nxiW7...
+xrpl-up account set --clear-flag requireDestTag --node local --seed sn3nxiW7...
 ```
 
 | Flag name | Description |
 |-----------|-------------|
-| `requireDest` | Require a destination tag on all incoming payments |
+| `requireDestTag` | Require a destination tag on all incoming payments |
 | `requireAuth` | Require the issuer to authorize all trust lines |
 | `disallowXRP` | Signal that this account does not accept direct XRP payments |
 | `disableMaster` | Disable the master key (use only after setting a signer list) |
 | `defaultRipple` | Enable rippling on all new trust lines (issuers) |
 | `depositAuth` | Only accept payments from pre-authorized senders |
-| `allowClawback` | Allow the issuer to clawback IOU tokens from trust line holders (irreversible) |
+
+For IOU clawback, use `--allow-clawback --confirm` (irreversible, not a `--set-flag`).
 
 > **Note:** Set a signer list before disabling the master key (`disableMaster`). For signer list management, use `xrpl-up multisig`. To query account settings, use `xrpl-up account info`.
 
@@ -835,7 +843,7 @@ Manage DepositPreauth entries (renamed from `depositpreauth`). Required when an 
 
 ```bash
 # Enable deposit authorization on your account first
-xrpl-up account set depositAuth --node local --seed sn3nxiW7...
+xrpl-up account set --set-flag depositAuth --node local --seed sn3nxiW7...
 
 # Pre-authorize a specific sender
 xrpl-up deposit-preauth set --authorize rSender... \
@@ -855,7 +863,7 @@ xrpl-up deposit-preauth list rMyAddress... --node local
 
 Ticket operations. Tickets reserve sequence numbers, allowing transactions to be submitted out-of-order or in parallel — useful for multi-sig workflows.
 
-#### `xrpl-up ticket create`
+#### `xrpl-up ticket create --count <n>`
 
 Reserves 1–250 sequence numbers as tickets. Returns the allocated TicketSequence numbers.
 
@@ -884,23 +892,21 @@ xrpl-up ticket list rSomeAddress...
 Issuer clawback operations. The issuer account must have clawback enabled before use.
 
 > **Prerequisites:**
-> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set allowClawback --node local --seed <issuer-seed>`
+> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set --allow-clawback --confirm --node local --seed <issuer-seed>`
 > - **MPT clawback:** The issuance must have been created with `xrpl-up mptoken issuance create --can-clawback`
 
-#### `xrpl-up clawback iou <amount> <currency> <holder>`
+#### `xrpl-up clawback --amount <value/CURRENCY/holder | value/ISSUANCE_ID>`
 
-Reclaims IOU tokens from a trust line holder. The signing wallet must be the token issuer.
+Reclaims issued tokens from a holder. The signing wallet must be the token issuer.
 
-#### `xrpl-up clawback mpt <issuanceId> <holder> <amount>`
-
-Reclaims MPT tokens from a holder. The signing wallet must be the MPT issuer.
+For IOU tokens, embed the holder address in the amount as `value/CURRENCY/holder-address`. For MPT tokens, use `value/ISSUANCE_ID` and pass `--holder`.
 
 ```bash
-# Clawback 10 USD from a holder trust line
-xrpl-up clawback iou 10 USD rHolder... --seed sIssuerSeed...
+# Clawback 10 USD from a holder (IOU — holder address goes in the amount)
+xrpl-up clawback --amount 10/USD/rHolder... --seed sIssuerSeed...
 
-# Clawback 500 units of an MPT
-xrpl-up clawback mpt 00000001AABBCCDD... rHolder... 500 --seed sIssuerSeed...
+# Clawback 500 units of an MPT (requires --holder)
+xrpl-up clawback --amount 500/00000001AABBCCDD... --holder rHolder... --seed sIssuerSeed...
 ```
 
 ---

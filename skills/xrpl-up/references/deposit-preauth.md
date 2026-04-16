@@ -14,7 +14,12 @@ Grant or revoke deposit preauthorization for an account or credential.
 | `--unauthorize-credential <issuer>` | string | No | — | Revoke credential-based preauthorization |
 | `--credential-type <string>` | string | No | — | Credential type as plain string (auto hex-encoded) |
 | `--credential-type-hex <hex>` | string | No | — | Credential type as raw hex |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up deposit-preauth set --authorize rAllowedXXX... --seed sEd...
@@ -26,6 +31,7 @@ List deposit preauthorizations for an account.
 
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
+| `--json` | boolean | No | false | Output as JSON |
 
 ```bash
 xrpl-up deposit-preauth list rXXX... --json

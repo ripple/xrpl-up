@@ -8,6 +8,7 @@ Get full on-ledger account information (balance, sequence, owner count, flags, r
 
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
+| `--json` | boolean | No | false | Output raw JSON |
 
 ```bash
 xrpl-up account info rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh
@@ -20,6 +21,7 @@ Get the XRP balance of an account.
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `--drops` | boolean | No | false | Output raw drops as a plain integer string |
+| `--json` | boolean | No | false | Output JSON with address and balance fields |
 
 ```bash
 xrpl-up account balance rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh
@@ -32,6 +34,10 @@ Update account settings with an AccountSet transaction.
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--mnemonic <phrase>` | string | No* | — | BIP39 mnemonic for signing |
+| `--account <address-or-alias>` | string | No* | — | Account address or alias to load from keystore |
+| `--password <password>` | string | No | — | Keystore decryption password (insecure, prefer interactive prompt) |
+| `--keystore <dir>` | string | No | `~/.xrpl/keystore/` | Keystore directory override |
 | `--domain <utf8-string>` | string | No | — | Domain to set (auto hex-encoded) |
 | `--email-hash <32-byte-hex>` | string | No | — | Email hash (32-byte hex) |
 | `--transfer-rate <integer>` | string | No | — | Transfer rate (0 or 1000000000–2000000000) |
@@ -40,6 +46,8 @@ Update account settings with an AccountSet transaction.
 | `--clear-flag <name>` | string | No | — | Account flag to clear (same names as `--set-flag`) |
 | `--allow-clawback` | boolean | No | false | Enable clawback (irreversible — requires `--confirm`) |
 | `--confirm` | boolean | No | false | Acknowledge irreversible operations |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print unsigned tx JSON without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
@@ -58,7 +66,14 @@ Submit an AccountDelete transaction to delete an account and send remaining XRP 
 | `--destination <address-or-alias>` | string | Yes | — | Destination address or alias to receive remaining XRP |
 | `--destination-tag <n>` | string | No | — | Destination tag for the destination account |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--mnemonic <phrase>` | string | No* | — | BIP39 mnemonic for signing |
+| `--account <address-or-alias>` | string | No* | — | Account address or alias to load from keystore |
+| `--password <password>` | string | No | — | Keystore decryption password (insecure, prefer interactive prompt) |
+| `--keystore <dir>` | string | No | `~/.xrpl/keystore/` | Keystore directory override |
 | `--confirm` | boolean | No | false | Acknowledge permanent account deletion (required unless `--dry-run`) |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print unsigned tx JSON without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
@@ -75,6 +90,13 @@ Assign or remove the regular signing key on an account (SetRegularKey).
 | `--key <address>` | string | No† | — | Base58 address of the new regular key to assign |
 | `--remove` | boolean | No† | false | Remove the existing regular key |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--mnemonic <phrase>` | string | No* | — | BIP39 mnemonic for signing |
+| `--account <address-or-alias>` | string | No* | — | Account address or alias to load from keystore |
+| `--password <password>` | string | No | — | Keystore decryption password (insecure, prefer interactive prompt) |
+| `--keystore <dir>` | string | No | `~/.xrpl/keystore/` | Keystore directory override |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print unsigned tx JSON without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 † Exactly one of `--key` or `--remove` is required; they are mutually exclusive.
@@ -92,6 +114,7 @@ List trust lines for an account.
 | `--peer <address>` | string | No | — | Filter to trust lines with a specific peer |
 | `--limit <n>` | string | No | — | Number of trust lines to return |
 | `--marker <json-string>` | string | No | — | Pagination marker from a previous `--json` response |
+| `--json` | boolean | No | false | Output raw JSON lines array |
 
 ```bash
 xrpl-up account trust-lines rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh
@@ -105,6 +128,7 @@ List open DEX offers for an account.
 |------|------|----------|---------|-------------|
 | `--limit <n>` | string | No | — | Number of offers to return |
 | `--marker <json-string>` | string | No | — | Pagination marker from a previous `--json` response |
+| `--json` | boolean | No | false | Output raw JSON offers array |
 
 ```bash
 xrpl-up account offers rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh
@@ -119,6 +143,7 @@ List payment channels for an account.
 | `--destination-account <address>` | string | No | — | Filter by destination account |
 | `--limit <n>` | string | No | — | Number of channels to return |
 | `--marker <json-string>` | string | No | — | Pagination marker from a previous `--json` response |
+| `--json` | boolean | No | false | Output raw JSON channels array |
 
 ```bash
 xrpl-up account channels rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh
@@ -132,6 +157,7 @@ List recent transactions for an account.
 |------|------|----------|---------|-------------|
 | `--limit <n>` | string | No | `20` | Number of transactions to return (max 400) |
 | `--marker <json-string>` | string | No | — | Pagination marker from a previous `--json` response |
+| `--json` | boolean | No | false | Output raw JSON with transactions and optional marker |
 
 ```bash
 xrpl-up account transactions rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh --limit 10
@@ -145,6 +171,7 @@ List NFTs owned by an account.
 |------|------|----------|---------|-------------|
 | `--limit <n>` | string | No | — | Number of NFTs to return |
 | `--marker <json-string>` | string | No | — | Pagination marker from a previous `--json` response |
+| `--json` | boolean | No | false | Output raw JSON NFTs array |
 
 ```bash
 xrpl-up account nfts rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh
@@ -158,6 +185,7 @@ List Multi-Purpose Tokens (MPT) held by an account.
 |------|------|----------|---------|-------------|
 | `--limit <n>` | string | No | `20` | Number of tokens to return |
 | `--marker <json-string>` | string | No | — | Pagination marker from a previous `--json` response |
+| `--json` | boolean | No | false | Output raw JSON tokens array |
 
 ```bash
 xrpl-up account mptokens rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh

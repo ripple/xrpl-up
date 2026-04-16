@@ -17,6 +17,9 @@ Create a DEX offer (OfferCreate transaction).
 | `--fill-or-kill` | boolean | No | false | Set `tfFillOrKill` flag |
 | `--expiration <iso>` | string | No | — | Offer expiration as ISO 8601 string (e.g. `2030-01-01T00:00:00Z`) |
 | `--replace <sequence>` | string | No | — | Cancel offer with this sequence and replace it atomically |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 `--immediate-or-cancel` and `--fill-or-kill` are mutually exclusive.
@@ -33,6 +36,9 @@ Cancel an existing DEX offer (OfferCancel transaction).
 |------|------|----------|---------|-------------|
 | `--sequence <n>` | string | Yes | — | Sequence number of the offer to cancel |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 

@@ -15,6 +15,9 @@ Open a new payment channel (PaymentChannelCreate transaction).
 | `--cancel-after <iso8601>` | string | No | — | Hard expiry in ISO 8601 format |
 | `--destination-tag <n>` | string | No | — | Destination tag (unsigned 32-bit integer) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
@@ -32,6 +35,9 @@ Add XRP to an existing payment channel (PaymentChannelFund transaction).
 | `--amount <xrp>` | string | Yes | — | XRP to add (decimal, e.g. `5`) |
 | `--expiration <iso8601>` | string | No | — | New soft expiry in ISO 8601 format |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
@@ -84,6 +90,9 @@ Redeem a signed payment channel claim or request channel closure (PaymentChannel
 | `--close` | boolean | No | false | Request channel closure (`tfClose` flag) |
 | `--renew` | boolean | No | false | Clear channel expiration (`tfRenew` flag, source account only) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 

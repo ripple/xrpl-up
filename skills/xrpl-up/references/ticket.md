@@ -9,7 +9,12 @@ Reserve ticket sequence numbers on an XRPL account.
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `--count <n>` | integer | **Yes** | — | Number of tickets to create (1–250) |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up ticket create --count 5 --seed sEd...

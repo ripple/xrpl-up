@@ -17,6 +17,9 @@ Alias: `send`. Send a Payment transaction on the XRP Ledger.
 | `--partial` | boolean | No | false | Set `tfPartialPayment` flag |
 | `--no-ripple-direct` | boolean | No | false | Set `tfNoRippleDirect` flag |
 | `--limit-quality` | boolean | No | false | Set `tfLimitQuality` flag |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 

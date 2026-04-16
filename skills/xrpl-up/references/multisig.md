@@ -11,6 +11,9 @@ Configure a multi-signature signer list on an account.
 | `--quorum <n>` | integer | **Yes** | — | Required signature weight threshold |
 | `--signer <address:weight>` | string | No | — | Signer entry in `address:weight` format (repeatable) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
@@ -33,6 +36,9 @@ Remove the signer list from an account (SignerListSet with empty signers).
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 

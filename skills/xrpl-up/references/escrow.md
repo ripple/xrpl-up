@@ -16,6 +16,9 @@ Create an escrow on the XRP Ledger (EscrowCreate transaction). At least one of `
 | `--destination-tag <n>` | string | No | — | Destination tag (unsigned 32-bit integer) |
 | `--source-tag <n>` | string | No | — | Source tag (unsigned 32-bit integer) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 † At least one of `--finish-after`, `--cancel-after`, or `--condition` must be provided.
@@ -35,6 +38,9 @@ Release funds from an escrow (EscrowFinish transaction).
 | `--condition <hex>` | string | No‡ | — | PREIMAGE-SHA-256 condition hex blob |
 | `--fulfillment <hex>` | string | No‡ | — | Matching crypto-condition fulfillment hex blob |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 ‡ `--condition` and `--fulfillment` must be provided together (or both omitted).
@@ -52,6 +58,9 @@ Cancel an expired escrow and return funds to the owner (EscrowCancel transaction
 | `--owner <address>` | string | Yes | — | Address of the account that created the escrow |
 | `--sequence <n>` | string | Yes | — | Sequence number of the EscrowCreate transaction |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
@@ -65,6 +74,7 @@ List pending escrows for an account (read-only, no key material needed).
 
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
+| `--json` | boolean | No | false | Output as JSON array |
 
 ```bash
 xrpl-up escrow list rAccount...
