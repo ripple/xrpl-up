@@ -1,9 +1,6 @@
 name: Watch rippled Docker Image
 
 on:
-  push:
-    branches:
-      - feat/watch-rippled-image
   schedule:
     - cron: '0 6 * * *'   # daily at 06:00 UTC
   workflow_dispatch:
