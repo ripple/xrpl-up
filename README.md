@@ -12,7 +12,11 @@ CLI for XRPL local development and scripting. Spin up a local sandbox with pre-f
 **From npm (global):**
 
 ```bash
+# Latest stable release
 npm install -g xrpl-up
+
+# Beta release
+npm install -g xrpl-up@beta-experimental
 ```
 
 **From source (development):**
