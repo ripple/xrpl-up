@@ -14,7 +14,12 @@ Create an on-chain credential for a subject account.
 | `--uri <string>` | string | No | — | URI as plain string (auto hex-encoded) |
 | `--uri-hex <hex>` | string | No | — | URI as raw hex |
 | `--expiration <ISO8601>` | string | No | — | Expiration date/time |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up credential create --subject rSubjectXXX... --credential-type KYCVerified --seed sIssuerEd...
@@ -29,7 +34,12 @@ Accept an on-chain credential issued to you.
 | `--issuer <address>` | string | **Yes** | — | Address of the credential issuer |
 | `--credential-type <string>` | string | No | — | Credential type as plain string |
 | `--credential-type-hex <hex>` | string | No | — | Credential type as raw hex |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up credential accept --issuer rIssuerXXX... --credential-type KYCVerified --seed sSubjectEd...
@@ -45,7 +55,12 @@ Delete an on-chain credential (revoke or clean up).
 | `--credential-type-hex <hex>` | string | No | — | Credential type as raw hex |
 | `--subject <address>` | string | No | — | Subject account address |
 | `--issuer <address>` | string | No | — | Issuer account address |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up credential delete --subject rSubjectXXX... --credential-type KYCVerified --seed sIssuerEd...

@@ -16,6 +16,9 @@ Create a new MPT issuance (MPTokenIssuanceCreate).
 | `--metadata-hex <hex>` | string | No | — | Metadata as raw hex |
 | `--metadata-file <path>` | string | No | — | Path to file whose contents are hex-encoded as metadata |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 `--metadata`, `--metadata-hex`, and `--metadata-file` are mutually exclusive.
@@ -27,6 +30,15 @@ xrpl-up mptoken issuance create --max-amount 1000000 --flags can-transfer --seed
 ### mptoken issuance destroy
 
 Destroy an MPT issuance (MPTokenIssuanceDestroy). The issuance ID is a positional argument.
+
+| Flag | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up mptoken issuance destroy <issuance-id> --seed sEd...
@@ -42,6 +54,9 @@ Lock or unlock an MPT issuance or a specific holder's balance (MPTokenIssuanceSe
 | `--unlock` | boolean | No† | false | Unlock the issuance (or holder's balance) |
 | `--holder <address>` | string | No | — | Holder address for per-holder lock/unlock |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 † Exactly one of `--lock` or `--unlock` is required.
@@ -79,6 +94,9 @@ Opt in to hold an MPT issuance, or grant/revoke holder authorization (MPTokenAut
 | `--holder <address>` | string | No | — | Holder address (issuer-side: authorize/unauthorize a specific holder) |
 | `--unauthorize` | boolean | No | false | Revoke authorization instead of granting (also used for holder opt-out) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 

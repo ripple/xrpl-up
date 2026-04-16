@@ -13,7 +13,12 @@ Create a new AMM liquidity pool.
 | `--amount <value>` | string | **Yes** | — | Amount of first asset (XRP: drops integer, IOU: decimal) |
 | `--amount2 <value>` | string | **Yes** | — | Amount of second asset (XRP: drops integer, IOU: decimal) |
 | `--trading-fee <n>` | integer | **Yes** | — | Trading fee in units of 1/100000 (0–1000, where 1000 = 1%) |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up amm create --asset XRP --asset2 USD/rIssuerXXX... --amount 1000000 --amount2 100 --trading-fee 500 --seed sEd...
@@ -32,7 +37,12 @@ Deposit assets into an AMM pool.
 | `--lp-token-out <value>` | string | No | — | LP token amount to receive |
 | `--ePrice <value>` | string | No | — | Maximum effective price per LP token |
 | `--for-empty` | boolean | No | false | Use tfTwoAssetIfEmpty mode |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up amm deposit --asset XRP --asset2 USD/rIssuerXXX... --amount 500000 --seed sEd...
@@ -60,7 +70,12 @@ Withdraw modes (exactly one valid combination required):
 | `--amount2 <value>` | string | No | — | Amount of second asset to withdraw |
 | `--ePrice <value>` | string | No | — | Minimum effective price in LP tokens per unit withdrawn |
 | `--all` | boolean | No | false | Withdraw all LP tokens (tfWithdrawAll or tfOneAssetWithdrawAll) |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up amm withdraw --asset XRP --asset2 USD/rIssuerXXX... --all --seed sEd...
@@ -75,7 +90,12 @@ Vote on the trading fee for an AMM pool. Vote weight is proportional to LP token
 | `--asset <spec>` | string | **Yes** | — | First asset spec |
 | `--asset2 <spec>` | string | **Yes** | — | Second asset spec |
 | `--trading-fee <n>` | integer | **Yes** | — | Desired trading fee in units of 1/100000 (0–1000) |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up amm vote --asset XRP --asset2 USD/rIssuerXXX... --trading-fee 300 --seed sEd...
@@ -92,7 +112,12 @@ Bid on an AMM auction slot to earn a reduced trading fee for a time window.
 | `--bid-min <value>` | string | No | — | Minimum LP token amount to bid (currency/issuer auto-fetched) |
 | `--bid-max <value>` | string | No | — | Maximum LP token amount to bid (currency/issuer auto-fetched) |
 | `--auth-account <address>` | string | No | — | Address to authorize for discounted trading (repeatable, max 4) |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up amm bid --asset XRP --asset2 USD/rIssuerXXX... --bid-min 100 --bid-max 200 --seed sEd...
@@ -108,7 +133,12 @@ Delete an empty AMM pool (all LP tokens must have been returned first).
 |------|------|----------|---------|-------------|
 | `--asset <spec>` | string | **Yes** | — | First asset spec |
 | `--asset2 <spec>` | string | **Yes** | — | Second asset spec |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up amm delete --asset XRP --asset2 USD/rIssuerXXX... --seed sEd...
@@ -126,6 +156,9 @@ Claw back IOU assets from an AMM pool (issuer only). The signing account must be
 | `--amount <value>` | string | No | all | Maximum amount to claw back |
 | `--both-assets` | boolean | No | false | Claw back both assets proportionally (tfClawTwoAssets) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 

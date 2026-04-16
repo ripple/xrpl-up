@@ -17,7 +17,12 @@ Publish or update a Decentralized Identifier (DID) on-chain (DIDSet).
 | `--clear-uri` | boolean | No | false | Clear the URI field |
 | `--clear-data` | boolean | No | false | Clear the Data field |
 | `--clear-did-document` | boolean | No | false | Clear the DIDDocument field |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up did set --uri https://example.com/did.json --seed sEd...
@@ -29,7 +34,12 @@ Delete the sender's on-chain Decentralized Identifier (DIDDelete).
 
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up did delete --seed sEd...

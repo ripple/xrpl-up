@@ -11,6 +11,9 @@ Create a new permissioned domain with a set of accepted credentials.
 | `--credential <issuer:type>` | string | No† | — | Accepted credential as `issuer:type` (type is UTF-8, auto hex-encoded); repeatable, 1–10 total |
 | `--credentials-json <json>` | string | No† | — | JSON array of `{issuer, credential_type}` objects (credential_type must be hex) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 † Exactly one of `--credential` or `--credentials-json` is required; they are mutually exclusive.
@@ -29,6 +32,9 @@ Update the accepted credentials for a permissioned domain.
 | `--credential <issuer:type>` | string | No† | — | Accepted credential as `issuer:type` (repeatable, 1–10 total); replaces entire list |
 | `--credentials-json <json>` | string | No† | — | JSON array of `{issuer, credential_type}` objects (credential_type must be hex) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 † Exactly one of `--credential` or `--credentials-json` is required; they are mutually exclusive.
@@ -44,7 +50,12 @@ Delete a permissioned domain, reclaiming the reserve.
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `--domain-id <hash>` | string | **Yes** | — | 64-char hex domain ID |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up permissioned-domain delete --domain-id <64hexID> --seed sEd...

@@ -19,6 +19,9 @@ Create or update a trust line (TrustSet transaction). Setting `--limit 0` effect
 | `--auth` | boolean | No | false | Authorize the trust line |
 | `--quality-in <n>` | string | No | — | Set `QualityIn` (unsigned integer) |
 | `--quality-out <n>` | string | No | — | Set `QualityOut` (unsigned integer) |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 `--no-ripple` and `--clear-no-ripple` are mutually exclusive. `--freeze` and `--unfreeze` are mutually exclusive.

@@ -16,7 +16,12 @@ Publish or update an on-chain price oracle (OracleSet).
 | `--asset-class <string>` | string | No | — | Asset class string (auto hex-encoded) |
 | `--asset-class-hex <hex>` | string | No | — | Asset class as raw hex |
 | `--last-update-time <ts>` | integer | No | now | Unix timestamp for LastUpdateTime |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up oracle set --document-id 1 --price-data '[{"base_asset":"XRP","quote_asset":"USD","asset_price":100,"scale":2}]' --seed sEd...
@@ -29,7 +34,12 @@ Delete an on-chain price oracle (OracleDelete).
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `--document-id <n>` | integer | **Yes** | — | Oracle document ID |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up oracle delete --document-id 1 --seed sEd...

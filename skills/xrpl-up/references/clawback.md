@@ -7,6 +7,9 @@ Claw back issued tokens (IOU or MPT) from a holder account.
 | `--amount <amount>` | string | Yes | — | For IOU: `value/CURRENCY/holder-address`; for MPT: `value/MPT_ISSUANCE_ID` |
 | `--holder <address>` | string | No† | — | Holder address to claw back from (required for MPT mode only) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 † `--holder` is required when `--amount` is an MPT amount; must be omitted for IOU amounts.

@@ -62,6 +62,7 @@ List accounts stored in the keystore.
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `--keystore <dir>` | string | No | `~/.xrpl/keystore/` | Keystore directory override |
+| `--json` | boolean | No | false | Output as JSON array |
 
 ```bash
 xrpl-up wallet list --json
@@ -78,6 +79,7 @@ Derive the XRPL address from key material.
 | `--private-key <hex>` | string | No | — | Raw private key hex (ED- or 00-prefixed) |
 | `--key-type <type>` | string | No | — | Key algorithm (required for unprefixed hex private keys) |
 | `--derivation-path <path>` | string | No | `m/44'/144'/0'/0/0` | BIP44 derivation path (used with `--mnemonic`) |
+| `--json` | boolean | No | false | Output as JSON |
 
 ```bash
 xrpl-up wallet address --seed sEd...
@@ -94,6 +96,7 @@ Derive the public key from key material.
 | `--private-key <hex>` | string | No | — | Raw private key hex |
 | `--key-type <type>` | string | No | — | Key algorithm: `secp256k1` or `ed25519` |
 | `--derivation-path <path>` | string | No | `m/44'/144'/0'/0/0` | BIP44 derivation path (used with `--mnemonic`) |
+| `--json` | boolean | No | false | Output as JSON |
 
 ```bash
 xrpl-up wallet public-key --seed sEd...
@@ -111,6 +114,7 @@ Derive the private key from a seed or mnemonic.
 | `--mnemonic <phrase>` | string | No | — | BIP39 mnemonic phrase |
 | `--key-type <type>` | string | No | — | Key algorithm: `secp256k1` or `ed25519` |
 | `--derivation-path <path>` | string | No | `m/44'/144'/0'/0/0` | BIP44 derivation path (used with `--mnemonic`) |
+| `--json` | boolean | No | false | Output as JSON |
 
 ```bash
 xrpl-up wallet private-key --seed sEd...
@@ -131,6 +135,7 @@ Sign a UTF-8 message or an XRPL transaction blob.
 | `--key-type <type>` | string | No | — | Key algorithm: `secp256k1` or `ed25519` (used with `--seed` or `--mnemonic`) |
 | `--password <password>` | string | No | — | Keystore decryption password (required with `--account` in non-TTY) |
 | `--keystore <dir>` | string | No | `~/.xrpl/keystore/` | Keystore directory override |
+| `--json` | boolean | No | false | Output as JSON |
 
 ```bash
 xrpl-up wallet sign --message "hello xrpl" --seed sEd...
@@ -147,6 +152,7 @@ Verify a message signature or a signed transaction blob.
 | `--signature <hex>` | string | No | — | Signature hex (used with `--message`) |
 | `--public-key <hex>` | string | No | — | Signer public key hex (used with `--message`) |
 | `--tx <tx_blob_hex>` | string | No | — | Signed transaction blob hex to verify |
+| `--json` | boolean | No | false | Output as JSON `{valid: boolean}` |
 
 ```bash
 xrpl-up wallet verify --message "hello xrpl" --signature <hex> --public-key <hex>
@@ -158,6 +164,7 @@ Fund an address from the testnet or devnet faucet.
 
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
+| `--json` | boolean | No | false | Output as JSON |
 
 ```bash
 xrpl-up wallet fund rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

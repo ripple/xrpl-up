@@ -15,7 +15,12 @@ Create a single-asset vault on the XRP Ledger.
 | `--domain-id <hash>` | string | No | — | 64-char hex DomainID for private vault |
 | `--private` | boolean | No | false | Set tfVaultPrivate (requires `--domain-id`) |
 | `--non-transferable` | boolean | No | false | Set tfVaultShareNonTransferable |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up vault create --asset 0 --assets-maximum 1000000 --seed sEd...
@@ -32,6 +37,9 @@ Update metadata, asset cap, or domain of a vault you own (VaultSet). At least on
 | `--assets-maximum <n>` | string | No | — | Updated maximum total assets cap (UInt64 string) |
 | `--domain-id <hash>` | string | No | — | Updated 64-char hex DomainID |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
@@ -47,7 +55,12 @@ Deposit assets into a vault and receive vault shares.
 |------|------|----------|---------|-------------|
 | `--vault-id <hash>` | string | **Yes** | — | 64-char hex VaultID |
 | `--amount <amount>` | string | **Yes** | — | Amount to deposit |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up vault deposit --vault-id <64hexID> --amount 10 --seed sEd...
@@ -63,6 +76,12 @@ Withdraw assets from a vault by burning vault shares.
 | `--amount <amount>` | string | Yes | — | Amount to withdraw: `"10"` for XRP, `"10/USD/rIssuer"` for IOU, `"10/<48hex>"` for MPT |
 | `--destination <address>` | string | No | — | Send redeemed assets to a different account |
 | `--destination-tag <n>` | integer | No | — | Destination tag (requires `--destination`; 0–4294967295) |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up vault withdraw --vault-id <64hexID> --amount 10 --seed sEd...
@@ -72,6 +91,16 @@ xrpl-up vault withdraw --vault-id <64hexID> --amount 10 --destination rRecipient
 ### vault delete
 
 Delete a vault you own.
+
+| Flag | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `--vault-id <hash>` | string | **Yes** | — | 64-char hex VaultID to delete |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up vault delete --vault-id <64hexID> --seed sEd...
@@ -86,6 +115,12 @@ Claw back assets from a vault (issuer only). IOU and MPT only — XRP cannot be 
 | `--vault-id <hash>` | string | Yes | — | 64-char hex VaultID |
 | `--holder <address>` | string | Yes | — | Address of the account whose shares to claw back |
 | `--amount <amount>` | string | No | all | Amount to claw back (omit to claw back all); IOU or MPT only |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up vault clawback --vault-id <64hexID> --holder rHolderXXX... --seed sIssuerEd...

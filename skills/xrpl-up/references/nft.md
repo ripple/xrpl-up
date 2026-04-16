@@ -16,7 +16,12 @@ Mint an NFT.
 | `--transferable` | boolean | No | false | Allow peer-to-peer transfers (tfTransferable) |
 | `--mutable` | boolean | No | false | Allow URI modification (tfMutable) |
 | `--issuer <address>` | string | No | — | Issuer when minting on behalf of another |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up nft mint --taxon 42 --uri https://example.com/nft.json --transferable --seed sEd...
@@ -30,7 +35,12 @@ Burn (destroy) an NFT.
 |------|------|----------|---------|-------------|
 | `--nft <hex>` | string | **Yes** | — | 64-char NFTokenID to burn |
 | `--owner <address>` | string | No | — | NFT owner (when issuer burns a token they don't hold) |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up nft burn --nft <64hexNFTokenID> --seed sEd...
@@ -47,6 +57,9 @@ Modify the URI of a mutable NFT (NFTokenModify). The NFT must have been minted w
 | `--clear-uri` | boolean | No† | false | Explicitly clear the existing URI |
 | `--owner <address>` | string | No | — | NFT owner address (if different from signer) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 † Exactly one of `--uri` or `--clear-uri` is required; they are mutually exclusive.
@@ -67,9 +80,13 @@ Create a buy or sell offer for an NFT.
 | `--owner <address>` | string | No† | — | NFT owner address (required for buy offers) |
 | `--expiration <ISO8601>` | string | No | — | Offer expiration datetime |
 | `--destination <address>` | string | No | — | Only this account may accept the offer |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 † `--owner` is required for buy offers.
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up nft offer create --nft <64hexID> --amount 10 --sell --seed sEd...
@@ -84,9 +101,13 @@ Accept a buy or sell NFT offer (direct or brokered mode).
 | `--sell-offer <hex>` | string | No† | — | Sell offer ID (64-char hex) |
 | `--buy-offer <hex>` | string | No† | — | Buy offer ID (64-char hex) |
 | `--broker-fee <amount>` | string | No | — | Broker fee; only valid with both offers present |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 † At least one of `--sell-offer` or `--buy-offer` is required.
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up nft offer accept --sell-offer <64hexOfferID> --seed sEd...
@@ -99,7 +120,12 @@ Cancel one or more NFT offers.
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `--offer <hex>` | string | **Yes** | — | NFTokenOffer ID to cancel (repeatable for multiple) |
-| `--seed <seed>` | string | No | — | Family seed for signing |
+| `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
+
+\* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
 ```bash
 xrpl-up nft offer cancel --offer <64hexOfferID> --seed sEd...
@@ -111,6 +137,7 @@ List all buy and sell offers for an NFT (read-only, no key material needed).
 
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
+| `--json` | boolean | No | false | Output as JSON |
 
 ```bash
 xrpl-up nft offer list <64hexNFTokenID> --json

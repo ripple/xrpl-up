@@ -14,6 +14,9 @@ Create a Check on the XRP Ledger (CheckCreate transaction).
 | `--destination-tag <n>` | string | No | — | Destination tag (unsigned 32-bit integer) |
 | `--invoice-id <string>` | string | No | — | Invoice identifier (≤32 bytes UTF-8, auto hex-encoded to UInt256) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
@@ -31,6 +34,9 @@ Cash a Check on the XRP Ledger (CheckCash transaction). Exactly one of `--amount
 | `--amount <amount>` | string | No† | — | Exact amount to cash (XRP decimal or `value/CURRENCY/issuer`) |
 | `--deliver-min <amount>` | string | No† | — | Minimum amount to receive (flexible cash; sets partial delivery) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 † Exactly one of `--amount` or `--deliver-min` is required; they are mutually exclusive.
@@ -47,6 +53,9 @@ Cancel a Check on the XRP Ledger (CheckCancel transaction).
 |------|------|----------|---------|-------------|
 | `--check <id>` | string | Yes | — | 64-character Check ID (hex) |
 | `--seed <seed>` | string | No* | — | Family seed for signing |
+| `--no-wait` | boolean | No | false | Submit without waiting for validation |
+| `--json` | boolean | No | false | Output as JSON |
+| `--dry-run` | boolean | No | false | Print signed tx without submitting |
 
 \* Exactly one of `--seed`, `--mnemonic`, or `--account` is required.
 
@@ -60,6 +69,7 @@ List pending checks for an account (read-only, no key material needed).
 
 | Flag | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
+| `--json` | boolean | No | false | Output as JSON array |
 
 ```bash
 xrpl-up check list rAccount...
