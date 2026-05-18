@@ -159,3 +159,105 @@ jobs:
             git commit -m "chore: update known rippled image digests [skip ci]"
             git push
           fi
+
+  # ── 4. Bump DEFAULT_IMAGE in compose.ts and open a PR ─────────────────────
+  bump-default-image:
+    name: Bump pinned rippled image
+    needs: [detect, e2e]
+    if: |
+      needs.e2e.result == 'success' &&
+      github.event_name != 'workflow_dispatch' &&
+      contains(fromJson(needs.detect.outputs.images), 'xrpllabsofficial/xrpld:latest')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get current pinned version
+        id: current
+        run: |
+          VERSION=$(grep "DEFAULT_IMAGE" src/core/compose.ts \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Current pinned: ${VERSION}"
+
+      - name: Get version tag matching latest digest
+        id: latest
+        run: |
+          LATEST_DIGEST=$(curl -sf \
+            "https://hub.docker.com/v2/repositories/xrpllabsofficial/xrpld/tags/latest" \
+            | jq -r '.digest')
+          # Find the highest semver tag whose digest matches latest
+          MATCHING_TAG=$(curl -sf \
+            "https://hub.docker.com/v2/repositories/xrpllabsofficial/xrpld/tags?page_size=50" \
+            | jq -r --arg d "$LATEST_DIGEST" \
+              '[.results[] | select(.name | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) | select(.digest == $d) | .name] | sort_by(split(".") | map(tonumber)) | last // empty')
+          echo "version=${MATCHING_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Version tag for latest: ${MATCHING_TAG}"
+
+      - name: Check if bump needed
+        id: diff
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          LATEST="${{ steps.latest.outputs.version }}"
+          if [ -z "$LATEST" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No version tag found matching latest digest — skipping."
+          elif [ "$CURRENT" = "$LATEST" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already pinned to ${CURRENT} — nothing to do."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Will bump ${CURRENT} → ${LATEST}"
+          fi
+
+      - name: Open pull request
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          LATEST="${{ steps.latest.outputs.version }}"
+          BRANCH="chore/bump-rippled-${LATEST}"
+
+          sed -i "s|xrpllabsofficial/xrpld:[0-9]*\.[0-9]*\.[0-9]*|xrpllabsofficial/xrpld:${LATEST}|g" \
+            src/core/compose.ts
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add src/core/compose.ts
+          git commit -m "chore: bump rippled image ${CURRENT} → ${LATEST}"
+          git push --force origin "$BRANCH"
+
+          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            echo "PR #${EXISTING} already open — skipping."
+            exit 0
+          fi
+
+          PR_BODY=$(mktemp)
+          {
+            echo "## Summary"
+            echo ""
+            echo "Bumps the pinned rippled image from \`xrpllabsofficial/xrpld:${CURRENT}\` to \`xrpllabsofficial/xrpld:${LATEST}\`."
+            echo ""
+            echo "## Tests"
+            echo ""
+            echo "The full \`test:e2e:local\` suite passed against \`xrpllabsofficial/xrpld:latest\` (which resolves to \`${LATEST}\`) before this PR was opened."
+            echo ""
+            echo "## Review checklist"
+            echo ""
+            echo "- [ ] Check the [rippled ${LATEST} release notes](https://github.com/XRPLF/rippled/releases/tag/${LATEST}) for breaking changes or new amendments"
+            echo "- [ ] Verify no new amendments need to be added to \`NOT_ON_MAINNET\` in the amendment test"
+            echo ""
+            echo "> ⚠️ Do not auto-merge. Human review required before this lands in \`main\`."
+          } > "$PR_BODY"
+
+          gh pr create \
+            --title "chore: bump rippled image ${CURRENT} → ${LATEST}" \
+            --base main \
+            --head "$BRANCH" \
+            --body-file "$PR_BODY"
