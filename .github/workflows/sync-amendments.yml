@@ -9,7 +9,7 @@ name: Sync genesis amendments
 
 on:
   schedule:
-    - cron: '0 9 1 * *'   # 1st of month, 09:00 UTC
+    - cron: '0 9 1,15 * *'   # 1st and 15th of month, 09:00 UTC
   workflow_dispatch:       # allow manual trigger
 
 concurrency:
@@ -105,12 +105,13 @@ jobs:
             --title "chore: sync [amendments] genesis list from mainnet (${DATE})" \
             --base main \
             --head "$BRANCH" \
-            --body "## Summary
+            --body "$(cat <<PRBODY
+## Summary
 
-Automated monthly sync of the \`[amendments]\` genesis list in \`src/core/compose.ts\`.
+Automated monthly sync of the `[amendments]` genesis list in `src/core/compose.ts`.
 
-- **Source:** mainnet via \`feature\` RPC (\`wss://xrplcluster.com\`)
-- **Filter:** amendments enabled on mainnet AND supported by \`xrpllabsofficial/xrpld:latest\`
+- **Source:** mainnet via `feature` RPC (`wss://xrplcluster.com`)
+- **Filter:** amendments enabled on mainnet AND supported by `xrpllabsofficial/xrpld:latest`
 - **New entries:** ${NEW_COUNT}
 
 Amendments that are enabled on mainnet but _not yet supported_ by the local rippled binary are listed in the workflow log and skipped — they will appear automatically on the next run after the Docker image is upgraded.
@@ -119,7 +120,9 @@ Amendments that are enabled on mainnet but _not yet supported_ by the local ripp
 
 - [ ] Cross-check each new hash against [XRPL Known Amendments](https://xrpl.org/resources/known-amendments) or the rippled changelog
 - [ ] Confirm the amendment name in the diff matches the hash (names in the RPC response can alias; hash is canonical)
-- [ ] Start a fresh local node (\`xrpl-up reset && xrpl-up node\`) and verify \`xrpl-up amendment list\` shows all new amendments as enabled
-- [ ] Run \`npm run test:e2e:local\` to confirm the sandbox starts cleanly with the updated genesis list
+- [ ] Start a fresh local node (`xrpl-up reset && xrpl-up node`) and verify `xrpl-up amendment list` shows all new amendments as enabled
+- [ ] Run `npm run test:e2e:local` to confirm the sandbox starts cleanly with the updated genesis list
 
-> ⚠️ Do not auto-merge. Human review required before this lands in \`main\`."
+> ⚠️ Do not auto-merge. Human review required before this lands in `main`.
+PRBODY
+)"
