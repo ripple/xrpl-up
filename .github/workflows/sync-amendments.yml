@@ -37,7 +37,7 @@ jobs:
         run: npm ci
 
       # Start a local rippled node so we can query which amendments the
-      # pinned Docker image (xrpllabsofficial/xrpld:latest) supports.
+      # pinned Docker image (xrpllabsofficial/xrpld:3.2.0) supports.
       # The node --local --persist --detach command blocks until rippled
       # is accepting connections, then exits 0.
       - name: Start local rippled
@@ -110,7 +110,7 @@ jobs:
 Automated monthly sync of the \`[amendments]\` genesis list in \`src/core/compose.ts\`.
 
 - **Source:** mainnet via \`feature\` RPC (\`wss://xrplcluster.com\`)
-- **Filter:** amendments enabled on mainnet AND supported by \`xrpllabsofficial/xrpld:latest\`
+- **Filter:** amendments enabled on mainnet AND supported by \`xrpllabsofficial/xrpld:3.2.0\`
 - **New entries:** ${NEW_COUNT}
 
 Amendments that are enabled on mainnet but _not yet supported_ by the local rippled binary are listed in the workflow log and skipped — they will appear automatically on the next run after the Docker image is upgraded.

@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       force_image:
-        description: 'Force-test a specific image (e.g. rippleci/rippled:3.1.2)'
+        description: 'Force-test a specific image (e.g. rippleci/rippled:3.2.0)'
         required: false
         type: string
   repository_dispatch:
-    types: [test-rippled-image]  # gh api repos/ripple/xrpl-up/dispatches -f event_type=test-rippled-image -f 'client_payload[force_image]=rippleci/rippled:3.1.2'
+    types: [test-rippled-image]  # gh api repos/ripple/xrpl-up/dispatches -f event_type=test-rippled-image -f 'client_payload[force_image]=rippleci/rippled:3.2.0'
 
 jobs:
   # ── 1. Detect new images ───────────────────────────────────────────────────
