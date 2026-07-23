@@ -99,7 +99,7 @@ Host
 
 | Service | Image / Build | Ports | Key details |
 |---|---|---|---|
-| `rippled` | `xrpllabsofficial/xrpld:3.2.0` (`--image`) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. |
+| `rippled` | `rippleci/xrpld:3.2.0` (`--image`) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. |
 | `faucet` | Built from `dist/faucet-server/` | `3001:3001` | Depends on rippled healthcheck. Connects via `host.docker.internal`. |
 
 Both share `xrpl-net` (bridge driver). `--exit-on-crash` disables restart and wraps rippled in a shell that detects `Logic error:` in stderr and exits 134.
@@ -472,9 +472,9 @@ Required for all `--local` commands. Any Docker Engine version that supports Com
 
 ### 9.3 rippled Version Pinning Strategy
 
-- Default image: `xrpllabsofficial/xrpld:3.2.0`
+- Default image: `rippleci/xrpld:3.2.0`
 - The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.2.0**.
-- Pinning to a specific tag (`--image xrpllabsofficial/xrpld:3.2.0`) is supported via `--image`.
+- Pinning to a specific tag (`--image rippleci/xrpld:3.2.0`) is supported via `--image`.
 - If a new rippled release adds amendments not in the `[amendments]` stanza, use `xrpl-up amendment enable <name> --local` to queue them for the next genesis start.
 - **Devnet compatibility:** XRPL Devnet may enable pre-release amendments ahead of the rippled version bundled with this tool. Transactions relying on such amendments may fail on the local sandbox. Use `xrpl-up amendment list --local --diff devnet` to identify gaps.
 

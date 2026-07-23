@@ -86,7 +86,7 @@ program
   .option(
     '--image <image>',
     'Docker image to use for local rippled',
-    'xrpllabsofficial/xrpld:3.2.0'
+    'rippleci/xrpld:3.2.0'
   )
   .option(
     '--ledger-interval <ms>',

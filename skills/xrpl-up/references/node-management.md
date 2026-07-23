@@ -23,7 +23,7 @@ xrpl-up start --local-network
 xrpl-up start --ledger-interval 500
 
 # Use a specific Docker image
-xrpl-up start --image xrpllabsofficial/xrpld:3.2.0
+xrpl-up start --image rippleci/xrpld:3.2.0
 ```
 
 ### `status` — Show node health
