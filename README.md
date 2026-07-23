@@ -2,6 +2,8 @@
 
 CLI for XRPL local development and scripting. Spin up a local sandbox with pre-funded accounts, run scripts, manage snapshots, and interact with remote testnet/devnet endpoints from one tool.
 
+> **This tool is intended for developer use when doing XRPL development, or for users who want to try out XRPL functionality on local/Devnet/Testnet. It is NOT intended to be used with the XRPL Mainnet with real XRP and other tokens.** XRPL Mainnet use requires following security best practices to secure your private key, which this tool does not provide. The developers of this project take no responsibility for loss of funds if this tool is used with the XRPL Mainnet.
+
 ![demo](demo.gif)
 
 ## Prerequisites
