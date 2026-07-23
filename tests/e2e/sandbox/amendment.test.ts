@@ -156,6 +156,7 @@ describe("sandbox amendments match mainnet", () => {
       "CryptoConditionsSuite", "NonFungibleTokensV1", "fixNFTokenDirV1",
       "fixNFTokenNegOffer", "fixXChainRewardRounding",
       "XChainBridge", "LendingProtocol", "SingleAssetVault",
+      "fixCleanup3_1_3",
     ]);
 
     // Parse all amendment lines from the output
