@@ -464,7 +464,7 @@ When `--exit-on-crash` is active and the foreground process is running, a `docke
 
 ### 9.1 Node.js
 
-Minimum required: **Node.js 20** (`engines.node` in `package.json`: `>=20.0.0`; runtime guard in `src/cli.ts`).
+Minimum required: **Node.js 22** (`engines.node` in `package.json`: `>=22.0.0`; runtime guard in `src/cli.ts`). Node 20 was dropped after reaching its own upstream end-of-life (2026-04-30) and after its bundled `undici` (Node's native `fetch()` implementation) proved less reliable than Node 22/24's under the concurrent real-network load these e2e tests generate.
 
 ### 9.2 Docker
 
