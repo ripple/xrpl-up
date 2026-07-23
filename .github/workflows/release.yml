@@ -554,14 +554,19 @@ jobs:
           echo "tag_name=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
-        with:
-          tag_name: "${{ steps.create_tag.outputs.tag_name }}"
-          name: "${{ steps.create_tag.outputs.tag_name }}"
-          draft: false
-          generate_release_notes: true
-          prerelease: ${{ needs.get_version.outputs.is_beta == 'true' }}
-          make_latest: ${{ needs.get_version.outputs.is_beta != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.create_tag.outputs.tag_name }}
+          IS_BETA: ${{ needs.get_version.outputs.is_beta }}
+        run: |
+          set -euo pipefail
+          ARGS=(--title "$TAG_NAME" --generate-notes)
+          if [[ "$IS_BETA" == "true" ]]; then
+            ARGS+=(--prerelease --latest=false)
+          else
+            ARGS+=(--latest)
+          fi
+          gh release create "$TAG_NAME" "${ARGS[@]}"
 
       - name: Notify Slack success
         if: success()
