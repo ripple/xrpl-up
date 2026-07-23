@@ -408,7 +408,15 @@ main().catch((err) => {
 const EXAMPLE_MPT_SCRIPT = `// scripts/example-mpt.ts
 // Issue and transfer a Multi-Purpose Token (MPT) on XRPL testnet.
 // Run with: xrpl-up run scripts/example-mpt.ts
-import { Client, MPTokenIssuanceCreateFlags } from 'xrpl';
+import { Client, MPTokenIssuanceCreateFlags, decodeAccountID } from 'xrpl';
+
+/** Compute the 192-bit MPTokenIssuanceID from issuer address and sequence number. */
+function computeMPTIssuanceID(sequence: number, address: string): string {
+  const seq = Buffer.alloc(4);
+  seq.writeUInt32BE(sequence);
+  const accountId = Buffer.from(decodeAccountID(address));
+  return (seq.toString('hex') + accountId.toString('hex')).toUpperCase();
+}
 
 async function main() {
   const networkUrl = process.env.XRPL_NETWORK_URL ?? 'wss://s.altnet.rippletest.net:51233';
@@ -438,7 +446,8 @@ async function main() {
   const issuanceNode = issuanceMeta?.AffectedNodes?.find(
     (n: any) => n.CreatedNode?.LedgerEntryType === 'MPTokenIssuance'
   );
-  const issuanceId = issuanceNode?.CreatedNode?.LedgerIndex as string;
+  const { Sequence: seq } = issuanceNode?.CreatedNode?.NewFields as { Sequence: number };
+  const issuanceId = computeMPTIssuanceID(seq, issuer.address);
   console.log('✓ MPT Issuance ID:', issuanceId);
 
   // ── 3. Holder opts in (MPTokenAuthorize) ─────────────────────────────────
@@ -850,7 +859,15 @@ const EXAMPLE_MPT_LOCAL = `// scripts/example-mpt.ts
 // Issue and transfer a Multi-Purpose Token (MPT) on the local xrpl-up sandbox.
 // Run with: xrpl-up run scripts/example-mpt.ts
 // Requires: xrpl-up start --local  (running in another terminal)
-import { Client, Wallet, MPTokenIssuanceCreateFlags } from 'xrpl';
+import { Client, Wallet, MPTokenIssuanceCreateFlags, decodeAccountID } from 'xrpl';
+
+/** Compute the 192-bit MPTokenIssuanceID from issuer address and sequence number. */
+function computeMPTIssuanceID(sequence: number, address: string): string {
+  const seq = Buffer.alloc(4);
+  seq.writeUInt32BE(sequence);
+  const accountId = Buffer.from(decodeAccountID(address));
+  return (seq.toString('hex') + accountId.toString('hex')).toUpperCase();
+}
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
 const FAUCET_URL  = 'http://localhost:3001';
@@ -888,7 +905,8 @@ async function main() {
   const issuanceNode = issuanceMeta?.AffectedNodes?.find(
     (n: any) => n.CreatedNode?.LedgerEntryType === 'MPTokenIssuance'
   );
-  const issuanceId = issuanceNode?.CreatedNode?.LedgerIndex as string;
+  const { Sequence: seq } = issuanceNode?.CreatedNode?.NewFields as { Sequence: number };
+  const issuanceId = computeMPTIssuanceID(seq, issuer.address);
   console.log('✓ MPT Issuance ID:', issuanceId);
 
   // ── 3. Holder opts in (MPTokenAuthorize) ─────────────────────────────────
@@ -1064,7 +1082,7 @@ async function main() {
   console.log(\`Trader USD balance: \${usdLine?.balance ?? '0'}\`);
 
   console.log('\\n✓ AMM example complete!');
-  console.log(\`  Query pool: xrpl-up amm info XRP USD.\${issuer.address} --local\`);
+  console.log(\`  Query pool: xrpl-up amm info --asset XRP --asset2 USD/\${issuer.address} --node local\`);
 
   await client.disconnect();
 }
