@@ -9,7 +9,7 @@ export const LOCAL_WS_PORT = 6006;
 export const FAUCET_PORT = 3001;
 export const LOCAL_WS_URL = `ws://localhost:${LOCAL_WS_PORT}`;
 export const FAUCET_URL = `http://localhost:${FAUCET_PORT}`;
-export const DEFAULT_IMAGE = 'xrpllabsofficial/xrpld:latest';
+export const DEFAULT_IMAGE = 'rippleci/xrpld:3.2.0';
 
 const XRPL_UP_DIR = path.join(os.homedir(), '.xrpl-up');
 const COMPOSE_FILE = path.join(XRPL_UP_DIR, 'docker-compose.yml');
@@ -110,14 +110,14 @@ small
 
 [node_db]
 type=NuDB
-path=/var/lib/rippled/db/nudb
+path=/var/lib/xrpld/db/nudb
 advisory_delete=0
 
 [database_path]
-/var/lib/rippled/db
+/var/lib/xrpld/db
 
 [debug_logfile]
-/var/log/rippled/debug.log
+/var/log/xrpld/debug.log
 
 [sntp_servers]
 time.windows.com
@@ -150,7 +150,7 @@ validators.txt
 # To enable additional amendments, run:
 #   xrpl-up amendment enable <name> --local
 # then reset and restart the node.
-# Hashes verified against s1.ripple.com on 2026-04-06.
+# Hashes verified against s1.ripple.com on 2026-06-23 (rippled 3.2.0).
 [amendments]
 00C1FC4A53E60AB02C864641002B3172F38677E29C26C5406685179B37E1EDAC RequireFullyCanonicalSig
 03BDC0099C4E14163ADA272C1B6F6FABB448CC3E51F522F978041E4B57D9158C fixNFTokenReserve
@@ -227,6 +227,8 @@ CA7C02118BA27599528543DFE77BA6838D1B0F43B447D4D7F53523CE6A0E9AC2 fix1543
 DAF3A6EB04FA5DC51E8E4F23E9B7022B693EFA636F23F22664746C77B5786B23 DeepFreeze
 FBD513F1B893AC765B78F250E6FFA6A11B573209D1842ADC787C850696741288 fix1578
 B4E4F5D2D6FB84DF7399960A732309C9FD530EAE5941838160042833625A6076 NegativeUNL
+21B8D2F76F68E11E9C077A43BBBC394136E9987E99DDB73966DD68419467E431 fixCleanup3_2_0
+303ACB16CF8DBD3B5C34F131A9D19A7DE01AE05F480A8A682B869D1B4AAC8CFC fixCleanup3_1_3
 # sync:end
 `.trim();
 }
@@ -355,11 +357,24 @@ function generateStandaloneYaml(
 
   const restartLine = noRestart ? '\n    restart: "no"' : '';
 
-  const RIPPLED_BIN = '/opt/ripple/bin/rippled';
+  // Two INDEPENDENT properties of an image — do not conflate them:
+  //
+  // 1. Binary path — images named "xrpld" ship the binary at /usr/bin/xrpld;
+  //    the pre-rebrand "rippled" name uses the legacy /opt/ripple/bin/rippled.
+  //    Verified true for both xrpllabsofficial/xrpld and rippleci/xrpld.
+  //
+  // 2. Whether the entrypoint auto-injects --conf — ONLY xrpllabsofficial/xrpld
+  //    has a real wrapper script (/entrypoint.sh) that copies the mounted config
+  //    into place internally. rippleci/xrpld's entrypoint is the raw binary
+  //    (no wrapper) — passing no --conf there means rippled silently falls back
+  //    to its own built-in defaults. This must default to "needs an explicit
+  //    flag" for anything that isn't the one confirmed wrapper image.
+  const imageRepo = image.split(':')[0];
+  const usesNewXrpldBinary = imageRepo === 'xrpld' || imageRepo.endsWith('/xrpld');
+  const RIPPLED_BIN = usesNewXrpldBinary ? '/usr/bin/xrpld' : '/opt/ripple/bin/rippled';
   const RIPPLED_CFG = '--conf /config/rippled.cfg';
-  // xrpllabsofficial/xrpld entrypoint already injects --conf internally;
-  // other images (e.g. rippleci/rippled) use the raw rippled binary and need it explicitly.
-  const needsConfFlag = !image.startsWith('xrpllabsofficial/xrpld');
+  const hasConfInjectingEntrypoint = imageRepo === 'xrpllabsofficial/xrpld';
+  const needsConfFlag = !hasConfInjectingEntrypoint;
   const confArg = needsConfFlag ? `, "--conf", "/config/rippled.cfg"` : '';
   const entrypointLine = noRestart
     ? `\n    entrypoint: ["/bin/sh", "-c", "${RIPPLED_BIN} ${RIPPLED_CFG} -a --start 2>/tmp/rip.err & RPID=$! ; wait $RPID ; EC=$? ; cat /tmp/rip.err >&2 ; grep -qF Logic\\ error: /tmp/rip.err 2>/dev/null && exit 134 ; exit $EC"]`
@@ -419,13 +434,23 @@ function generateConsensusYaml(
 ): string {
   writeRippledConfig(debug, false);
 
+  // Same two independent properties as standalone mode (see generateStandaloneYaml
+  // above) — binary path and whether the entrypoint auto-injects --conf. Only
+  // xrpllabsofficial/xrpld has the /entrypoint.sh wrapper; anything else (e.g.
+  // rippleci/xrpld) needs the binary invoked directly with an explicit --conf.
+  const imageRepo = image.split(':')[0];
+  const usesNewXrpldBinary = imageRepo === 'xrpld' || imageRepo.endsWith('/xrpld');
+  const RIPPLED_BIN = usesNewXrpldBinary ? '/usr/bin/xrpld' : '/opt/ripple/bin/rippled';
+  const hasConfInjectingEntrypoint = imageRepo === 'xrpllabsofficial/xrpld';
+  const confFlag = hasConfInjectingEntrypoint ? '' : ' --conf /config/rippled.cfg';
+  const startCmd = hasConfInjectingEntrypoint ? '/entrypoint.sh' : `${RIPPLED_BIN}${confFlag}`;
+
   // Node1 (primary): creates genesis with --start on first boot, --load on resume.
   // Node2 (peer): syncs from node1 on first boot (no flags), --load on resume.
-  // Uses the image's native /entrypoint.sh which copies configs and runs rippled.
   const entrypointPrimary =
-    `["/bin/bash", "-c", "if [ -f /var/lib/rippled/db/ledger.db ]; then exec /entrypoint.sh --load; else exec /entrypoint.sh --start; fi"]`;
+    `["/bin/bash", "-c", "if [ -f /var/lib/xrpld/db/ledger.db ]; then exec ${startCmd} --load; else exec ${startCmd} --start; fi"]`;
   const entrypointPeer =
-    `["/bin/bash", "-c", "if [ -f /var/lib/rippled/db/ledger.db ]; then exec /entrypoint.sh --load; else exec /entrypoint.sh; fi"]`;
+    `["/bin/bash", "-c", "if [ -f /var/lib/xrpld/db/ledger.db ]; then exec ${startCmd} --load; else exec ${startCmd}; fi"]`;
 
   return `# Generated by xrpl-up — do not edit manually
 # 2-node private consensus network (default mode)
@@ -442,7 +467,7 @@ services:
     volumes:
       - "${RIPPLED_CFG_FILE_NODE1}:/config/rippled.cfg:ro"
       - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
-      - rippled-db:/var/lib/rippled/db
+      - rippled-db:/var/lib/xrpld/db
     networks:
       - xrpl-net
     healthcheck:
@@ -458,7 +483,7 @@ services:
     volumes:
       - "${RIPPLED_CFG_FILE_NODE2}:/config/rippled.cfg:ro"
       - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
-      - rippled-peer-db:/var/lib/rippled/db
+      - rippled-peer-db:/var/lib/xrpld/db
     networks:
       - xrpl-net
     depends_on:
@@ -577,7 +602,7 @@ function volumeHasData(volumeName: string): boolean {
  * amendments already activated through voting. This avoids the ~38-minute
  * amendment voting delay on first boot.
  *
- * The entrypoint checks for /var/lib/rippled/db/ledger.db and uses
+ * The entrypoint checks for /var/lib/xrpld/db/ledger.db and uses
  * --load (instead of --start) when it exists, so pre-seeded volumes
  * boot immediately into a functioning consensus network.
  */

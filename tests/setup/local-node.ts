@@ -123,7 +123,7 @@ async function startNode(): Promise<void> {
     timeout: 30_000,
     env: { ...process.env },
   });
-  // Allow CI to test a specific rippled image (e.g. rippleci/rippled:3.1.2)
+  // Allow CI to test a specific rippled image (e.g. rippleci/rippled:3.2.0)
   const customImage = process.env.XRPL_RIPPLED_IMAGE;
   const imageArgs = customImage ? ["--image", customImage] : [];
   if (customImage) {

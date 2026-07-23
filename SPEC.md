@@ -99,7 +99,7 @@ Host
 
 | Service | Image / Build | Ports | Key details |
 |---|---|---|---|
-| `rippled` | `xrpllabsofficial/xrpld:latest` (`--image`) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. |
+| `rippled` | `rippleci/xrpld:3.2.0` (`--image`) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. |
 | `faucet` | Built from `dist/faucet-server/` | `3001:3001` | Depends on rippled healthcheck. Connects via `host.docker.internal`. |
 
 Both share `xrpl-net` (bridge driver). `--exit-on-crash` disables restart and wraps rippled in a shell that detects `Logic error:` in stderr and exits 134.
@@ -310,7 +310,7 @@ Snapshots capture the full state of a `--local-network` session: ledger database
 
 ### 5.6 Amendment Management
 
-**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). This stanza lists all amendments known to rippled 3.1.1 by hash and name. Approximately 70+ amendments are pre-enabled.
+**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). This stanza lists all amendments known to rippled 3.2.0 by hash and name. Approximately 70+ amendments are pre-enabled.
 
 **`amendment list`**:
 - Calls `feature` RPC on the target network
@@ -464,7 +464,7 @@ When `--exit-on-crash` is active and the foreground process is running, a `docke
 
 ### 9.1 Node.js
 
-Minimum required: **Node.js 20** (`engines.node` in `package.json`: `>=20.0.0`; runtime guard in `src/cli.ts`).
+Minimum required: **Node.js 22** (`engines.node` in `package.json`: `>=22.0.0`; runtime guard in `src/cli.ts`). Node 20 was dropped after reaching its own upstream end-of-life (2026-04-30) and after its bundled `undici` (Node's native `fetch()` implementation) proved less reliable than Node 22/24's under the concurrent real-network load these e2e tests generate.
 
 ### 9.2 Docker
 
@@ -472,9 +472,9 @@ Required for all `--local` commands. Any Docker Engine version that supports Com
 
 ### 9.3 rippled Version Pinning Strategy
 
-- Default image: `xrpllabsofficial/xrpld:latest`
-- The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.1.1**.
-- Pinning to a specific tag (`--image xrpllabsofficial/xrpld:3.1.1`) is supported via `--image`.
+- Default image: `rippleci/xrpld:3.2.0`
+- The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.2.0**.
+- Pinning to a specific tag (`--image rippleci/xrpld:3.2.0`) is supported via `--image`.
 - If a new rippled release adds amendments not in the `[amendments]` stanza, use `xrpl-up amendment enable <name> --local` to queue them for the next genesis start.
 - **Devnet compatibility:** XRPL Devnet may enable pre-release amendments ahead of the rippled version bundled with this tool. Transactions relying on such amendments may fail on the local sandbox. Use `xrpl-up amendment list --local --diff devnet` to identify gaps.
 
