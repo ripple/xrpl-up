@@ -34,7 +34,7 @@ jobs:
       is_beta: ${{ steps.validate_inputs.outputs.is_beta }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.release_branch_name }}
@@ -133,7 +133,7 @@ jobs:
       release_pr_url: ${{ steps.ensure_pr.outputs.pr_url }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ needs.get_version.outputs.release_branch }}
@@ -181,13 +181,13 @@ jobs:
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           registry-url: "https://registry.npmjs.org"
 
       - name: Download dist artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
@@ -195,11 +195,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install cyclonedx-npm
+        run: npm install -g @cyclonedx/cyclonedx-npm@4.0.2
+
       - name: Generate CycloneDX SBOM
-        run: npx --no-install cyclonedx-npm --output-format json --output-file sbom.json
+        run: cyclonedx-npm --output-format json --output-file sbom.json
 
       - name: Scan SBOM for vulnerabilities using Trivy
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           scan-type: sbom
           scan-ref: sbom.json
@@ -221,7 +224,7 @@ jobs:
             https://owasp-dt-api.prod.ripplex.io/api/v1/bom
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
@@ -231,7 +234,7 @@ jobs:
 
       - name: Upload vulnerability report artifact
         id: upload_vuln
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: vulnerability-report
           path: vuln-report.txt
@@ -291,7 +294,7 @@ jobs:
           echo "TARBALL=${TARBALL}" >> "$GITHUB_ENV"
 
       - name: Upload tarball as artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: npm-package-tarball
           path: ${{ env.TARBALL }}
@@ -327,7 +330,7 @@ jobs:
       reviewers_sec: ${{ steps.get_reviewers.outputs.reviewers_sec }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -501,19 +504,19 @@ jobs:
           fi
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org/'
 
       - name: Checkout release branch
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ needs.get_version.outputs.release_branch }}
 
       - name: Download tarball artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@v4
         with:
           name: npm-package-tarball
           path: dist
@@ -554,7 +557,7 @@ jobs:
           echo "tag_name=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: "${{ steps.create_tag.outputs.tag_name }}"
           name: "${{ steps.create_tag.outputs.tag_name }}"

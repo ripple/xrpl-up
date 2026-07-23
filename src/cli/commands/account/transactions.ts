@@ -52,7 +52,7 @@ export const transactionsCommand = new Command("transactions")
         marker?: unknown;
       };
 
-      const transactions = (result.transactions ?? []).slice(0, limit);
+      const transactions = result.transactions ?? [];
 
       if (options.json) {
         const out: { transactions: TxEntry[]; marker?: unknown } = { transactions };

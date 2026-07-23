@@ -6,33 +6,30 @@ on:
   workflow_dispatch:
     inputs:
       force_image:
-        description: 'Force-test a specific image (e.g. rippleci/rippled:3.2.0)'
+        description: 'Force-test a specific image (e.g. rippleci/rippled:3.1.2)'
         required: false
         type: string
   repository_dispatch:
-    types: [test-rippled-image]  # gh api repos/ripple/xrpl-up/dispatches -f event_type=test-rippled-image -f 'client_payload[force_image]=rippleci/rippled:3.2.0'
+    types: [test-rippled-image]  # gh api repos/ripple/xrpl-up/dispatches -f event_type=test-rippled-image -f 'client_payload[force_image]=rippleci/rippled:3.1.2'
 
 jobs:
   # ── 1. Detect new images ───────────────────────────────────────────────────
   detect:
     name: Detect new rippled images
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     outputs:
       images: ${{ steps.detect.outputs.images }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@v4
 
       - name: Detect new images
         id: detect
-        env:
-          FORCE_IMAGE: ${{ inputs.force_image || github.event.client_payload.force_image }}
         run: |
           DIGESTS=".github/rippled-image-digests.json"
           IMAGES="[]"
 
           # ── Force mode (workflow_dispatch or repository_dispatch) ────────
+          FORCE_IMAGE="${{ inputs.force_image || github.event.client_payload.force_image }}"
           if [ -n "$FORCE_IMAGE" ]; then
             IMAGES=$(jq -n --arg img "$FORCE_IMAGE" '[$img]')
             echo "Force-testing image: $FORCE_IMAGE"
@@ -75,14 +72,12 @@ jobs:
     needs: detect
     if: needs.detect.outputs.images != '[]'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
         image: ${{ fromJson(needs.detect.outputs.images) }}
-        node-version: [22, 24]
+        node-version: [20, 22, 24]
         mode: [standalone, local-network, snapshot, testnet]
         include:
           - mode: standalone
@@ -94,9 +89,9 @@ jobs:
           - mode: testnet
             test-script: test:e2e
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -105,9 +100,7 @@ jobs:
       - run: npm run build
 
       - name: Pull rippled image
-        env:
-          IMAGE: ${{ matrix.image }}
-        run: docker pull "$IMAGE"
+        run: docker pull ${{ matrix.image }}
 
       - name: Run e2e tests (${{ matrix.mode }})
         env:
@@ -126,7 +119,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@v4
 
       - name: Update digest file
         run: |
