@@ -599,11 +599,9 @@ function volumeHasData(volumeName: string): boolean {
 
 /**
  * Guard against silently booting a --local-network image against a
- * persistent volume laid out by a different image. Real precedent: the
- * 3.1.x → 3.2.0 upgrade moved the DB/log paths (/var/lib/rippled →
- * /var/lib/xrpld), so an old volume mounted under a new image's expected
- * path just doesn't have the ledger the new container is looking for —
- * previously this failed unpredictably instead of with a clear message.
+ * persistent volume laid out by a different image. Different rippled
+ * images can lay out their data directory differently, so an old volume
+ * booted under a new image can fail unpredictably instead of cleanly.
  *
  * Only blocks when there's actually data at risk (a fresh volume has
  * nothing to be incompatible with) and only compares against a recorded
@@ -618,10 +616,9 @@ function checkLocalNetworkImageCompatibility(image: string): void {
 
   throw new Error(
     `This --local-network sandbox was last started with ${previousImage}, ` +
-    `but you're starting it with ${image}. A different rippled image can lay ` +
-    `out its data directory differently (e.g. the 3.1.x → 3.2.0 upgrade moved ` +
-    `/var/lib/rippled → /var/lib/xrpld), so booting the new image against the ` +
-    `old volume can fail unpredictably instead of cleanly.\n\n` +
+    `but you're starting it with ${image}. Different rippled images can lay ` +
+    `out their data directory differently, so booting the new image against ` +
+    `the old volume can fail unpredictably instead of cleanly.\n\n` +
     `Run "xrpl-up reset" first, then start again with the new image.`
   );
 }
