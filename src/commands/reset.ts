@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import chalk from 'chalk';
 import ora from 'ora';
-import { composeDown, VOLUME_NAME, PEER_VOLUME_NAME } from '../core/compose';
+import { composeDown, VOLUME_NAME, PEER_VOLUME_NAME, clearLocalNetworkImageRecord } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
 
@@ -46,6 +46,9 @@ export function resetCommand(options: ResetOptions = {}): void {
     }
   }
   stopSpinner.succeed(chalk.dim('Sandbox stopped and volumes removed'));
+
+  // Volumes are gone — any previously recorded --local-network image is stale
+  clearLocalNetworkImageRecord();
 
   // Clear WalletStore
   new WalletStore('local').clear();

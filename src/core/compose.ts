@@ -74,6 +74,8 @@ const RIPPLED_CFG_FILE_NODE2 = path.join(XRPL_UP_DIR, 'rippled-node2.cfg');
 const VALIDATORS_CFG_FILE    = path.join(XRPL_UP_DIR, 'validators.txt');
 /** Extra amendments written by `amendment enable --local`; merged at genesis. */
 export const EXTRA_AMENDMENTS_FILE = path.join(XRPL_UP_DIR, 'genesis-amendments.txt');
+/** Records which image last started the persistent --local-network volumes. */
+const LOCAL_NETWORK_IMAGE_FILE = path.join(XRPL_UP_DIR, 'local-network-image.txt');
 export { RIPPLED_CFG_FILE };
 
 /**
@@ -596,6 +598,44 @@ function volumeHasData(volumeName: string): boolean {
 }
 
 /**
+ * Guard against silently booting a --local-network image against a
+ * persistent volume laid out by a different image. Real precedent: the
+ * 3.1.x → 3.2.0 upgrade moved the DB/log paths (/var/lib/rippled →
+ * /var/lib/xrpld), so an old volume mounted under a new image's expected
+ * path just doesn't have the ledger the new container is looking for —
+ * previously this failed unpredictably instead of with a clear message.
+ *
+ * Only blocks when there's actually data at risk (a fresh volume has
+ * nothing to be incompatible with) and only compares against a recorded
+ * image (older xrpl-up versions never wrote this file, so upgrading
+ * xrpl-up itself doesn't spuriously trigger this).
+ */
+function checkLocalNetworkImageCompatibility(image: string): void {
+  if (!fs.existsSync(LOCAL_NETWORK_IMAGE_FILE)) return;
+  const previousImage = fs.readFileSync(LOCAL_NETWORK_IMAGE_FILE, 'utf-8').trim();
+  if (!previousImage || previousImage === image) return;
+  if (!volumeHasData(VOLUME_NAME)) return;
+
+  throw new Error(
+    `This --local-network sandbox was last started with ${previousImage}, ` +
+    `but you're starting it with ${image}. A different rippled image can lay ` +
+    `out its data directory differently (e.g. the 3.1.x → 3.2.0 upgrade moved ` +
+    `/var/lib/rippled → /var/lib/xrpld), so booting the new image against the ` +
+    `old volume can fail unpredictably instead of cleanly.\n\n` +
+    `Run "xrpl-up reset" first, then start again with the new image.`
+  );
+}
+
+function recordLocalNetworkImage(image: string): void {
+  fs.writeFileSync(LOCAL_NETWORK_IMAGE_FILE, image);
+}
+
+/** Called by `xrpl-up reset` — the volumes are gone, so the recorded image is stale. */
+export function clearLocalNetworkImageRecord(): void {
+  try { fs.unlinkSync(LOCAL_NETWORK_IMAGE_FILE); } catch { /* not present — ok */ }
+}
+
+/**
  * Seed consensus volumes with pre-built genesis DB if they are empty.
  *
  * Uses pre-built tarballs containing a ledger at ~seq 782 with all mainnet
@@ -647,6 +687,8 @@ function seedConsensusVolumes(): void {
  * With --local-network (noConsensus=false): 2-node consensus network. Volumes preserved.
  */
 export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1'): Promise<string> {
+  if (!noConsensus) checkLocalNetworkImageCompatibility(image);
+
   writeComposeFile(image, noConsensus, debug, ledgerIntervalMs, configPath, noRestart, bindAddress);
   if (noConsensus) composeDown(); // clean slate only in standalone mode
 
@@ -681,6 +723,8 @@ export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debu
   }
 
   await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
+
+  if (!noConsensus) recordLocalNetworkImage(image);
 
   return LOCAL_WS_URL;
 }
