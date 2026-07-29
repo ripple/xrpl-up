@@ -9,7 +9,7 @@ Combine a **SignerList** (2-of-3 multi-signature) with **Tickets** (reserved seq
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -23,8 +23,8 @@ export XRPL_NODE=local
 The treasury account + three signers (Alice, Bob, Carol):
 
 ```bash
-xrpl-up faucet --local; xrpl-up faucet --local
-xrpl-up faucet --local; xrpl-up faucet --local
+xrpl-up faucet --network local; xrpl-up faucet --network local
+xrpl-up faucet --network local; xrpl-up faucet --network local
 # Run xrpl-up accounts --local to see all four:
 xrpl-up accounts --local
 ```
@@ -47,7 +47,8 @@ CAROL=rCarolXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ### 1b. Install a 2-of-3 signer list on the treasury
 
 ```bash
-xrpl-up accountset signer-list 2 "$ALICE:1,$BOB:1,$CAROL:1" \
+xrpl-up multisig set --quorum 2 \
+  --signer $ALICE:1 --signer $BOB:1 --signer $CAROL:1 \
   --seed $TREASURY_SEED
 # ✔ Signer list set  quorum 2  signers: rAliceXXX(1) rBobXXX(1) rCarolXXX(1)
 ```
@@ -84,7 +85,7 @@ Tickets let co-signers prepare transactions independently — no sequence depend
 # The treasury account reserves 3 tickets
 # (requires multi-sig now that master key is disabled — use a script for this
 #  or reserve tickets BEFORE disabling the master key)
-xrpl-up ticket create 3 --seed $TREASURY_SEED
+xrpl-up ticket create --count 3 --seed $TREASURY_SEED
 # ✔ 3 tickets created
 #   sequences: 10, 11, 12
 

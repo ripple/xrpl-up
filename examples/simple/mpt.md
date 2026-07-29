@@ -9,7 +9,7 @@ MPT is XRPL's next-generation fungible token standard. Unlike IOU trust lines, M
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -18,21 +18,21 @@ export XRPL_NODE=local
 
 ## 1. Create an MPT issuance
 
-Auto-fund a wallet and mint a new token:
+Fund an issuer account, then mint a new token:
 
 ```bash
-# Minimal — just a transferable token
-xrpl-up mptoken issuance create --flags can-transfer
-# ✔ MPT issuance created
-#   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   issuer       rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   seed         sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-#
-#   Hint: xrpl-up mptoken authorize 00070C44... --seed <holder-seed>
+xrpl-up faucet --network local
+# → seed: sEdIssuerSeedXXX  address: rIssuerXXX
 
-MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
 ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# Minimal — just a transferable token
+xrpl-up mptoken issuance create --flags can-transfer --seed $ISSUER_SEED
+# ✔ MPT issuance created
+#   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 ### Full issuance with all controls
@@ -80,7 +80,7 @@ Before a holder can receive MPTs they must opt in by running `mptoken authorize`
 
 ```bash
 # Fund a holder wallet
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdHolderSeedXXX  address: rHolderXXX
 
 HOLDER_SEED=sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
@@ -137,7 +137,7 @@ xrpl-up account mptokens $HOLDER
 
 ```bash
 # Fund a second holder
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdHolder2SeedXXX  address: rHolder2XXX
 
 HOLDER2_SEED=sEdHolder2SeedXXXXXXXXXXXXXXXXXXXXX
@@ -203,12 +203,12 @@ xrpl-up mptoken issuance destroy $MPT_ID --seed $ISSUER_SEED
 ## Full lifecycle at a glance
 
 ```bash
-# 1. Create
-xrpl-up mptoken issuance create --flags can-transfer,can-clawback
-# → MPT_ID, ISSUER_SEED, ISSUER
+# 1. Create (issuer already funded via `xrpl-up faucet --network local`)
+xrpl-up mptoken issuance create --flags can-transfer,can-clawback --seed $ISSUER_SEED
+# → MPT_ID
 
 # 2. Holder opts in
-xrpl-up faucet --local    # → HOLDER, HOLDER_SEED
+xrpl-up faucet --network local    # → HOLDER, HOLDER_SEED
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED
 
 # 3. Send tokens

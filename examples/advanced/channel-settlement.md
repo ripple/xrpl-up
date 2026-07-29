@@ -9,7 +9,7 @@ This guide goes beyond the quick-start [payment-channel.md](../simple/payment-ch
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -19,8 +19,8 @@ export XRPL_NODE=local
 ## Step 1: Create accounts
 
 ```bash
-xrpl-up faucet --local
-xrpl-up faucet --local
+xrpl-up faucet --network local
+xrpl-up faucet --network local
 xrpl-up accounts --local
 
 SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
@@ -62,22 +62,22 @@ xrpl-up channel list $SENDER
 
 The sender issues signed claims as service is delivered. Each claim covers the **cumulative total**:
 
+`channel sign` prints only the raw signature hex (no other fields) — get the channel's public key once via `channel list` (see Step 2):
+
 ```bash
+PUBKEY=ED1234XXXXXXXXXX   # from `xrpl-up channel list $SENDER`
+
 # After delivering unit 1 (worth 5 XRP):
-xrpl-up channel sign $CHANNEL_ID 5 --seed $SENDER_SEED
-# ✔ Claim signed (off-chain, no tx fee)
-#   amount     5 XRP
-#   signature  3045...XXXXXXXXXX
-#   publicKey  ED1234XXXXXXXXXX
+xrpl-up channel sign --channel $CHANNEL_ID --amount 5 --seed $SENDER_SEED
+# 3045...XXXXXXXXXX
 SIG_5=3045...XXXXXXXXXX
-PUBKEY=ED1234XXXXXXXXXX
 
 # After delivering unit 2 (cumulative: 12 XRP):
-xrpl-up channel sign $CHANNEL_ID 12 --seed $SENDER_SEED
+xrpl-up channel sign --channel $CHANNEL_ID --amount 12 --seed $SENDER_SEED
 SIG_12=3045...YYYYYYYYYY
 
 # After delivering unit 3 (cumulative: 27 XRP):
-xrpl-up channel sign $CHANNEL_ID 27 --seed $SENDER_SEED
+xrpl-up channel sign --channel $CHANNEL_ID --amount 27 --seed $SENDER_SEED
 SIG_27=3045...ZZZZZZZZZZ
 ```
 
@@ -86,7 +86,7 @@ SIG_27=3045...ZZZZZZZZZZ
 Verify a claim before accepting it:
 
 ```bash
-xrpl-up channel verify $CHANNEL_ID 27 $SIG_27 $PUBKEY
+xrpl-up channel verify --channel $CHANNEL_ID --amount 27 --signature $SIG_27 --public-key $PUBKEY
 # ✔ Claim signature valid
 ```
 
@@ -97,8 +97,8 @@ xrpl-up channel verify $CHANNEL_ID 27 $SIG_27 $PUBKEY
 The receiver decides to settle 27 XRP mid-session (e.g., end-of-day batch settlement). The channel stays open for more payments:
 
 ```bash
-xrpl-up channel claim $CHANNEL_ID \
-  --amount 27 --signature $SIG_27 --public-key $PUBKEY \
+xrpl-up channel claim --channel $CHANNEL_ID \
+  --amount 27 --balance 27 --signature $SIG_27 --public-key $PUBKEY \
   --seed $RECEIVER_SEED
 # ✔ Channel claim submitted
 #   redeemed  27 XRP  (channel balance: 27 XRP / 100 XRP)
@@ -120,11 +120,11 @@ The next batch of claims continues from the cumulative total (not from zero):
 
 ```bash
 # Cumulative total after continued service: 45 XRP
-xrpl-up channel sign $CHANNEL_ID 45 --seed $SENDER_SEED
+xrpl-up channel sign --channel $CHANNEL_ID --amount 45 --seed $SENDER_SEED
 SIG_45=...
 
 # Cumulative total: 68 XRP
-xrpl-up channel sign $CHANNEL_ID 68 --seed $SENDER_SEED
+xrpl-up channel sign --channel $CHANNEL_ID --amount 68 --seed $SENDER_SEED
 SIG_68=...
 ```
 
@@ -135,8 +135,8 @@ SIG_68=...
 Submit the latest claim (68 XRP cumulative). The channel pays out only the **delta** since last settlement (68 − 27 = 41 XRP):
 
 ```bash
-xrpl-up channel claim $CHANNEL_ID \
-  --amount 68 --signature $SIG_68 --public-key $PUBKEY \
+xrpl-up channel claim --channel $CHANNEL_ID \
+  --amount 68 --balance 68 --signature $SIG_68 --public-key $PUBKEY \
   --seed $RECEIVER_SEED
 # ✔ Channel claim submitted
 #   total claimed  68 XRP  (delta: 41 XRP this settlement)
@@ -152,7 +152,7 @@ xrpl-up channel claim $CHANNEL_ID \
 If the sender wants to extend the session beyond the original 100 XRP cap:
 
 ```bash
-xrpl-up channel fund $CHANNEL_ID 50 --seed $SENDER_SEED
+xrpl-up channel fund --channel $CHANNEL_ID --amount 50 --seed $SENDER_SEED
 # ✔ Channel funded  +50 XRP  (total: 150 XRP)
 
 xrpl-up channel list $SENDER
@@ -166,7 +166,7 @@ xrpl-up channel list $SENDER
 When the sender wants to stop the session, they request closure. The settle delay gives the receiver time to submit their final claim:
 
 ```bash
-xrpl-up channel claim $CHANNEL_ID --close --seed $SENDER_SEED
+xrpl-up channel claim --channel $CHANNEL_ID --close --seed $SENDER_SEED
 # ✔ Close requested
 # ⏳ Receiver has 600 s to submit final claim
 #    After that, sender can close and recover remaining XRP
@@ -179,11 +179,11 @@ xrpl-up channel claim $CHANNEL_ID --close --seed $SENDER_SEED
 The receiver still has claims in-hand (say, SIG_90 for 90 XRP cumulative). They submit the final settlement:
 
 ```bash
-xrpl-up channel sign $CHANNEL_ID 90 --seed $SENDER_SEED
+xrpl-up channel sign --channel $CHANNEL_ID --amount 90 --seed $SENDER_SEED
 SIG_90=...
 
-xrpl-up channel claim $CHANNEL_ID \
-  --amount 90 --signature $SIG_90 --public-key $PUBKEY \
+xrpl-up channel claim --channel $CHANNEL_ID \
+  --amount 90 --balance 90 --signature $SIG_90 --public-key $PUBKEY \
   --close --seed $RECEIVER_SEED
 # ✔ Final settlement + channel closed
 #   total claimed  90 XRP  (delta: 22 XRP this settlement)
@@ -201,7 +201,7 @@ If the receiver does **not** submit within the settle delay after the sender req
 
 ```bash
 # After settle-delay expires (600 s in this example):
-xrpl-up channel claim $CHANNEL_ID --close --seed $SENDER_SEED
+xrpl-up channel claim --channel $CHANNEL_ID --close --seed $SENDER_SEED
 # ✔ Channel force-closed
 #   No pending receiver claim — all remaining XRP returned to sender
 ```

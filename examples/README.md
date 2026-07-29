@@ -2,7 +2,7 @@
 
 Step-by-step walkthroughs for common XRPL use cases using `xrpl-up` CLI commands.
 
-Each guide starts a local sandbox (`xrpl-up node`) and walks through a complete workflow — fund accounts, run transactions, inspect results.
+Each guide starts a local sandbox (`xrpl-up start --detach`) and walks through a complete workflow — fund accounts, run transactions, inspect results.
 
 ---
 
@@ -13,7 +13,7 @@ Each guide starts a local sandbox (`xrpl-up node`) and walks through a complete 
 git clone https://github.com/ripple/xrpl-up.git
 cd xrpl-up && npm install && npm run build && npm link
 
-xrpl-up node          # start local XRPL sandbox
+xrpl-up start --detach          # start local XRPL sandbox
 xrpl-up status        # confirm healthy
 ```
 

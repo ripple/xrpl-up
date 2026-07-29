@@ -11,7 +11,7 @@ Two escrow types:
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -26,11 +26,11 @@ Fund a sender and create an escrow to a destination:
 
 ```bash
 # Fund sender
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdSenderSeedXXX  address: rSenderXXX
 
 # Fund destination
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → address: rDestXXX
 
 SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
