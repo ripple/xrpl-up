@@ -13,7 +13,7 @@ This guide:
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -22,16 +22,24 @@ export XRPL_NODE=local
 
 ## Step 1: Create the AMM pool
 
-```bash
-# XRP/USD pool: 100 XRP, 100 USD → implicit price 1 XRP = 1 USD
-xrpl-up amm create XRP USD --amount1 100 --amount2 100 --fee 0.3
-# ✔ AMM pool created
-#   XRP reserve  100
-#   USD reserve  100
-#   fee          0.3%
-#   issuer       rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
+`amm create` doesn't create issuers or fund the LP for you — set that up first (see [amm.md](../simple/amm.md) for the full walkthrough):
 
+```bash
+xrpl-up faucet --network local   # → ISSUER_SEED / ISSUER
+xrpl-up faucet --network local   # → LP_SEED / LP
+ISSUER_SEED=sEdIssuerSeedXXX
 ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
+LP_SEED=sEdLpSeedXXX
+LP=rLpXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $LP_SEED
+xrpl-up payment --to $LP --amount 100/USD/$ISSUER --seed $ISSUER_SEED
+
+# XRP/USD pool: 100 XRP, 100 USD → implicit price 1 XRP = 1 USD; 0.3% fee (300 = 0.3% in basis-points-of-a-percent)
+xrpl-up amm create --asset XRP --asset2 USD/$ISSUER \
+  --amount 100000000 --amount2 100 --trading-fee 300 \
+  --seed $LP_SEED
 ```
 
 ---
@@ -39,9 +47,9 @@ ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Step 2: Check the initial AMM price
 
 ```bash
-xrpl-up amm info XRP USD.$ISSUER
-# XRP reserve   100 XRP
-# USD reserve   100 USD
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER
+# Asset 1: 100 XRP
+# Asset 2: 100 USD
 # → implicit price: 1 XRP = 1 USD
 ```
 
@@ -52,14 +60,15 @@ xrpl-up amm info XRP USD.$ISSUER
 Fund a market maker and post an offer at **1 XRP = 1.25 USD** (i.e., selling USD cheaply compared to the AMM):
 
 ```bash
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdMMSeedXXX  address: rMMXXX
 
 MM_SEED=sEdMMSeedXXXXXXXXXXXXXXXXXXXXXXXX
 MM=rMMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# MM needs a USD trust line
+# MM needs a USD trust line and an actual USD balance to sell
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $MM_SEED
+xrpl-up payment --to $MM --amount 50/USD/$ISSUER --seed $ISSUER_SEED
 
 # MM places an offer: pay 25 USD, get 20 XRP (= 1.25 USD per XRP)
 # i.e. MM is willing to sell USD at a 25% premium over AMM price
@@ -77,7 +86,7 @@ xrpl-up offer create --taker-pays 25/USD/$ISSUER --taker-gets 20 --seed $MM_SEED
 **AMM quote** — inspect the pool state to estimate the swap output:
 
 ```bash
-xrpl-up amm info XRP USD.$ISSUER
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER
 # XRP reserve   100 XRP
 # USD reserve   100 USD
 # fee           0.3%
@@ -106,16 +115,17 @@ xrpl-up account offers $MM
 
 ## Step 5: Execute the arbitrage — buy XRP from AMM
 
-Fund an arbitrageur with USD (they set a trust line and receive USD from the MM first):
+Fund an arbitrageur with USD (they set a trust line and need an actual USD balance to pay with):
 
 ```bash
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdArbitragerSeedXXX  address: rArbitragerXXX
 
 ARB_SEED=sEdArbitragerSeedXXXXXXXXXXXXXXXX
 ARB=rArbitragerXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $ARB_SEED
+xrpl-up payment --to $ARB --amount 20/USD/$ISSUER --seed $ISSUER_SEED
 ```
 
 Place an IOC offer to buy XRP by paying USD — the ledger routes through the cheapest source (AMM first):
@@ -156,7 +166,7 @@ xrpl-up offer create --taker-pays 20 --taker-gets 25/USD/$ISSUER --seed $ARB_SEE
 #   Profit ~8.23 USD
 
 # Check the AMM pool — it shifted toward the DEX price
-xrpl-up amm info XRP USD.$ISSUER
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER
 # XRP reserve   80 XRP   ← decreased (sold 20 XRP to arb)
 # USD reserve  125 USD   ← increased (received ~16.77 USD from arb)
 # → new price: 125/80 = 1.5625 USD/XRP  (moved toward DEX price of 1.25)

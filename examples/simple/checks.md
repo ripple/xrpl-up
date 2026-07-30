@@ -9,7 +9,7 @@ Checks work with both **XRP** and **IOUs**.
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -19,10 +19,10 @@ export XRPL_NODE=local
 ## 1. Set up sender and receiver
 
 ```bash
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdSenderSeedXXX  address: rSenderXXX
 
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdReceiverSeedXXX  address: rReceiverXXX
 
 SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
@@ -78,7 +78,7 @@ xrpl-up check list $RECEIVER
 The receiver cashes for exactly 5 XRP (less than the 10 XRP maximum):
 
 ```bash
-xrpl-up check cash $CHECK_ID --amount 5 --seed $RECEIVER_SEED
+xrpl-up check cash --check $CHECK_ID --amount 5 --seed $RECEIVER_SEED
 # ✔ Check cashed  received 5 XRP
 ```
 
@@ -89,7 +89,7 @@ xrpl-up check cash $CHECK_ID --amount 5 --seed $RECEIVER_SEED
 Instead of an exact amount, the receiver asks for "as much as possible, but at least 3 XRP":
 
 ```bash
-xrpl-up check cash $CHECK_ID --deliver-min 3 --seed $RECEIVER_SEED
+xrpl-up check cash --check $CHECK_ID --deliver-min 3 --seed $RECEIVER_SEED
 # ✔ Check cashed  received 10 XRP  (full sendMax)
 ```
 
@@ -103,11 +103,11 @@ Either the sender or the receiver can cancel at any time. After the expiry, anyo
 
 ```bash
 # Sender cancels their own check
-xrpl-up check cancel $CHECK_ID --seed $SENDER_SEED
+xrpl-up check cancel --check $CHECK_ID --seed $SENDER_SEED
 # ✔ Check cancelled  A1B2C3D4...
 
 # Receiver cancels (also valid)
-xrpl-up check cancel $CHECK_ID --seed $RECEIVER_SEED
+xrpl-up check cancel --check $CHECK_ID --seed $RECEIVER_SEED
 ```
 
 ---
@@ -122,7 +122,7 @@ xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_SEED --expiratio
 
 # Wait 10 seconds, then cancel (anyone can do this after expiry)
 sleep 10
-xrpl-up check cancel $EXPIRED_CHECK_ID --seed $SENDER_SEED
+xrpl-up check cancel --check $EXPIRED_CHECK_ID --seed $SENDER_SEED
 ```
 
 ---

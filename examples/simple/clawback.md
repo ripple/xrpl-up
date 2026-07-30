@@ -9,7 +9,7 @@ Both **IOU (trust line)** and **MPT** tokens support clawback.
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -24,14 +24,14 @@ export XRPL_NODE=local
 
 ```bash
 # Fund a brand-new issuer account
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdIssuerSeedXXX  address: rIssuerXXX
 
 ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
 ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Enable clawback BEFORE creating any trust lines
-xrpl-up account set --allow-clawback --seed $ISSUER_SEED
+xrpl-up account set --allow-clawback --confirm --seed $ISSUER_SEED
 # ✔ Flag set: allowClawback  (permanent)
 ```
 
@@ -48,7 +48,7 @@ xrpl-up account info $ISSUER
 
 ```bash
 # Fund a holder
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdHolderSeedXXX  address: rHolderXXX
 
 HOLDER_SEED=sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
@@ -61,7 +61,7 @@ xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $HOLDER_SEED
 
 # Issue 500 USD to the holder
-# (use xrpl-up run with a Payment script, or via the DEX)
+xrpl-up payment --to $HOLDER --amount 500/USD/$ISSUER --seed $ISSUER_SEED
 ```
 
 ---
@@ -96,7 +96,7 @@ xrpl-up account trust-lines $HOLDER
 ### Step 1: Create an MPT issuance with clawback enabled
 
 ```bash
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdMptIssuerSeedXXX  address: rMptIssuerXXX
 
 MPT_ISSUER_SEED=sEdMptIssuerSeedXXXXXXXXXXXXXXX
@@ -116,7 +116,7 @@ MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ### Step 2: Issue tokens to a holder
 
 ```bash
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdMptHolderSeedXXX  address: rMptHolderXXX
 
 MPT_HOLDER_SEED=sEdMptHolderSeedXXXXXXXXXXXXXXX

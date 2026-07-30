@@ -9,7 +9,7 @@ This guide complements [MPT](mpt.md) with a focus on the **policy controls** rat
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -32,16 +32,16 @@ All policy flags are **set at issuance creation and cannot be changed afterwards
 ## Step 1: Create issuer and holder accounts
 
 ```bash
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdIssuerSeedXXX  address: rIssuerXXX
 
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdHolderASeedXXX  address: rHolderAXXX   (will be approved)
 
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdHolderBSeedXXX  address: rHolderBXXX   (will attempt to opt-in, then be rejected)
 
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdHolderCSeedXXX  address: rHolderCXXX   (approved, then locked, then clawback)
 
 ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX

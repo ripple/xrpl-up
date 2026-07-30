@@ -7,7 +7,7 @@ Tickets reserve sequence numbers, allowing you to submit transactions out-of-ord
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -29,26 +29,16 @@ Normally, XRPL transactions must be submitted in strict sequence order. If you n
 
 ```bash
 # Fund a wallet (or use an existing one)
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdUserSeedXXX  address: rUserXXX
 
 USER_SEED=sEdUserSeedXXXXXXXXXXXXXXXXXXXXXX
 USER=rUserXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Reserve 5 tickets
-xrpl-up ticket create 5 --seed $USER_SEED
+xrpl-up ticket create --count 5 --seed $USER_SEED
 # ✔ 5 tickets created
 #   sequences: 10, 11, 12, 13, 14
-```
-
-Or auto-fund a fresh wallet with tickets on local:
-
-```bash
-xrpl-up ticket create 3 --auto-fund
-# ✔ 3 tickets created
-#   address:   rNewWalletXXX...
-#   seed:      sEdNewSeedXXX...
-#   sequences: 4, 5, 6
 ```
 
 ---
@@ -113,7 +103,7 @@ Tickets shine in multi-sig scenarios where each signer prepares their transactio
 
 ```bash
 # 1. Reserve 3 tickets for 3 parallel transactions
-xrpl-up ticket create 3 --seed $USER_SEED
+xrpl-up ticket create --count 3 --seed $USER_SEED
 # → sequences: 20, 21, 22
 
 # 2. Signer A prepares a transaction using ticket 20

@@ -13,7 +13,7 @@ This guide covers:
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 
@@ -60,10 +60,10 @@ CONDITION=A0258020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Step 2: Create accounts
 
 ```bash
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdSenderSeedXXX  address: rSenderXXX
 
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdReceiverSeedXXX  address: rReceiverXXX
 
 SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX

@@ -7,7 +7,7 @@ When `DepositAuth` is enabled on an account, it blocks all incoming payments unl
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -18,21 +18,22 @@ export XRPL_NODE=local
 
 ```bash
 # The account that will require deposit authorization
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdReceiverSeedXXX  address: rReceiverXXX
 
 # An authorized sender
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdSenderASeedXXX  address: rSenderAXXX
 
 # An unauthorized sender (for testing)
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdSenderBSeedXXX  address: rSenderBXXX
 
 RECEIVER_SEED=sEdReceiverSeedXXXXXXXXXXXXXXXXX
 RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SENDER_A_SEED=sEdSenderASeedXXXXXXXXXXXXXXXXX
 SENDER_A=rSenderAXXXXXXXXXXXXXXXXXXXXXXXXXXX
+SENDER_B_SEED=sEdSenderBSeedXXXXXXXXXXXXXXXXX
 SENDER_B=rSenderBXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
@@ -84,9 +85,11 @@ With Checks as a workaround (the receiver cashes the check — no deposit restri
 ```bash
 # Sender B creates a check (anyone can create a check to an account with depositAuth)
 xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_B_SEED
+# → CHECK_ID
+CHECK_ID=...
 
 # Receiver cashes the check (receiver initiates — not a direct payment, so depositAuth does not block it)
-xrpl-up check cash $CHECK_ID --amount 5 --seed $RECEIVER_SEED
+xrpl-up check cash --check $CHECK_ID --amount 5 --seed $RECEIVER_SEED
 ```
 
 > **Note:** DepositAuth blocks *incoming payments*, not *cashing checks* (which are receiver-initiated). Escrow finishes and channel claims are similarly receiver-initiated and bypass DepositAuth.

@@ -7,7 +7,7 @@ XRPL has a fully on-chain order book built into the protocol. No smart contracts
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -20,13 +20,13 @@ We need a token to trade. Skip to step 2 if you already have an IOU set up.
 
 ```bash
 # Fund issuer and trader accounts
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdIssuerSeedXXX   address: rIssuerXXX
 
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdTraderASeedXXX  address: rTraderAXXX
 
-xrpl-up faucet --local
+xrpl-up faucet --network local
 # → seed: sEdTraderBSeedXXX  address: rTraderBXXX
 
 ISSUER_SEED=sEdIssuerSeedXXX
@@ -104,7 +104,7 @@ xrpl-up offer create --taker-pays 100/USD/$ISSUER --taker-gets 50 --seed $TRADER
 
 ```bash
 # Cancel Trader A's open offer by its sequence number
-xrpl-up offer cancel 7 --seed $TRADER_A_SEED
+xrpl-up offer cancel --sequence 7 --seed $TRADER_A_SEED
 # ✔ Offer 7 cancelled
 ```
 
