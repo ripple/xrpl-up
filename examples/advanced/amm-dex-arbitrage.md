@@ -25,12 +25,13 @@ export XRPL_NODE=local
 `amm create` doesn't create issuers or fund the LP for you — set that up first (see [amm.md](../simple/amm.md) for the full walkthrough):
 
 ```bash
-xrpl-up faucet --network local   # → ISSUER_SEED / ISSUER
-xrpl-up faucet --network local   # → LP_SEED / LP
-ISSUER_SEED=sEdIssuerSeedXXX
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-LP_SEED=sEdLpSeedXXX
-LP=rLpXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
+
+LP_JSON=$(xrpl-up faucet --network local --json)
+LP_SEED=$(echo "$LP_JSON" | jq -r .seed)
+LP=$(echo "$LP_JSON" | jq -r .address)
 
 xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $LP_SEED
@@ -60,11 +61,9 @@ xrpl-up amm info --asset XRP --asset2 USD/$ISSUER
 Fund a market maker and post an offer at **1 XRP = 1.25 USD** (i.e., selling USD cheaply compared to the AMM):
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdMMSeedXXX  address: rMMXXX
-
-MM_SEED=sEdMMSeedXXXXXXXXXXXXXXXXXXXXXXXX
-MM=rMMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+MM_JSON=$(xrpl-up faucet --network local --json)
+MM_SEED=$(echo "$MM_JSON" | jq -r .seed)
+MM=$(echo "$MM_JSON" | jq -r .address)
 
 # MM needs a USD trust line and an actual USD balance to sell
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $MM_SEED
@@ -118,11 +117,9 @@ xrpl-up account offers $MM
 Fund an arbitrageur with USD (they set a trust line and need an actual USD balance to pay with):
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdArbitragerSeedXXX  address: rArbitragerXXX
-
-ARB_SEED=sEdArbitragerSeedXXXXXXXXXXXXXXXX
-ARB=rArbitragerXXXXXXXXXXXXXXXXXXXXXXXXXX
+ARB_JSON=$(xrpl-up faucet --network local --json)
+ARB_SEED=$(echo "$ARB_JSON" | jq -r .seed)
+ARB=$(echo "$ARB_JSON" | jq -r .address)
 
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $ARB_SEED
 xrpl-up payment --to $ARB --amount 20/USD/$ISSUER --seed $ISSUER_SEED

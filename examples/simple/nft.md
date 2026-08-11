@@ -19,26 +19,17 @@ export XRPL_NODE=local
 Fund a minter account, then mint a transferable NFT with a metadata URI. `--transfer-fee` requires `--transferable`:
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdMinterSeedXXX  address: rMinterXXX
+MINTER_JSON=$(xrpl-up faucet --network local --json)
+MINTER_SEED=$(echo "$MINTER_JSON" | jq -r .seed)
+MINTER=$(echo "$MINTER_JSON" | jq -r .address)
 
-MINTER_SEED=sEdMinterSeedXXXXXXXXXXXXXXXXXXXXX
-MINTER=rMinterXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-xrpl-up nft mint \
+NFT_ID=$(xrpl-up nft mint \
   --uri https://example.com/nft-metadata.json \
   --transferable \
   --transfer-fee 500 \
   --taxon 1 \
-  --seed $MINTER_SEED
-# ✔ NFT minted
-#   NFTokenID  000800006B9C0BXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-```
-
-Save the NFTokenID:
-
-```bash
-NFT_ID=000800006B9C0BXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  --seed $MINTER_SEED \
+  --json | jq -r .nftokenId)
 ```
 
 ### Mint flags
@@ -70,11 +61,7 @@ The owner puts the NFT up for sale. `--sell` is required — without it, `nft of
 
 ```bash
 # Sell for 5 XRP
-xrpl-up nft offer create --nft $NFT_ID --amount 5 --sell --seed $MINTER_SEED
-# ✔ Sell offer created
-#   offerID  A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-OFFER_ID=A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+OFFER_ID=$(xrpl-up nft offer create --nft $NFT_ID --amount 5 --sell --seed $MINTER_SEED --json | jq -r .offerId)
 ```
 
 Sell for an IOU instead:
@@ -101,11 +88,9 @@ xrpl-up nft offer list $NFT_ID
 Fund a separate buyer wallet, then accept the offer:
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdBuyerSeedXXX  address: rBuyerXXX
-
-BUYER_SEED=sEdBuyerSeedXXXXXXXXXXXXXXXXXXXXX
-BUYER=rBuyerXXXXXXXXXXXXXXXXXXXXXXXXXXX
+BUYER_JSON=$(xrpl-up faucet --network local --json)
+BUYER_SEED=$(echo "$BUYER_JSON" | jq -r .seed)
+BUYER=$(echo "$BUYER_JSON" | jq -r .address)
 
 xrpl-up nft offer accept --sell-offer $OFFER_ID --seed $BUYER_SEED
 # ✔ Offer accepted
@@ -131,13 +116,15 @@ A third party (broker) can match a sell offer and a buy offer simultaneously, ta
 
 ```bash
 # Buyer creates a buy offer for an NFT held by $MINTER
-xrpl-up faucet --network local
-# → seed: sEdBuyer2SeedXXX  address: rBuyer2XXX
+BUYER2_JSON=$(xrpl-up faucet --network local --json)
+BUYER2_SEED=$(echo "$BUYER2_JSON" | jq -r .seed)
+BUYER2=$(echo "$BUYER2_JSON" | jq -r .address)
 
-xrpl-up nft offer create --nft $NFT_ID --amount 3 --owner $MINTER --seed $BUYER2_SEED
-# → BUY_OFFER_ID
+BUY_OFFER_ID=$(xrpl-up nft offer create --nft $NFT_ID --amount 3 --owner $MINTER --seed $BUYER2_SEED --json | jq -r .offerId)
 
 # Broker (or anyone) matches both offers, keeping the price difference as commission:
+BROKER_JSON=$(xrpl-up faucet --network local --json)
+BROKER_SEED=$(echo "$BROKER_JSON" | jq -r .seed)
 xrpl-up nft offer accept --sell-offer $OFFER_ID --buy-offer $BUY_OFFER_ID --seed $BROKER_SEED
 ```
 
@@ -165,12 +152,10 @@ xrpl-up account nfts $BUYER
 
 ```bash
 # 1. Mint (minter and buyer must already be funded via `xrpl-up faucet --network local`)
-xrpl-up nft mint --taxon 1 --uri https://example.com/meta.json --transferable --transfer-fee 500 --seed $MINTER_SEED
-# → NFT_ID
+NFT_ID=$(xrpl-up nft mint --taxon 1 --uri https://example.com/meta.json --transferable --transfer-fee 500 --seed $MINTER_SEED --json | jq -r .nftokenId)
 
 # 2. List for sale
-xrpl-up nft offer create --nft $NFT_ID --amount 5 --sell --seed $MINTER_SEED
-# → OFFER_ID
+OFFER_ID=$(xrpl-up nft offer create --nft $NFT_ID --amount 5 --sell --seed $MINTER_SEED --json | jq -r .offerId)
 
 # 3. Accept (buy)
 xrpl-up nft offer accept --sell-offer $OFFER_ID --seed $BUYER_SEED

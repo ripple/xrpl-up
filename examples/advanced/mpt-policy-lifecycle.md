@@ -32,26 +32,21 @@ All policy flags are **set at issuance creation and cannot be changed afterwards
 ## Step 1: Create issuer and holder accounts
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdIssuerSeedXXX  address: rIssuerXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 
-xrpl-up faucet --network local
-# → seed: sEdHolderASeedXXX  address: rHolderAXXX   (will be approved)
+HOLDER_A_JSON=$(xrpl-up faucet --network local --json)   # will be approved
+HOLDER_A_SEED=$(echo "$HOLDER_A_JSON" | jq -r .seed)
+HOLDER_A=$(echo "$HOLDER_A_JSON" | jq -r .address)
 
-xrpl-up faucet --network local
-# → seed: sEdHolderBSeedXXX  address: rHolderBXXX   (will attempt to opt-in, then be rejected)
+HOLDER_B_JSON=$(xrpl-up faucet --network local --json)   # will attempt to opt-in, then be rejected
+HOLDER_B_SEED=$(echo "$HOLDER_B_JSON" | jq -r .seed)
+HOLDER_B=$(echo "$HOLDER_B_JSON" | jq -r .address)
 
-xrpl-up faucet --network local
-# → seed: sEdHolderCSeedXXX  address: rHolderCXXX   (approved, then locked, then clawback)
-
-ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_A_SEED=sEdHolderASeedXXXXXXXXXXXXXXXXXX
-HOLDER_A=rHolderAXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_B_SEED=sEdHolderBSeedXXXXXXXXXXXXXXXXXX
-HOLDER_B=rHolderBXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_C_SEED=sEdHolderCSeedXXXXXXXXXXXXXXXXXX
-HOLDER_C=rHolderCXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER_C_JSON=$(xrpl-up faucet --network local --json)   # approved, then locked, then clawback
+HOLDER_C_SEED=$(echo "$HOLDER_C_JSON" | jq -r .seed)
+HOLDER_C=$(echo "$HOLDER_C_JSON" | jq -r .address)
 ```
 
 ---
@@ -59,22 +54,13 @@ HOLDER_C=rHolderCXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Step 2: Create the MPT issuance with all policy controls
 
 ```bash
-xrpl-up mptoken issuance create --seed $ISSUER_SEED \
+MPT_ID=$(xrpl-up mptoken issuance create --seed $ISSUER_SEED \
   --max-amount 1000000 \
   --asset-scale 2 \
   --transfer-fee 50 \
   --metadata "Regulated MPT v1" \
-  --flags can-transfer,require-auth,can-lock,can-clawback
-# ✔ MPT issuance created
-#   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   issuer       rIssuerXXX...
-#   flags        transferable, require-auth, can-lock, can-clawback
-#   max-amount   1000000
-#   asset-scale  2
-#   transfer-fee 50 (0.5%)
-#   metadata     "Regulated MPT v1"
-
-MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  --flags can-transfer,require-auth,can-lock,can-clawback \
+  --json | jq -r .issuanceId)
 ```
 
 ---

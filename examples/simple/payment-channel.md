@@ -19,16 +19,13 @@ export XRPL_NODE=local
 ## 1. Set up sender and receiver accounts
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdSenderSeedXXX  address: rSenderXXX
+SENDER_JSON=$(xrpl-up faucet --network local --json)
+SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
+SENDER=$(echo "$SENDER_JSON" | jq -r .address)
 
-xrpl-up faucet --network local
-# → seed: sEdReceiverSeedXXX  address: rReceiverXXX
-
-SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-SENDER=rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXX
-RECEIVER_SEED=sEdReceiverSeedXXXXXXXXXXXXXXXXX
-RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER_SEED=$(echo "$RECEIVER_JSON" | jq -r .seed)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 ```
 
 ---
@@ -39,52 +36,34 @@ The sender locks XRP in the channel. The receiver can claim up to this amount ov
 
 ```bash
 # Open a 50 XRP channel with a 1-hour settle delay
-xrpl-up channel create --to $RECEIVER --amount 50 --seed $SENDER_SEED \
-  --settle-delay 3600
-# Transaction: D248064691A00691899A8A11F3568F4A56FBBAB99F5DA2483A27EB63F07AC470
-# Result:      tesSUCCESS
-# Fee:         0.000012 XRP
-# Ledger:      37
-# Channel ID:  ABCDEF1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-CHANNEL_ID=ABCDEF1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CHANNEL_ID=$(xrpl-up channel create --to $RECEIVER --amount 50 --seed $SENDER_SEED \
+  --settle-delay 3600 --json | jq -r .channelId)
 ```
 
 `--settle-delay` is required (no default) — it's how long the receiver has to submit a final claim after the sender requests closure.
 
 ---
 
-## 3. List open channels
+## 3. Get the channel's public key
 
-The `Public Key` field here is what the receiver needs to verify/claim signed off-chain claims later:
+`channel verify`/`channel claim` need the channel source's public key. Since the channel uses the sender's own key by default, derive it directly from the seed instead of reading it off `channel list`'s output:
 
 ```bash
-xrpl-up channel list $SENDER
-# Channel ID:   ABCDEF1234...
-# Amount:       50.000000 XRP
-# Balance:      0.000000 XRP
-# Destination:  rReceiverXXX...
-# Settle Delay: 3600 seconds
-# Public Key:   ED1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-PUBKEY=ED1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+PUBKEY=$(xrpl-up wallet address --seed $SENDER_SEED --json | jq -r .publicKey)
 ```
 
 ---
 
 ## 4. Sign off-chain claims (sender)
 
-The sender generates signed payment authorizations off-chain — no on-chain transaction, no fee. `channel sign` prints only the raw signature hex (nothing else) — the receiver already has the public key from step 3:
+The sender generates signed payment authorizations off-chain — no on-chain transaction, no fee. `channel sign` prints only the raw signature hex (nothing else):
 
 ```bash
 # Authorize the receiver to claim up to 1 XRP
-xrpl-up channel sign --channel $CHANNEL_ID --amount 1 --seed $SENDER_SEED
-# 3045...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-SIG_1XRP=3045...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+SIG_1XRP=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 1 --seed $SENDER_SEED --json | jq -r .signature)
 ```
 
-Send the signature to the receiver out-of-band (e.g., over a WebSocket, HTTP, or message queue) — they already have the channel's public key from `channel list`.
+Send the signature to the receiver out-of-band (e.g., over a WebSocket, HTTP, or message queue) — they already have `$PUBKEY` from step 3.
 
 ---
 
@@ -94,12 +73,10 @@ Each new claim covers the cumulative total, not the increment. Always sign for t
 
 ```bash
 # After delivering more service, authorize up to 3 XRP total
-xrpl-up channel sign --channel $CHANNEL_ID --amount 3 --seed $SENDER_SEED
-# → SIG_3XRP=...
+SIG_3XRP=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 3 --seed $SENDER_SEED --json | jq -r .signature)
 
 # After more, authorize up to 7 XRP total
-xrpl-up channel sign --channel $CHANNEL_ID --amount 7 --seed $SENDER_SEED
-# → SIG_7XRP=...
+SIG_7XRP=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 7 --seed $SENDER_SEED --json | jq -r .signature)
 ```
 
 The receiver only needs to redeem the latest (highest-value) claim.
@@ -182,13 +159,13 @@ xrpl-up channel claim --channel $CHANNEL_ID --close --seed $SENDER_SEED
 
 ```bash
 # 1. Open channel
-xrpl-up channel create --to $RECEIVER --amount 50 --settle-delay 3600 --seed $SENDER_SEED
-# → CHANNEL_ID
+CHANNEL_ID=$(xrpl-up channel create --to $RECEIVER --amount 50 --settle-delay 3600 --seed $SENDER_SEED --json | jq -r .channelId)
+PUBKEY=$(xrpl-up wallet address --seed $SENDER_SEED --json | jq -r .publicKey)
 
 # 2. Off-chain: sign claims as service is delivered (no fee)
-xrpl-up channel sign --channel $CHANNEL_ID --amount 1  --seed $SENDER_SEED   # → SIG_1
-xrpl-up channel sign --channel $CHANNEL_ID --amount 5  --seed $SENDER_SEED   # → SIG_5
-xrpl-up channel sign --channel $CHANNEL_ID --amount 12 --seed $SENDER_SEED   # → SIG_12
+xrpl-up channel sign --channel $CHANNEL_ID --amount 1  --seed $SENDER_SEED --json | jq -r .signature
+SIG_5=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 5  --seed $SENDER_SEED --json | jq -r .signature)
+SIG_12=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 12 --seed $SENDER_SEED --json | jq -r .signature)
 
 # 3. Receiver verifies latest claim
 xrpl-up channel verify --channel $CHANNEL_ID --amount 12 --signature $SIG_12 --public-key $PUBKEY
@@ -211,7 +188,7 @@ xrpl-up channel claim --channel $CHANNEL_ID --close --seed $RECEIVER_SEED
 | **Claim** | An off-chain signed authorization for the receiver to claim up to `amount` XRP. |
 | **Cumulative amount** | Each claim covers the *total* amount from channel open, not the increment. Always submit the highest claim. |
 | **Settle delay** | Grace period after the sender requests closure — gives the receiver time to submit their final claim. |
-| **Public key** | The channel source's Ed25519 / SECP256k1 public key, from the channel's own ledger data (`channel list`). Required by `channel verify`/`channel claim`. |
+| **Public key** | The channel source's Ed25519 / SECP256k1 public key. Defaults to the sender's own wallet key — derive it with `xrpl-up wallet address --seed <seed> --json`. Required by `channel verify`/`channel claim`. |
 
 ---
 

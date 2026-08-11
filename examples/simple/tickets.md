@@ -29,16 +29,15 @@ Normally, XRPL transactions must be submitted in strict sequence order. If you n
 
 ```bash
 # Fund a wallet (or use an existing one)
-xrpl-up faucet --network local
-# → seed: sEdUserSeedXXX  address: rUserXXX
+USER_JSON=$(xrpl-up faucet --network local --json)
+USER_SEED=$(echo "$USER_JSON" | jq -r .seed)
+USER=$(echo "$USER_JSON" | jq -r .address)
 
-USER_SEED=sEdUserSeedXXXXXXXXXXXXXXXXXXXXXX
-USER=rUserXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-# Reserve 5 tickets
-xrpl-up ticket create --count 5 --seed $USER_SEED
-# ✔ 5 tickets created
-#   sequences: 10, 11, 12, 13, 14
+# Reserve 5 tickets — capture the actual sequences instead of assuming numbers
+TICKETS_JSON=$(xrpl-up ticket create --count 5 --seed $USER_SEED --json)
+TICKET_0=$(echo "$TICKETS_JSON" | jq -r '.sequences[0]')
+TICKET_1=$(echo "$TICKETS_JSON" | jq -r '.sequences[1]')
+TICKET_2=$(echo "$TICKETS_JSON" | jq -r '.sequences[2]')
 ```
 
 ---
@@ -63,21 +62,22 @@ When using a ticket, set `Sequence = 0` and `TicketSequence = <n>` in the transa
 
 ```typescript
 // scripts/use-ticket.ts
+// Reads USER_SEED, TICKET_2, RECEIVER from the environment — no hardcoded secrets/IDs
 import { Client, Wallet } from 'xrpl';
 
 const client = new Client('ws://localhost:6006');
 await client.connect();
 
-const wallet = Wallet.fromSeed('sEdUserSeedXXXXXXXXXXXXXXXXXXXXXX');
+const wallet = Wallet.fromSeed(process.env.USER_SEED!);
 
-// Use ticket sequence 12 (out-of-order — 10 and 11 are still unused)
+// Use ticket sequence TICKET_2 (out-of-order — TICKET_0 and TICKET_1 are still unused)
 const tx = {
   TransactionType: 'Payment',
   Account: wallet.address,
-  Destination: 'rDestXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+  Destination: process.env.RECEIVER!,
   Amount: '1000000',   // 1 XRP in drops
   Sequence: 0,         // must be 0 when using a ticket
-  TicketSequence: 12,  // the ticket to consume
+  TicketSequence: Number(process.env.TICKET_2),  // the ticket to consume
 };
 
 const prepared = await client.autofill(tx as any);
@@ -89,11 +89,14 @@ await client.disconnect();
 ```
 
 ```bash
-xrpl-up run scripts/use-ticket.ts
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
+
+USER_SEED=$USER_SEED TICKET_2=$TICKET_2 RECEIVER=$RECEIVER xrpl-up run scripts/use-ticket.ts
 # tesSUCCESS
 ```
 
-After submission, ticket 12 is consumed. Tickets 10, 11, 13, 14 are still available.
+After submission, `$TICKET_2` is consumed. `$TICKET_0`/`$TICKET_1` and the remaining reserved tickets are still available.
 
 ---
 
@@ -103,16 +106,18 @@ Tickets shine in multi-sig scenarios where each signer prepares their transactio
 
 ```bash
 # 1. Reserve 3 tickets for 3 parallel transactions
-xrpl-up ticket create --count 3 --seed $USER_SEED
-# → sequences: 20, 21, 22
+BATCH_JSON=$(xrpl-up ticket create --count 3 --seed $USER_SEED --json)
+BATCH_T0=$(echo "$BATCH_JSON" | jq -r '.sequences[0]')
+BATCH_T1=$(echo "$BATCH_JSON" | jq -r '.sequences[1]')
+BATCH_T2=$(echo "$BATCH_JSON" | jq -r '.sequences[2]')
 
-# 2. Signer A prepares a transaction using ticket 20
-#    Signer B prepares a transaction using ticket 21
-#    Signer C prepares a transaction using ticket 22
+# 2. Signer A prepares a transaction using $BATCH_T0
+#    Signer B prepares a transaction using $BATCH_T1
+#    Signer C prepares a transaction using $BATCH_T2
 #    (all three can happen simultaneously — no ordering dependency)
 
 # 3. Submit in any order
-#    Ticket 21 can be submitted before ticket 20 — the ledger accepts both
+#    $BATCH_T1 can be submitted before $BATCH_T0 — the ledger accepts both
 ```
 
 ---

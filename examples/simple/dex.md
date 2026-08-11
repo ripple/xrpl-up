@@ -20,21 +20,17 @@ We need a token to trade. Skip to step 2 if you already have an IOU set up.
 
 ```bash
 # Fund issuer and trader accounts
-xrpl-up faucet --network local
-# → seed: sEdIssuerSeedXXX   address: rIssuerXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 
-xrpl-up faucet --network local
-# → seed: sEdTraderASeedXXX  address: rTraderAXXX
+TRADER_A_JSON=$(xrpl-up faucet --network local --json)
+TRADER_A_SEED=$(echo "$TRADER_A_JSON" | jq -r .seed)
+TRADER_A=$(echo "$TRADER_A_JSON" | jq -r .address)
 
-xrpl-up faucet --network local
-# → seed: sEdTraderBSeedXXX  address: rTraderBXXX
-
-ISSUER_SEED=sEdIssuerSeedXXX
-ISSUER=rIssuerXXX
-TRADER_A_SEED=sEdTraderASeedXXX
-TRADER_A=rTraderAXXX
-TRADER_B_SEED=sEdTraderBSeedXXX
-TRADER_B=rTraderBXXX
+TRADER_B_JSON=$(xrpl-up faucet --network local --json)
+TRADER_B_SEED=$(echo "$TRADER_B_JSON" | jq -r .seed)
+TRADER_B=$(echo "$TRADER_B_JSON" | jq -r .address)
 ```
 
 Enable DefaultRipple so tokens can flow between accounts:
@@ -59,10 +55,7 @@ Format: `offer create --taker-pays <pays> --taker-gets <gets>` — `pays` is wha
 ```bash
 # Trader A offers 10 XRP in exchange for 20 USD
 # (i.e. selling XRP at 2 USD per XRP)
-xrpl-up offer create --taker-pays 10 --taker-gets 20/USD/$ISSUER --seed $TRADER_A_SEED
-# ✔ Offer created  sequence 5
-#   pays  10 XRP
-#   gets  20 USD (rIssuerXXX...)
+OFFER_A_SEQ=$(xrpl-up offer create --taker-pays 10 --taker-gets 20/USD/$ISSUER --seed $TRADER_A_SEED --json | jq -r .offerSequence)
 ```
 
 ---
@@ -90,8 +83,7 @@ xrpl-up account offers $TRADER_A
 
 ```bash
 # Place an offer that is too large to fill right away
-xrpl-up offer create --taker-pays 100 --taker-gets 200/USD/$ISSUER --seed $TRADER_A_SEED
-# → sequence: 7
+OFFER_A_SEQ=$(xrpl-up offer create --taker-pays 100 --taker-gets 200/USD/$ISSUER --seed $TRADER_A_SEED --json | jq -r .offerSequence)
 
 # Place a counter-offer that only fills half
 xrpl-up offer create --taker-pays 100/USD/$ISSUER --taker-gets 50 --seed $TRADER_B_SEED
@@ -104,8 +96,8 @@ xrpl-up offer create --taker-pays 100/USD/$ISSUER --taker-gets 50 --seed $TRADER
 
 ```bash
 # Cancel Trader A's open offer by its sequence number
-xrpl-up offer cancel --sequence 7 --seed $TRADER_A_SEED
-# ✔ Offer 7 cancelled
+xrpl-up offer cancel --sequence $OFFER_A_SEQ --seed $TRADER_A_SEED
+# ✔ Offer cancelled
 ```
 
 ---

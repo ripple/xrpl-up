@@ -21,18 +21,12 @@ export XRPL_NODE=local
 Fund an issuer account, then mint a new token:
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdIssuerSeedXXX  address: rIssuerXXX
-
-ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 
 # Minimal — just a transferable token
-xrpl-up mptoken issuance create --flags can-transfer --seed $ISSUER_SEED
-# ✔ MPT issuance created
-#   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+MPT_ID=$(xrpl-up mptoken issuance create --flags can-transfer --seed $ISSUER_SEED --json | jq -r .issuanceId)
 ```
 
 ### Full issuance with all controls
@@ -80,11 +74,9 @@ Before a holder can receive MPTs they must opt in by running `mptoken authorize`
 
 ```bash
 # Fund a holder wallet
-xrpl-up faucet --network local
-# → seed: sEdHolderSeedXXX  address: rHolderXXX
-
-HOLDER_SEED=sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
-HOLDER=rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER_JSON=$(xrpl-up faucet --network local --json)
+HOLDER_SEED=$(echo "$HOLDER_JSON" | jq -r .seed)
+HOLDER=$(echo "$HOLDER_JSON" | jq -r .address)
 
 # Holder opts in (no --holder flag means "this account is opting in for itself")
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED
@@ -137,11 +129,9 @@ xrpl-up account mptokens $HOLDER
 
 ```bash
 # Fund a second holder
-xrpl-up faucet --network local
-# → seed: sEdHolder2SeedXXX  address: rHolder2XXX
-
-HOLDER2_SEED=sEdHolder2SeedXXXXXXXXXXXXXXXXXXXXX
-HOLDER2=rHolder2XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER2_JSON=$(xrpl-up faucet --network local --json)
+HOLDER2_SEED=$(echo "$HOLDER2_JSON" | jq -r .seed)
+HOLDER2=$(echo "$HOLDER2_JSON" | jq -r .address)
 
 # Holder 2 opts in
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER2_SEED
@@ -204,11 +194,12 @@ xrpl-up mptoken issuance destroy $MPT_ID --seed $ISSUER_SEED
 
 ```bash
 # 1. Create (issuer already funded via `xrpl-up faucet --network local`)
-xrpl-up mptoken issuance create --flags can-transfer,can-clawback --seed $ISSUER_SEED
-# → MPT_ID
+MPT_ID=$(xrpl-up mptoken issuance create --flags can-transfer,can-clawback --seed $ISSUER_SEED --json | jq -r .issuanceId)
 
 # 2. Holder opts in
-xrpl-up faucet --network local    # → HOLDER, HOLDER_SEED
+HOLDER_JSON=$(xrpl-up faucet --network local --json)
+HOLDER_SEED=$(echo "$HOLDER_JSON" | jq -r .seed)
+HOLDER=$(echo "$HOLDER_JSON" | jq -r .address)
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED
 
 # 3. Send tokens

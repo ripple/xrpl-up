@@ -19,33 +19,26 @@ export XRPL_NODE=local
 ## 1. Set up sender and receiver
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdSenderSeedXXX  address: rSenderXXX
+SENDER_JSON=$(xrpl-up faucet --network local --json)
+SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
+SENDER=$(echo "$SENDER_JSON" | jq -r .address)
 
-xrpl-up faucet --network local
-# → seed: sEdReceiverSeedXXX  address: rReceiverXXX
-
-SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-SENDER=rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXX
-RECEIVER_SEED=sEdReceiverSeedXXXXXXXXXXXXXXXXX
-RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER_SEED=$(echo "$RECEIVER_JSON" | jq -r .seed)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 ```
 
 ---
 
 ## 2. Create a check (XRP)
 
-The sender creates a check for up to 10 XRP, valid for 7 days:
+The sender creates a check for up to 10 XRP, valid for 7 days. Compute the expiration relative to now instead of hardcoding a date:
 
 ```bash
-xrpl-up check create --to $RECEIVER --send-max 10 --seed $SENDER_SEED \
-  --expiration 2024-01-15T00:00:00Z
-# ✔ Check created
-#   checkID  A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   sendMax  10 XRP → rReceiverXXX...
-#   expiry   2024-01-08T00:00:00Z
+EXPIRY_7D=$(node -e "console.log(new Date(Date.now()+7*86400000).toISOString())")
 
-CHECK_ID=A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CHECK_ID=$(xrpl-up check create --to $RECEIVER --send-max 10 --seed $SENDER_SEED \
+  --expiration $EXPIRY_7D --json | jq -r .checkId)
 ```
 
 ---
@@ -56,8 +49,10 @@ CHECK_ID=A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 # Requires the receiver to have a trust line for USD first
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $RECEIVER_SEED
 
+EXPIRY_14D=$(node -e "console.log(new Date(Date.now()+14*86400000).toISOString())")
+
 xrpl-up check create --to $RECEIVER --send-max 50/USD/$ISSUER --seed $SENDER_SEED \
-  --expiration 2024-02-01T00:00:00Z
+  --expiration $EXPIRY_14D
 # ✔ Check created  sendMax 50 USD  checkID EFGH5678...
 ```
 
@@ -118,7 +113,8 @@ Checks with a past `--expiration` can be cancelled by anyone (including the send
 
 ```bash
 # Create a check that expires in 10 seconds (for testing)
-xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_SEED --expiration 2024-01-01T00:00:10Z
+EXPIRY_10S=$(node -e "console.log(new Date(Date.now()+10*1000).toISOString())")
+EXPIRED_CHECK_ID=$(xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_SEED --expiration $EXPIRY_10S --json | jq -r .checkId)
 
 # Wait 10 seconds, then cancel (anyone can do this after expiry)
 sleep 10

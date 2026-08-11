@@ -23,25 +23,21 @@ export XRPL_NODE=local
 The treasury account + three signers (Alice, Bob, Carol):
 
 ```bash
-xrpl-up faucet --network local; xrpl-up faucet --network local
-xrpl-up faucet --network local; xrpl-up faucet --network local
-# Run xrpl-up accounts --local to see all four:
-xrpl-up accounts --local
-```
+TREASURY_JSON=$(xrpl-up faucet --network local --json)
+TREASURY_SEED=$(echo "$TREASURY_JSON" | jq -r .seed)
+TREASURY=$(echo "$TREASURY_JSON" | jq -r .address)
 
-Assign to shell variables from the output:
+ALICE_JSON=$(xrpl-up faucet --network local --json)
+ALICE_SEED=$(echo "$ALICE_JSON" | jq -r .seed)
+ALICE=$(echo "$ALICE_JSON" | jq -r .address)
 
-```bash
-TREASURY_SEED=sEdTreasurySeedXXXXXXXXXXXXXXXXXXX
-TREASURY=rTreasuryXXXXXXXXXXXXXXXXXXXXXXXXXXX
+BOB_JSON=$(xrpl-up faucet --network local --json)
+BOB_SEED=$(echo "$BOB_JSON" | jq -r .seed)
+BOB=$(echo "$BOB_JSON" | jq -r .address)
 
-ALICE=rAliceXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-ALICE_SEED=sEdAliceSeedXXXXXXXXXXXXXXXXXXXXX
-
-BOB=rBobXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-BOB_SEED=sEdBobSeedXXXXXXXXXXXXXXXXXXXXXXX
-
-CAROL=rCarolXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CAROL_JSON=$(xrpl-up faucet --network local --json)
+CAROL_SEED=$(echo "$CAROL_JSON" | jq -r .seed)
+CAROL=$(echo "$CAROL_JSON" | jq -r .address)
 ```
 
 ### 1b. Install a 2-of-3 signer list on the treasury
@@ -85,13 +81,10 @@ Tickets let co-signers prepare transactions independently — no sequence depend
 # The treasury account reserves 3 tickets
 # (requires multi-sig now that master key is disabled — use a script for this
 #  or reserve tickets BEFORE disabling the master key)
-xrpl-up ticket create --count 3 --seed $TREASURY_SEED
-# ✔ 3 tickets created
-#   sequences: 10, 11, 12
-
-T1=10
-T2=11
-T3=12
+TICKETS_JSON=$(xrpl-up ticket create --count 3 --seed $TREASURY_SEED --json)
+T1=$(echo "$TICKETS_JSON" | jq -r '.sequences[0]')
+T2=$(echo "$TICKETS_JSON" | jq -r '.sequences[1]')
+T3=$(echo "$TICKETS_JSON" | jq -r '.sequences[2]')
 ```
 
 ### 2b. List the reserved tickets
@@ -113,24 +106,25 @@ Use a script with `xrpl-up run` to sign multi-sig transactions. Below is `script
 
 ```typescript
 // scripts/multisig-sign.ts
+// Reads TREASURY, DEST, ALICE_SEED, BOB_SEED, TICKET from the environment — no hardcoded secrets/IDs
 import { Client, Wallet, encode } from 'xrpl';
 
 const client = new Client('ws://localhost:6006');
 await client.connect();
 
-const treasury  = 'rTreasuryXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-const dest      = 'rDestXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-const aliceWallet = Wallet.fromSeed('sEdAliceSeedXXXXXXXXXXXXXXXXXXXXX');
-const bobWallet   = Wallet.fromSeed('sEdBobSeedXXXXXXXXXXXXXXXXXXXXXXX');
+const treasury  = process.env.TREASURY!;
+const dest      = process.env.DEST!;
+const aliceWallet = Wallet.fromSeed(process.env.ALICE_SEED!);
+const bobWallet   = Wallet.fromSeed(process.env.BOB_SEED!);
 
-// Tx 1: uses ticket 10 — Alice and Bob sign independently
+// Tx 1: uses the given ticket — Alice and Bob sign independently
 const tx1 = {
   TransactionType: 'Payment',
   Account: treasury,
   Destination: dest,
   Amount: '5000000',    // 5 XRP in drops
   Sequence: 0,          // must be 0 when using a ticket
-  TicketSequence: 10,
+  TicketSequence: Number(process.env.TICKET),
   Fee: '12',
   SigningPubKey: '',    // empty for multi-sig
 };
@@ -157,24 +151,30 @@ await client.disconnect();
 ```
 
 ```bash
-xrpl-up run scripts/multisig-sign.ts
-# tesSUCCESS   (ticket 10 consumed)
+DEST_JSON=$(xrpl-up faucet --network local --json)
+DEST=$(echo "$DEST_JSON" | jq -r .address)
+
+TREASURY=$TREASURY DEST=$DEST ALICE_SEED=$ALICE_SEED BOB_SEED=$BOB_SEED TICKET=$T1 \
+  xrpl-up run scripts/multisig-sign.ts
+# tesSUCCESS   ($T1 consumed)
 ```
 
 ---
 
 ## Part 4 — Submit Out-of-Order
 
-With tickets, there is **no ordering requirement**. Submit Tx using ticket 12 before ticket 11:
+With tickets, there is **no ordering requirement**. Reuse the same `scripts/multisig-sign.ts` from Part 3, submitting `$T3` before `$T2`:
 
 ```bash
-# Tx using ticket 12 submitted first
-xrpl-up run scripts/multisig-sign-t12.ts
-# tesSUCCESS   (ticket 12 consumed)
+# Tx using $T3 submitted first
+TREASURY=$TREASURY DEST=$DEST ALICE_SEED=$ALICE_SEED BOB_SEED=$BOB_SEED TICKET=$T3 \
+  xrpl-up run scripts/multisig-sign.ts
+# tesSUCCESS   ($T3 consumed)
 
-# Tx using ticket 11 submitted second — still valid
-xrpl-up run scripts/multisig-sign-t11.ts
-# tesSUCCESS   (ticket 11 consumed)
+# Tx using $T2 submitted second — still valid
+TREASURY=$TREASURY DEST=$DEST ALICE_SEED=$ALICE_SEED BOB_SEED=$BOB_SEED TICKET=$T2 \
+  xrpl-up run scripts/multisig-sign.ts
+# tesSUCCESS   ($T2 consumed)
 ```
 
 After all tickets are used:

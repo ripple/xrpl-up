@@ -24,11 +24,9 @@ export XRPL_NODE=local
 
 ```bash
 # Fund a brand-new issuer account
-xrpl-up faucet --network local
-# → seed: sEdIssuerSeedXXX  address: rIssuerXXX
-
-ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 
 # Enable clawback BEFORE creating any trust lines
 xrpl-up account set --allow-clawback --confirm --seed $ISSUER_SEED
@@ -48,11 +46,9 @@ xrpl-up account info $ISSUER
 
 ```bash
 # Fund a holder
-xrpl-up faucet --network local
-# → seed: sEdHolderSeedXXX  address: rHolderXXX
-
-HOLDER_SEED=sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
-HOLDER=rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER_JSON=$(xrpl-up faucet --network local --json)
+HOLDER_SEED=$(echo "$HOLDER_JSON" | jq -r .seed)
+HOLDER=$(echo "$HOLDER_JSON" | jq -r .address)
 
 # Enable DefaultRipple on the issuer
 xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
@@ -96,19 +92,14 @@ xrpl-up account trust-lines $HOLDER
 ### Step 1: Create an MPT issuance with clawback enabled
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdMptIssuerSeedXXX  address: rMptIssuerXXX
+MPT_ISSUER_JSON=$(xrpl-up faucet --network local --json)
+MPT_ISSUER_SEED=$(echo "$MPT_ISSUER_JSON" | jq -r .seed)
+MPT_ISSUER=$(echo "$MPT_ISSUER_JSON" | jq -r .address)
 
-MPT_ISSUER_SEED=sEdMptIssuerSeedXXXXXXXXXXXXXXX
-MPT_ISSUER=rMptIssuerXXXXXXXXXXXXXXXXXXXXXXXXX
-
-xrpl-up mptoken issuance create --seed $MPT_ISSUER_SEED \
+MPT_ID=$(xrpl-up mptoken issuance create --seed $MPT_ISSUER_SEED \
   --flags can-transfer,can-clawback \
-  --max-amount 1000000
-# ✔ MPT issuance created
-#   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  --max-amount 1000000 \
+  --json | jq -r .issuanceId)
 ```
 
 ---
@@ -116,11 +107,9 @@ MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ### Step 2: Issue tokens to a holder
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdMptHolderSeedXXX  address: rMptHolderXXX
-
-MPT_HOLDER_SEED=sEdMptHolderSeedXXXXXXXXXXXXXXX
-MPT_HOLDER=rMptHolderXXXXXXXXXXXXXXXXXXXXXXXXX
+MPT_HOLDER_JSON=$(xrpl-up faucet --network local --json)
+MPT_HOLDER_SEED=$(echo "$MPT_HOLDER_JSON" | jq -r .seed)
+MPT_HOLDER=$(echo "$MPT_HOLDER_JSON" | jq -r .address)
 
 # Holder opts in
 xrpl-up mptoken authorize $MPT_ID --seed $MPT_HOLDER_SEED

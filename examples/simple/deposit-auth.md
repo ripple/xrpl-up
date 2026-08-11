@@ -18,23 +18,19 @@ export XRPL_NODE=local
 
 ```bash
 # The account that will require deposit authorization
-xrpl-up faucet --network local
-# → seed: sEdReceiverSeedXXX  address: rReceiverXXX
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER_SEED=$(echo "$RECEIVER_JSON" | jq -r .seed)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 
 # An authorized sender
-xrpl-up faucet --network local
-# → seed: sEdSenderASeedXXX  address: rSenderAXXX
+SENDER_A_JSON=$(xrpl-up faucet --network local --json)
+SENDER_A_SEED=$(echo "$SENDER_A_JSON" | jq -r .seed)
+SENDER_A=$(echo "$SENDER_A_JSON" | jq -r .address)
 
 # An unauthorized sender (for testing)
-xrpl-up faucet --network local
-# → seed: sEdSenderBSeedXXX  address: rSenderBXXX
-
-RECEIVER_SEED=sEdReceiverSeedXXXXXXXXXXXXXXXXX
-RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SENDER_A_SEED=sEdSenderASeedXXXXXXXXXXXXXXXXX
-SENDER_A=rSenderAXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SENDER_B_SEED=sEdSenderBSeedXXXXXXXXXXXXXXXXX
-SENDER_B=rSenderBXXXXXXXXXXXXXXXXXXXXXXXXXXX
+SENDER_B_JSON=$(xrpl-up faucet --network local --json)
+SENDER_B_SEED=$(echo "$SENDER_B_JSON" | jq -r .seed)
+SENDER_B=$(echo "$SENDER_B_JSON" | jq -r .address)
 ```
 
 ---
@@ -84,9 +80,7 @@ With Checks as a workaround (the receiver cashes the check — no deposit restri
 
 ```bash
 # Sender B creates a check (anyone can create a check to an account with depositAuth)
-xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_B_SEED
-# → CHECK_ID
-CHECK_ID=...
+CHECK_ID=$(xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_B_SEED --json | jq -r .checkId)
 
 # Receiver cashes the check (receiver initiates — not a direct payment, so depositAuth does not block it)
 xrpl-up check cash --check $CHECK_ID --amount 5 --seed $RECEIVER_SEED

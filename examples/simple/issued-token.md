@@ -18,19 +18,14 @@ export XRPL_NODE=local
 
 ```bash
 # Create the token issuer
-xrpl-up faucet --network local
-# → address: rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-# → seed:    sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER_ADDR=$(echo "$ISSUER_JSON" | jq -r .address)
 
 # Create a token holder
-xrpl-up faucet --network local
-# → address: rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
-# → seed:    sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
-
-ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-ISSUER_ADDR=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_SEED=sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
-HOLDER_ADDR=rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER_JSON=$(xrpl-up faucet --network local --json)
+HOLDER_SEED=$(echo "$HOLDER_JSON" | jq -r .seed)
+HOLDER_ADDR=$(echo "$HOLDER_JSON" | jq -r .address)
 ```
 
 ---

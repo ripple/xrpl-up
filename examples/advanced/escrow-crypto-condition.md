@@ -40,17 +40,14 @@ fulfillment.setPreimage(preimage);
 const fulfillmentHex  = fulfillment.serializeBinary().toString('hex').toUpperCase();
 const conditionHex    = fulfillment.getConditionBinary().toString('hex').toUpperCase();
 
-console.log('FULFILLMENT:', fulfillmentHex);
-console.log('CONDITION:  ', conditionHex);
+// Print as a single JSON line so it can be captured directly — no manual copying
+console.log(JSON.stringify({ fulfillment: fulfillmentHex, condition: conditionHex }));
 ```
 
 ```bash
-xrpl-up run scripts/gen-condition.ts
-# FULFILLMENT: A0228020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-# CONDITION:   A0258020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-FULFILLMENT=A0228020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-CONDITION=A0258020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CC_JSON=$(xrpl-up run scripts/gen-condition.ts)
+FULFILLMENT=$(echo "$CC_JSON" | jq -r .fulfillment)
+CONDITION=$(echo "$CC_JSON" | jq -r .condition)
 ```
 
 > The **condition** is published on-chain. The **fulfillment** is shared only with the intended recipient — keep it secret until you want the escrow released.
@@ -60,16 +57,13 @@ CONDITION=A0258020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Step 2: Create accounts
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdSenderSeedXXX  address: rSenderXXX
+SENDER_JSON=$(xrpl-up faucet --network local --json)
+SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
+SENDER=$(echo "$SENDER_JSON" | jq -r .address)
 
-xrpl-up faucet --network local
-# → seed: sEdReceiverSeedXXX  address: rReceiverXXX
-
-SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-SENDER=rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXX
-RECEIVER_SEED=sEdReceiverSeedXXXXXXXXXXXXXXXXX
-RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER_SEED=$(echo "$RECEIVER_JSON" | jq -r .seed)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 ```
 
 ---
@@ -79,17 +73,13 @@ RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The sender locks 25 XRP behind the condition. The escrow auto-cancels after 7 days if not finished:
 
 ```bash
-xrpl-up escrow create --to $RECEIVER --amount 25 --seed $SENDER_SEED \
-  --condition $CONDITION \
-  --cancel-after 2024-01-08T00:00:00Z
-# ✔ Escrow created
-#   sequence    42
-#   amount      25 XRP  →  rReceiverXXX...
-#   condition   A0258020...
-#   cancelAfter 2024-01-08T00:00:00Z
-
 ESCROW_OWNER=$SENDER
-ESCROW_SEQ=42
+CANCEL_AFTER=$(node -e "console.log(new Date(Date.now()+7*86400000).toISOString())")
+
+ESCROW_SEQ=$(xrpl-up escrow create --to $RECEIVER --amount 25 --seed $SENDER_SEED \
+  --condition $CONDITION \
+  --cancel-after $CANCEL_AFTER \
+  --json | jq -r .sequence)
 ```
 
 Note: `--finish-after` is intentionally omitted — the condition alone gates release. No time restriction on when it can be finished (within the cancel window).
@@ -101,7 +91,7 @@ Note: `--finish-after` is intentionally omitted — the condition alone gates re
 ```bash
 xrpl-up escrow list $SENDER
 # sequence  42  amount 25 XRP → rReceiverXXX...
-# condition A0258020...  cancelAfter 2024-01-08T00:00:00Z
+# condition A0258020...  cancelAfter: whatever you computed above
 ```
 
 ---
@@ -174,15 +164,17 @@ If the receiver never presents the fulfillment and `CancelAfter` passes, anyone 
 # (after CancelAfter time has passed — in the sandbox you can advance time
 #  by waiting, or create a short --cancel-after for testing)
 
-xrpl-up escrow create --to $RECEIVER --amount 10 --seed $SENDER_SEED \
+SHORT_CANCEL_AFTER=$(node -e "console.log(new Date(Date.now()+30*1000).toISOString())")
+
+ESCROW_SEQ_SHORT=$(xrpl-up escrow create --to $RECEIVER --amount 10 --seed $SENDER_SEED \
   --condition $CONDITION \
-  --cancel-after 2024-01-01T00:00:30Z
-# → ESCROW_SEQ_SHORT=43
+  --cancel-after $SHORT_CANCEL_AFTER \
+  --json | jq -r .sequence)
 
 sleep 35
 
 # Cancel the expired escrow (sender or anyone else can do this)
-xrpl-up escrow cancel --owner $SENDER --sequence 43 --seed $SENDER_SEED
+xrpl-up escrow cancel --owner $SENDER --sequence $ESCROW_SEQ_SHORT --seed $SENDER_SEED
 # ✔ Escrow cancelled  10 XRP returned to rSenderXXX...
 ```
 

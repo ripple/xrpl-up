@@ -22,13 +22,13 @@ export XRPL_NODE=local
 
 ```bash
 # Fund an issuer and a liquidity-provider account
-xrpl-up faucet --network local   # → issuer seed/address
-xrpl-up faucet --network local   # → LP seed/address
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 
-ISSUER_SEED=sEdIssuerSeedXXX
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-LP_SEED=sEdLpSeedXXX
-LP=rLpXXXXXXXXXXXXXXXXXXXXXXXXXXX
+LP_JSON=$(xrpl-up faucet --network local --json)
+LP_SEED=$(echo "$LP_JSON" | jq -r .seed)
+LP=$(echo "$LP_JSON" | jq -r .address)
 
 # Let the issuer's USD ripple through trust lines (needed for it to settle payments)
 xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED --node local
@@ -65,9 +65,9 @@ Once the pool is live, any account can trade against it using the DEX `offer cre
 
 ```bash
 # Fund a trader and give it a USD trust line
-xrpl-up faucet --network local
-TRADER_SEED=sEdTraderSeedXXX
-TRADER=rTraderXXX
+TRADER_JSON=$(xrpl-up faucet --network local --json)
+TRADER_SEED=$(echo "$TRADER_JSON" | jq -r .seed)
+TRADER=$(echo "$TRADER_JSON" | jq -r .address)
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $TRADER_SEED --node local
 
 # Trader sells 5 XRP into the pool (gets USD back) — price includes the 0.5% fee + slippage

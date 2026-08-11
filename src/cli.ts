@@ -178,11 +178,12 @@ program
   .option('--network <network>', 'Network: local | testnet | devnet — omit for local')
   .option('--local', '[deprecated] Alias for --network local')
   .option('-s, --seed <seed>', 'Wallet seed to fund (insecure, prefer $WALLET_SEED env var; omit to generate a new wallet)')
-  .action((opts: { network?: string; local?: boolean; seed?: string }) => {
+  .option('--json', 'Output as JSON', false)
+  .action((opts: { network?: string; local?: boolean; seed?: string; json?: boolean }) => {
     const network = opts.local ? 'local' : (opts.network ?? 'local');
     const seed = opts.seed ?? process.env['WALLET_SEED'];
     if (opts.seed) process.stderr.write('Warning: passing seed via flag is insecure. Use $WALLET_SEED env var instead.\n');
-    faucetCommand({ network, seed }).catch(handleError);
+    faucetCommand({ network, seed, json: opts.json }).catch(handleError);
   });
 
 // ── run ───────────────────────────────────────────────────────────────────────

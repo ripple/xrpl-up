@@ -19,14 +19,13 @@ export XRPL_NODE=local
 ## Step 1: Create accounts
 
 ```bash
-xrpl-up faucet --network local
-xrpl-up faucet --network local
-xrpl-up accounts --local
+SENDER_JSON=$(xrpl-up faucet --network local --json)
+SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
+SENDER=$(echo "$SENDER_JSON" | jq -r .address)
 
-SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-SENDER=rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXX
-RECEIVER_SEED=sEdReceiverSeedXXXXXXXXXXXXXXXXX
-RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER_SEED=$(echo "$RECEIVER_JSON" | jq -r .seed)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 ```
 
 ---
@@ -36,15 +35,8 @@ RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
 Use a short settle delay (600 seconds = 10 minutes) so close timing is easy to observe in the sandbox:
 
 ```bash
-xrpl-up channel create --to $RECEIVER --amount 100 --seed $SENDER_SEED \
-  --settle-delay 600
-# ✔ Channel created
-#   channelID    ABCDEF1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   amount       100 XRP
-#   destination  rReceiverXXX...
-#   settleDelay  600 s
-
-CHANNEL_ID=ABCDEF1234XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CHANNEL_ID=$(xrpl-up channel create --to $RECEIVER --amount 100 --seed $SENDER_SEED \
+  --settle-delay 600 --json | jq -r .channelId)
 ```
 
 Inspect the channel:
@@ -62,23 +54,19 @@ xrpl-up channel list $SENDER
 
 The sender issues signed claims as service is delivered. Each claim covers the **cumulative total**:
 
-`channel sign` prints only the raw signature hex (no other fields) — get the channel's public key once via `channel list` (see Step 2):
+`channel sign` prints only the raw signature hex (no other fields). The channel uses the sender's own key by default, so derive the public key directly from the seed:
 
 ```bash
-PUBKEY=ED1234XXXXXXXXXX   # from `xrpl-up channel list $SENDER`
+PUBKEY=$(xrpl-up wallet address --seed $SENDER_SEED --json | jq -r .publicKey)
 
 # After delivering unit 1 (worth 5 XRP):
-xrpl-up channel sign --channel $CHANNEL_ID --amount 5 --seed $SENDER_SEED
-# 3045...XXXXXXXXXX
-SIG_5=3045...XXXXXXXXXX
+SIG_5=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 5 --seed $SENDER_SEED --json | jq -r .signature)
 
 # After delivering unit 2 (cumulative: 12 XRP):
-xrpl-up channel sign --channel $CHANNEL_ID --amount 12 --seed $SENDER_SEED
-SIG_12=3045...YYYYYYYYYY
+SIG_12=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 12 --seed $SENDER_SEED --json | jq -r .signature)
 
 # After delivering unit 3 (cumulative: 27 XRP):
-xrpl-up channel sign --channel $CHANNEL_ID --amount 27 --seed $SENDER_SEED
-SIG_27=3045...ZZZZZZZZZZ
+SIG_27=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 27 --seed $SENDER_SEED --json | jq -r .signature)
 ```
 
 > The receiver only needs to keep the **latest (highest-value) claim** — earlier ones are superseded.
@@ -120,12 +108,10 @@ The next batch of claims continues from the cumulative total (not from zero):
 
 ```bash
 # Cumulative total after continued service: 45 XRP
-xrpl-up channel sign --channel $CHANNEL_ID --amount 45 --seed $SENDER_SEED
-SIG_45=...
+SIG_45=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 45 --seed $SENDER_SEED --json | jq -r .signature)
 
 # Cumulative total: 68 XRP
-xrpl-up channel sign --channel $CHANNEL_ID --amount 68 --seed $SENDER_SEED
-SIG_68=...
+SIG_68=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 68 --seed $SENDER_SEED --json | jq -r .signature)
 ```
 
 ---
@@ -179,8 +165,7 @@ xrpl-up channel claim --channel $CHANNEL_ID --close --seed $SENDER_SEED
 The receiver still has claims in-hand (say, SIG_90 for 90 XRP cumulative). They submit the final settlement:
 
 ```bash
-xrpl-up channel sign --channel $CHANNEL_ID --amount 90 --seed $SENDER_SEED
-SIG_90=...
+SIG_90=$(xrpl-up channel sign --channel $CHANNEL_ID --amount 90 --seed $SENDER_SEED --json | jq -r .signature)
 
 xrpl-up channel claim --channel $CHANNEL_ID \
   --amount 90 --balance 90 --signature $SIG_90 --public-key $PUBKEY \

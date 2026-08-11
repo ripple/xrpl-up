@@ -35,11 +35,9 @@ Holder A (approved)        Holder B (rejected)
 ## Step 1: Create the regulated issuer account
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdIssuerSeedXXX  address: rIssuerXXX
-
-ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 ```
 
 ---
@@ -81,16 +79,13 @@ xrpl-up account info $ISSUER
 ## Step 3: Create holder accounts
 
 ```bash
-xrpl-up faucet --network local
-# → seed: sEdHolderASeedXXX  address: rHolderAXXX   (will be approved)
+HOLDER_A_JSON=$(xrpl-up faucet --network local --json)   # will be approved
+HOLDER_A_SEED=$(echo "$HOLDER_A_JSON" | jq -r .seed)
+HOLDER_A=$(echo "$HOLDER_A_JSON" | jq -r .address)
 
-xrpl-up faucet --network local
-# → seed: sEdHolderBSeedXXX  address: rHolderBXXX   (will be rejected)
-
-HOLDER_A_SEED=sEdHolderASeedXXXXXXXXXXXXXXXXXX
-HOLDER_A=rHolderAXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_B_SEED=sEdHolderBSeedXXXXXXXXXXXXXXXXXX
-HOLDER_B=rHolderBXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER_B_JSON=$(xrpl-up faucet --network local --json)   # will be rejected
+HOLDER_B_SEED=$(echo "$HOLDER_B_JSON" | jq -r .seed)
+HOLDER_B=$(echo "$HOLDER_B_JSON" | jq -r .address)
 ```
 
 ---

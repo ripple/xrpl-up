@@ -18,27 +18,16 @@ export XRPL_NODE=local
 
 ## 1. Fund two accounts
 
-```bash
-# Fund a sender wallet via the local genesis faucet
-xrpl-up faucet --network local
-# Output:
-#   address : rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   seed    : sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-#   balance : 1000 XRP
-
-# Fund a receiver wallet
-xrpl-up faucet --network local
-# Output:
-#   address : rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   seed    : sEdReceiverSeedXXXXXXXXXXXXXXXXXXXX
-#   balance : 1000 XRP
-```
-
-Save the values:
+`faucet --json` prints a single JSON line — capture it once per account and pull out the fields you need with `jq`:
 
 ```bash
-SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXX
+SENDER_JSON=$(xrpl-up faucet --network local --json)
+SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
+SENDER=$(echo "$SENDER_JSON" | jq -r .address)
+
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER_SEED=$(echo "$RECEIVER_JSON" | jq -r .seed)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 ```
 
 ---
@@ -75,10 +64,10 @@ After any on-chain activity, inspect an account's history:
 
 ```bash
 # Show the last 20 transactions for an account
-xrpl-up account transactions rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+xrpl-up account transactions $SENDER
 
 # Limit to the last 5
-xrpl-up account transactions rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX --limit 5
+xrpl-up account transactions $SENDER --limit 5
 ```
 
 Each row shows: date, transaction type, result (`tesSUCCESS` / error), hash, and a short summary.
