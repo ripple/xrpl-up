@@ -5,7 +5,7 @@ import { getKeystoreDir, resolveAccount } from "../../utils/keystore";
 
 interface MPTokenEntry {
   MPTokenIssuanceID: string;
-  MPTAmount: string;
+  MPTAmount?: string;
   Flags: number;
 }
 
@@ -51,7 +51,9 @@ export const mptokensCommand = new Command("mptokens")
 
       for (const token of tokens) {
         const flags = token.Flags === 1 ? "Locked" : "None";
-        console.log(`${token.MPTokenIssuanceID}  ${token.MPTAmount.padStart(20)}  ${flags}`);
+        // rippled omits MPTAmount entirely when the balance is exactly 0
+        const amount = token.MPTAmount ?? "0";
+        console.log(`${token.MPTokenIssuanceID}  ${amount.padStart(20)}  ${flags}`);
       }
 
       if (res.result.marker) {

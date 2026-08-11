@@ -59,28 +59,16 @@ xrpl-up account info $TREASURY
 #   rCarolXXX  weight 1
 ```
 
-### 1c. Disable the master key (optional — enforces multi-sig only)
-
-> ⚠️ Only do this after confirming the signer list is correct. If you disable the master key with no valid signer list you permanently lose access.
-
-```bash
-xrpl-up account set --set-flag disableMaster --seed $TREASURY_SEED
-# ✔ Flag set: disableMaster
-# ⚠  Master key is now disabled. All future transactions require multi-sig.
-```
-
 ---
 
 ## Part 2 — Reserve Tickets
 
-Tickets let co-signers prepare transactions independently — no sequence dependency between them.
+Tickets let co-signers prepare transactions independently — no sequence dependency between them. Reserve them **before** disabling the master key below — `xrpl-up ticket create` only supports single-key signing, so it can't run once the master key is gone (live-verified: doing this in the other order fails with `transaction expired`/`tefNO_TICKET`).
 
 ### 2a. Reserve 3 tickets
 
 ```bash
-# The treasury account reserves 3 tickets
-# (requires multi-sig now that master key is disabled — use a script for this
-#  or reserve tickets BEFORE disabling the master key)
+# The treasury account reserves 3 tickets (still signing with the master key, which is still active)
 TICKETS_JSON=$(xrpl-up ticket create --count 3 --seed $TREASURY_SEED --json)
 T1=$(echo "$TICKETS_JSON" | jq -r '.sequences[0]')
 T2=$(echo "$TICKETS_JSON" | jq -r '.sequences[1]')
@@ -96,6 +84,16 @@ xrpl-up ticket list $TREASURY
 # TicketSequence  12
 ```
 
+### 2c. Disable the master key (optional — enforces multi-sig only)
+
+> ⚠️ Only do this after confirming the signer list is correct **and** after reserving all the tickets you need. If you disable the master key with no valid signer list you permanently lose access — and once it's disabled, `xrpl-up ticket create`/most other single-key commands stop working for this account entirely (they'd need their own multisig script, same as `scripts/multisig-sign.ts` below).
+
+```bash
+xrpl-up account set --set-flag disableMaster --seed $TREASURY_SEED
+# ✔ Flag set: disableMaster
+# ⚠  Master key is now disabled. All future transactions require multi-sig.
+```
+
 ---
 
 ## Part 3 — Pre-Sign Transactions with Tickets
@@ -107,7 +105,7 @@ Use a script with `xrpl-up run` to sign multi-sig transactions. Below is `script
 ```typescript
 // scripts/multisig-sign.ts
 // Reads TREASURY, DEST, ALICE_SEED, BOB_SEED, TICKET from the environment — no hardcoded secrets/IDs
-import { Client, Wallet, encode } from 'xrpl';
+import { Client, Wallet, encode, decode, decodeAccountID } from 'xrpl';
 
 const client = new Client('ws://localhost:6006');
 await client.connect();
@@ -117,34 +115,33 @@ const dest      = process.env.DEST!;
 const aliceWallet = Wallet.fromSeed(process.env.ALICE_SEED!);
 const bobWallet   = Wallet.fromSeed(process.env.BOB_SEED!);
 
-// Tx 1: uses the given ticket — Alice and Bob sign independently
-const tx1 = {
+// Tx 1: uses the given ticket — Alice and Bob sign independently.
+// autofill(tx, signersCount) fills the multisig-adjusted Fee and LastLedgerSequence
+// (a plain autofill(tx) without the signers count omits both).
+const tx1 = await client.autofill({
   TransactionType: 'Payment',
   Account: treasury,
   Destination: dest,
   Amount: '5000000',    // 5 XRP in drops
   Sequence: 0,          // must be 0 when using a ticket
   TicketSequence: Number(process.env.TICKET),
-  Fee: '12',
   SigningPubKey: '',    // empty for multi-sig
-};
+} as any, 2);
 
-// Alice signs
-const aliceSig = aliceWallet.sign(tx1 as any, true);  // true = multi-sign
-console.log('Alice sig:', aliceSig.tx_blob);
+// wallet.sign(tx, true) returns a binary-encoded tx_blob (hex), not JSON —
+// decode() it back to an object to read the SigningPubKey/TxnSignature it produced.
+const aliceSigned = decode(aliceWallet.sign(tx1, true).tx_blob) as any;
+const bobSigned = decode(bobWallet.sign(tx1, true).tx_blob) as any;
 
-// Bob signs
-const bobSig = bobWallet.sign(tx1 as any, true);
-console.log('Bob sig:', bobSig.tx_blob);
+// The ledger requires Signers sorted by the *binary* AccountID, ascending —
+// base58 address string order does not match this.
+const signers = [
+  { Signer: { Account: aliceWallet.address, SigningPubKey: aliceSigned.Signers[0].Signer.SigningPubKey, TxnSignature: aliceSigned.Signers[0].Signer.TxnSignature } },
+  { Signer: { Account: bobWallet.address,   SigningPubKey: bobSigned.Signers[0].Signer.SigningPubKey,   TxnSignature: bobSigned.Signers[0].Signer.TxnSignature } },
+].sort((a, b) => Buffer.compare(decodeAccountID(a.Signer.Account), decodeAccountID(b.Signer.Account)));
 
 // Combine and submit (2-of-3 quorum met)
-const combined = await client.submitAndWait(encode({
-  ...tx1,
-  Signers: [
-    { Signer: { Account: aliceWallet.address, SigningPubKey: aliceWallet.publicKey, TxnSignature: JSON.parse(Buffer.from(aliceSig.tx_blob, 'hex').toString()).TxnSignature } },
-    { Signer: { Account: bobWallet.address,   SigningPubKey: bobWallet.publicKey,   TxnSignature: JSON.parse(Buffer.from(bobSig.tx_blob, 'hex').toString()).TxnSignature } },
-  ],
-} as any));
+const combined = await client.submitAndWait(encode({ ...tx1, Signers: signers } as any));
 console.log('Tx1 result:', combined.result.meta?.TransactionResult);
 
 await client.disconnect();

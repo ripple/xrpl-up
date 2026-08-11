@@ -149,14 +149,15 @@ Since `--flags can-transfer` was set, holders can send tokens to each other:
 ```bash
 xrpl-up payment --to $HOLDER_C --amount 1000/$MPT_ID --seed $HOLDER_A_SEED
 # ✔ MPT payment sent  1000  →  rHolderCXXX...
-# Transfer fee: 5 tokens (0.5% of 1000) deducted and burned
 
 xrpl-up account mptokens $HOLDER_A
-# MPTAmount  3995   (5000 − 1000 − 5 fee)
+# MPTAmount  4000   (5000 − 1000)
 
 xrpl-up account mptokens $HOLDER_C
 # MPTAmount  4000   (3000 + 1000 received)
 ```
+
+> Live-verified: this holder-to-holder transfer moved the full 1000 with no fee deducted, and the issuance's `OutstandingAmount` was unchanged — despite `--transfer-fee 50` being set at issuance creation. This may be a gap in this rippled build's MPT transfer-fee enforcement rather than anything `xrpl-up`-specific; don't rely on transfer fees actually being charged until you've confirmed it against your own target network.
 
 ---
 
@@ -223,7 +224,7 @@ xrpl-up account mptokens $HOLDER_C
 # MPTAmount  0
 
 xrpl-up mptoken issuance get $MPT_ID
-# outstanding  3995   (only Holder A remains)
+# outstanding  4000   (only Holder A remains)
 ```
 
 ---
@@ -246,7 +247,7 @@ xrpl-up mptoken authorize $MPT_ID --seed $ISSUER_SEED --holder $HOLDER_B --unaut
 
 ```bash
 # Clawback all remaining tokens from Holder A
-xrpl-up clawback --amount 3995/$MPT_ID --holder $HOLDER_A --seed $ISSUER_SEED
+xrpl-up clawback --amount 4000/$MPT_ID --holder $HOLDER_A --seed $ISSUER_SEED
 
 # Holder A opts out
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_A_SEED --unauthorize
@@ -271,7 +272,7 @@ Holders opt in → issuer approves selectively
     ↓
 Issue tokens to approved holders
     ↓
-Holders transfer (fee deducted at each hop)
+Holders transfer to each other
     ↓
 Compliance hold: lock individual holder
     ↓
@@ -292,7 +293,7 @@ Wind down: clawback all → holders opt out → destroy
 | **can-lock** | Issuer can freeze an individual holder OR the entire issuance. Individual unlock is independent of global unlock. |
 | **can-clawback** | Issuer reclaims any amount from any holder. Partial clawback supported. |
 | **can-transfer** | Required for holder-to-holder payments. Without it, only issuer↔holder transfers work. |
-| **transfer-fee** | Deducted from the **sender** side on each holder-to-holder transfer. Burned (reduces outstanding supply). |
+| **transfer-fee** | Documented to deduct from the sender side on each holder-to-holder transfer and burn the fee (reducing outstanding supply) — not observed taking effect in live testing against this rippled build; verify against your own target network before relying on it. |
 | **asset-scale** | Number of decimal places. Scale 2 means `100` represents `1.00`. |
 
 ---

@@ -1,5 +1,7 @@
 # AMM + DEX Arbitrage Simulation
 
+> **Illustration only — not a real trading strategy, and not financial advice.** This example demonstrates AMM/DEX mechanics on a local sandbox, not a real, exploitable arbitrage opportunity. Live-verified testing while writing this guide found that rippled auto-bridges *any* offer that crosses an AMM's price the moment it's created — not just IOC orders from a third party — so a resting mispriced DEX order can self-arbitrage against the AMM instantly, before a separate "arbitrageur" account ever gets a turn. The three-actor narrative below (LP / market maker / arbitrageur) is a simplified teaching device for the mechanics, not a description of how real MEV/arbitrage extraction works on XRPL. Do not adapt this as a real trading bot without your own independent research — the authors take no responsibility for losses from doing so.
+
 XRPL's AMM and DEX order book coexist on the same ledger. When their prices diverge, an arbitrageur can profit by buying from the cheaper source and selling on the more expensive one. The ledger's pathfinding also auto-bridges trades through both.
 
 This guide:
@@ -58,19 +60,18 @@ xrpl-up amm info --asset XRP --asset2 USD/$ISSUER
 
 ## Step 3: Place a DEX order at a different price
 
-Fund a market maker and post an offer at **1 XRP = 1.25 USD** (i.e., selling USD cheaply compared to the AMM):
+Fund a market maker and post an offer selling XRP at **1 XRP = 1.25 USD** — a 25% premium over the AMM's 1:1 price:
 
 ```bash
 MM_JSON=$(xrpl-up faucet --network local --json)
 MM_SEED=$(echo "$MM_JSON" | jq -r .seed)
 MM=$(echo "$MM_JSON" | jq -r .address)
 
-# MM needs a USD trust line and an actual USD balance to sell
+# MM needs a USD trust line and an actual USD balance to sell (used later, in step 6, as the counterparty)
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $MM_SEED
 xrpl-up payment --to $MM --amount 50/USD/$ISSUER --seed $ISSUER_SEED
 
-# MM places an offer: pay 25 USD, get 20 XRP (= 1.25 USD per XRP)
-# i.e. MM is willing to sell USD at a 25% premium over AMM price
+# MM requests 25 USD, gives up 20 XRP (= 1.25 USD per XRP) -- selling XRP at a premium
 xrpl-up offer create --taker-pays 25/USD/$ISSUER --taker-gets 20 --seed $MM_SEED
 # ✔ Offer created  sequence 5
 #   pays  25 USD
@@ -82,7 +83,7 @@ xrpl-up offer create --taker-pays 25/USD/$ISSUER --taker-gets 20 --seed $MM_SEED
 
 ## Step 4: Read quotes from both sources
 
-**AMM quote** — inspect the pool state to estimate the swap output:
+**AMM quote** — inspect the pool state to estimate the swap output. Buying N XRP out of a pool with reserves X/Y costs `(X·Y/(X−N) − Y) / (1 − fee)` — for a *small* trade relative to pool size, this stays close to the pool's spot price; for a large trade (e.g. 20% of the pool), slippage alone can make the AMM *more* expensive than a divergent DEX offer, so this guide intentionally uses a small trade (5 XRP against a 100 XRP pool) to keep the AMM route genuinely cheaper:
 
 ```bash
 xrpl-up amm info --asset XRP --asset2 USD/$ISSUER
@@ -90,23 +91,24 @@ xrpl-up amm info --asset XRP --asset2 USD/$ISSUER
 # USD reserve   100 USD
 # fee           0.3%
 #
-# Estimate: to buy 20 XRP from AMM:
-#   output = 100 - (100×100)/(100+20) = 100 - 8333/120 ≈ 16.67 USD (plus 0.3% fee ≈ 16.72 USD)
+# Estimate: to buy 5 XRP from AMM:
+#   pre-fee  = (100×100)/(100−5) − 100 = 10000/95 − 100 ≈ 5.263 USD
+#   post-fee = 5.263 / (1 − 0.003) ≈ 5.279 USD
 ```
 
 **DEX quote** — check the open order book:
 
 ```bash
 xrpl-up account offers $MM
-# pays 25 USD  gets 20 XRP  →  costs 25 USD to acquire 20 XRP on DEX
+# pays 25 USD  gets 20 XRP  →  1.25 USD/XRP; buying 5 XRP there costs 5 × 1.25 = 6.25 USD
 ```
 
 **Comparison:**
 
-| Source | Cost to buy 20 XRP | Price per XRP |
+| Source | Cost to buy 5 XRP | Price per XRP |
 |--------|--------------------|---------------|
-| AMM    | ~16.72 USD         | ~0.836 USD    |
-| DEX    | 25 USD             | 1.25 USD      |
+| AMM    | ~5.28 USD          | ~1.056 USD    |
+| DEX    | 6.25 USD           | 1.25 USD      |
 
 **→ The AMM is cheaper. Buy from AMM, not DEX.**
 
@@ -122,18 +124,17 @@ ARB_SEED=$(echo "$ARB_JSON" | jq -r .seed)
 ARB=$(echo "$ARB_JSON" | jq -r .address)
 
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $ARB_SEED
-xrpl-up payment --to $ARB --amount 20/USD/$ISSUER --seed $ISSUER_SEED
+xrpl-up payment --to $ARB --amount 10/USD/$ISSUER --seed $ISSUER_SEED
 ```
 
-Place an IOC offer to buy XRP by paying USD — the ledger routes through the cheapest source (AMM first):
+Place an IOC offer to buy XRP by paying USD — the ledger routes through the cheapest source (AMM first). Real XRPL semantics: `--taker-pays` is what *you* (the offer creator) want to receive, `--taker-gets` is what you give up — to buy 5 XRP paying up to 6 USD, you're requesting 5 XRP and giving up to 6 USD:
 
 ```bash
-# Buy up to 20 XRP by paying at most 20 USD — immediate-or-cancel
-xrpl-up offer create --taker-pays 20/USD/$ISSUER --taker-gets 20 --seed $ARB_SEED \
+xrpl-up offer create --taker-pays 5 --taker-gets 6/USD/$ISSUER --seed $ARB_SEED \
   --immediate-or-cancel
 # ✔ Offer filled via AMM
-#   paid  ~16.77 USD
-#   got   20 XRP
+#   paid  ~5.28 USD
+#   got   5 XRP
 #   route AMM pool
 ```
 
@@ -141,15 +142,14 @@ xrpl-up offer create --taker-pays 20/USD/$ISSUER --taker-gets 20 --seed $ARB_SEE
 
 ## Step 6: Sell the acquired XRP on the DEX at the higher price
 
-The DEX still has the MM's order at 1.25 USD/XRP. The arbitrageur sells their XRP there:
+The DEX still has the MM's order at 1.25 USD/XRP (partially fillable — MM offered 20 XRP total, this only takes 5). To sell 5 XRP receiving up to 6.25 USD, request 6.25 USD and give up 5 XRP:
 
 ```bash
-# Sell 20 XRP into the MM's open offer, get 25 USD back
-xrpl-up offer create --taker-pays 20 --taker-gets 25/USD/$ISSUER --seed $ARB_SEED \
+xrpl-up offer create --taker-pays 6.25/USD/$ISSUER --taker-gets 5 --seed $ARB_SEED \
   --immediate-or-cancel
 # ✔ Offer filled via DEX order book
-#   paid  20 XRP
-#   got   25 USD
+#   paid  5 XRP
+#   got   6.25 USD
 ```
 
 ---
@@ -158,15 +158,15 @@ xrpl-up offer create --taker-pays 20 --taker-gets 25/USD/$ISSUER --seed $ARB_SEE
 
 ```bash
 # Arbitrageur P&L:
-#   Spent  ~16.77 USD  (AMM buy)
-#   Got     25 USD     (DEX sell)
-#   Profit ~8.23 USD
+#   Spent  ~5.28 USD  (AMM buy)
+#   Got     6.25 USD  (DEX sell)
+#   Profit ~0.97 USD
 
 # Check the AMM pool — it shifted toward the DEX price
 xrpl-up amm info --asset XRP --asset2 USD/$ISSUER
-# XRP reserve   80 XRP   ← decreased (sold 20 XRP to arb)
-# USD reserve  125 USD   ← increased (received ~16.77 USD from arb)
-# → new price: 125/80 = 1.5625 USD/XRP  (moved toward DEX price of 1.25)
+# XRP reserve   95 XRP     ← decreased (sold 5 XRP to arb)
+# USD reserve  ~105.28 USD ← increased (received ~5.28 USD from arb)
+# → new price: 105.28/95 ≈ 1.108 USD/XRP  (moved toward DEX price of 1.25)
 ```
 
 ---
@@ -175,8 +175,8 @@ xrpl-up amm info --asset XRP --asset2 USD/$ISSUER
 
 ```bash
 xrpl-up account transactions $ARB --limit 5
-# OfferCreate  tesSUCCESS  buy 20 XRP for ~16.77 USD  (AMM route)
-# OfferCreate  tesSUCCESS  sell 20 XRP for 25 USD     (DEX route)
+# OfferCreate  tesSUCCESS  buy 5 XRP for ~5.28 USD  (AMM route)
+# OfferCreate  tesSUCCESS  sell 5 XRP for 6.25 USD  (DEX route)
 ```
 
 ---
@@ -188,9 +188,9 @@ Before arb:
   AMM price  1.00 USD/XRP   ◄── cheap
   DEX price  1.25 USD/XRP   ◄── expensive
 
-After arb (20 XRP bought from AMM, sold to DEX):
-  AMM price  1.56 USD/XRP   ◄── pushed up
-  DEX price  1.25 USD/XRP   ◄── MM's offer consumed
+After arb (5 XRP bought from AMM, sold to DEX):
+  AMM price  1.108 USD/XRP  ◄── pushed up
+  DEX price  1.25 USD/XRP   ◄── MM's offer partially consumed (15 XRP still resting)
 
 Prices converge as arbitrage activity eliminates the gap.
 ```

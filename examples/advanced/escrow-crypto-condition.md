@@ -127,17 +127,19 @@ If the wrong preimage is presented, the ledger rejects the transaction:
 
 ```typescript
 // scripts/wrong-fulfillment.ts
+// Reads RECEIVER_SEED, ESCROW_OWNER, ESCROW_SEQ, CONDITION from the environment --
+// targets the *real* escrow created in Step 3, just with a deliberately wrong fulfillment.
 import { Client, Wallet } from 'xrpl';
 const client = new Client('ws://localhost:6006');
 await client.connect();
-const receiver = Wallet.fromSeed('sEdReceiverSeedXXXXXXXXXXXXXXXXXXX');
+const receiver = Wallet.fromSeed(process.env.RECEIVER_SEED!);
 const tx = {
   TransactionType: 'EscrowFinish',
   Account: receiver.address,
-  Owner: 'rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-  OfferSequence: 42,
-  Condition:   'A0258020...CORRECT',
-  Fulfillment: 'A0228020...WRONG',   // wrong preimage
+  Owner: process.env.ESCROW_OWNER!,
+  OfferSequence: Number(process.env.ESCROW_SEQ),
+  Condition: process.env.CONDITION!,
+  Fulfillment: 'A0228020' + '00'.repeat(32) + '810100',   // well-formed but wrong preimage
 };
 const prepared = await client.autofill(tx as any);
 const signed = receiver.sign(prepared as any);
@@ -148,7 +150,8 @@ await client.disconnect();
 ```
 
 ```bash
-xrpl-up run scripts/wrong-fulfillment.ts
+RECEIVER_SEED=$RECEIVER_SEED ESCROW_OWNER=$ESCROW_OWNER ESCROW_SEQ=$ESCROW_SEQ CONDITION=$CONDITION \
+  xrpl-up run scripts/wrong-fulfillment.ts
 # tecCRYPTOCONDITION_ERROR
 ```
 

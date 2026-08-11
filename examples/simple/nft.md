@@ -112,20 +112,24 @@ xrpl-up account nfts $MINTER
 
 ## 7. Broker a trade (optional)
 
-A third party (broker) can match a sell offer and a buy offer simultaneously, taking a commission. `nft offer create` without `--sell` makes a buy offer instead — it needs `--owner` (the current NFT holder) since there's no NFT to transfer from the buyer's side yet:
+A third party (broker) can match a sell offer and a buy offer simultaneously, taking a commission. This is a separate, self-contained example — it mints its own NFT rather than reusing `$NFT_ID`/`$OFFER_ID` from steps 1-6 above, since that NFT and sell offer are already consumed by step 5's accept:
 
 ```bash
-# Buyer creates a buy offer for an NFT held by $MINTER
+NFT2_ID=$(xrpl-up nft mint --taxon 1 --uri https://example.com/nft-metadata.json --transferable --seed $MINTER_SEED --json | jq -r .nftokenId)
+SELL_OFFER_ID=$(xrpl-up nft offer create --nft $NFT2_ID --amount 3 --sell --seed $MINTER_SEED --json | jq -r .offerId)
+
+# `nft offer create` without `--sell` makes a buy offer instead — it needs
+# --owner (the current NFT holder) since there's no NFT to transfer from the buyer's side yet:
 BUYER2_JSON=$(xrpl-up faucet --network local --json)
 BUYER2_SEED=$(echo "$BUYER2_JSON" | jq -r .seed)
 BUYER2=$(echo "$BUYER2_JSON" | jq -r .address)
 
-BUY_OFFER_ID=$(xrpl-up nft offer create --nft $NFT_ID --amount 3 --owner $MINTER --seed $BUYER2_SEED --json | jq -r .offerId)
+BUY_OFFER_ID=$(xrpl-up nft offer create --nft $NFT2_ID --amount 3 --owner $MINTER --seed $BUYER2_SEED --json | jq -r .offerId)
 
 # Broker (or anyone) matches both offers, keeping the price difference as commission:
 BROKER_JSON=$(xrpl-up faucet --network local --json)
 BROKER_SEED=$(echo "$BROKER_JSON" | jq -r .seed)
-xrpl-up nft offer accept --sell-offer $OFFER_ID --buy-offer $BUY_OFFER_ID --seed $BROKER_SEED
+xrpl-up nft offer accept --sell-offer $SELL_OFFER_ID --buy-offer $BUY_OFFER_ID --seed $BROKER_SEED
 ```
 
 ---

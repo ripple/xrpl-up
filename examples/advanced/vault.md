@@ -41,12 +41,17 @@ VAULT_ID=$(xrpl-up vault create --asset 0 --assets-maximum 1000000000 --seed $OW
 
 ### IOU vault
 
-Needs a real issuer account first (see [Issued Token](../simple/issued-token.md) for the full walkthrough):
+Needs a real issuer account first (see [Issued Token](../simple/issued-token.md) for the full walkthrough). Live-verified: `vault create` for a completely fresh currency/issuer pair that no account has ever held a trust line to fails silently (`transaction expired`) — the owner needs to already hold a trust line and balance in that asset first:
 
 ```bash
 ISSUER_JSON=$(xrpl-up faucet --network local --json)
 ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
 ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
+
+# Owner needs to already hold this asset before creating a vault for it
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $OWNER_SEED
+xrpl-up payment --to $OWNER --amount 100/USD/$ISSUER --seed $ISSUER_SEED
 
 # IOU asset: 0/CURRENCY/issuer
 IOU_VAULT_ID=$(xrpl-up vault create --asset 0/USD/$ISSUER --seed $OWNER_SEED --json | jq -r .vaultId)
@@ -161,15 +166,28 @@ xrpl-up vault set --vault-id $VAULT_ID --data 48656C6C6F --seed $OWNER_SEED
 
 ## 6. Clawback (IOU/MPT vaults only — cannot claw back XRP)
 
-```bash
-# Only meaningful for vaults whose underlying asset is an IOU or MPT
-# where the issuer is also the vault owner
-xrpl-up vault clawback --vault-id $VAULT_ID --holder $DEPOSITOR --seed $OWNER_SEED
-# ✔ Clawback successful — all of the holder's shares reclaimed
+Only meaningful for vaults whose underlying asset is an IOU or MPT **issued by the vault owner themselves** — self-contained example, since neither `$VAULT_ID` (XRP) nor `$IOU_VAULT_ID` (asset issued by a separate `$ISSUER`, not `$OWNER`) above qualify:
 
-# Or claw back a specific amount:
-xrpl-up vault clawback --vault-id $VAULT_ID --holder $DEPOSITOR \
-  --amount 100/USD/$ISSUER --seed $OWNER_SEED
+```bash
+CB_OWNER_JSON=$(xrpl-up faucet --network local --json)
+CB_OWNER_SEED=$(echo "$CB_OWNER_JSON" | jq -r .seed)
+
+CB_MPT_ID=$(xrpl-up mptoken issuance create --flags can-transfer,can-clawback --seed $CB_OWNER_SEED --json | jq -r .issuanceId)
+CB_VAULT_ID=$(xrpl-up vault create --asset 0/$CB_MPT_ID --seed $CB_OWNER_SEED --json | jq -r .vaultId)
+
+CB_DEPOSITOR_JSON=$(xrpl-up faucet --network local --json)
+CB_DEPOSITOR_SEED=$(echo "$CB_DEPOSITOR_JSON" | jq -r .seed)
+CB_DEPOSITOR=$(echo "$CB_DEPOSITOR_JSON" | jq -r .address)
+
+xrpl-up mptoken authorize $CB_MPT_ID --seed $CB_DEPOSITOR_SEED
+xrpl-up payment --to $CB_DEPOSITOR --amount 500/$CB_MPT_ID --seed $CB_OWNER_SEED
+xrpl-up vault deposit --vault-id $CB_VAULT_ID --amount 200/$CB_MPT_ID --seed $CB_DEPOSITOR_SEED
+
+# --amount is required here in practice — omitting it (to mean "claw back everything",
+# per --amount's own help text) fails with tecWRONG_ASSET on this rippled build.
+xrpl-up vault clawback --vault-id $CB_VAULT_ID --holder $CB_DEPOSITOR \
+  --amount 200/$CB_MPT_ID --seed $CB_OWNER_SEED
+# ✔ Clawback successful — all of the holder's shares reclaimed
 ```
 
 > Attempting this against an XRP-asset vault fails client-side with "VaultClawback cannot claw back XRP" — the CLI validates this before ever submitting the transaction.
@@ -179,8 +197,9 @@ xrpl-up vault clawback --vault-id $VAULT_ID --holder $DEPOSITOR \
 ## 7. Delete the vault (must be empty)
 
 ```bash
-# Withdraw everything first — vault must hold zero assets to delete
-xrpl-up vault withdraw --vault-id $VAULT_ID --amount 10 --seed $DEPOSITOR_SEED
+# Withdraw everything first — vault must hold zero assets to delete.
+# Depositor put in 100 and already withdrew 40 in step 4, so 60 remains; depositor2's full 50 remains.
+xrpl-up vault withdraw --vault-id $VAULT_ID --amount 60 --seed $DEPOSITOR_SEED
 xrpl-up vault withdraw --vault-id $VAULT_ID --amount 50 --seed $DEPOSITOR2_SEED
 
 xrpl-up vault delete --vault-id $VAULT_ID --seed $OWNER_SEED

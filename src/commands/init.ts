@@ -10,7 +10,7 @@ function generateConfig(defaultNetwork: string): string {
   return `// xrpl-up.config.js
 // @ts-check
 /** @type {import('xrpl-up').XrplUpConfig} */
-module.exports = {
+export default {
   networks: {
     local: {
       url: 'ws://localhost:6006',
@@ -41,6 +41,7 @@ const packageJsonTemplate = (name: string) =>
       name,
       version: '0.1.0',
       description: 'An XRPL project using xrpl-up',
+      type: 'module',
       scripts: {
         start: 'xrpl-up start',
         accounts: 'xrpl-up accounts',

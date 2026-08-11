@@ -25,9 +25,10 @@ ISSUER_JSON=$(xrpl-up faucet --network local --json)
 ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
 ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 
-# Minimal — just a transferable token
-MPT_ID=$(xrpl-up mptoken issuance create --flags can-transfer --seed $ISSUER_SEED --json | jq -r .issuanceId)
+MPT_ID=$(xrpl-up mptoken issuance create --flags can-transfer,can-lock,can-clawback --seed $ISSUER_SEED --json | jq -r .issuanceId)
 ```
+
+This issuance is used throughout the rest of this walkthrough, including the lock (step 7) and clawback (step 8) sections below — that's why `can-lock`/`can-clawback` are included here, not just `can-transfer`. All policy flags are set at creation and can't be added later.
 
 ### Full issuance with all controls
 
@@ -173,7 +174,10 @@ xrpl-up clawback --amount 500/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
 ## 9. Unauthorize a holder
 
 ```bash
-# Holder opts back out (balance must be zero first)
+# Balance must be zero first — claw back what step 8 left behind (500 remaining)
+xrpl-up clawback --amount 500/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
+
+# Holder opts back out
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED --unauthorize
 ```
 
