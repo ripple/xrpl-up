@@ -9,7 +9,7 @@ export const LOCAL_WS_PORT = 6006;
 export const FAUCET_PORT = 3001;
 export const LOCAL_WS_URL = `ws://localhost:${LOCAL_WS_PORT}`;
 export const FAUCET_URL = `http://localhost:${FAUCET_PORT}`;
-export const DEFAULT_IMAGE = 'rippleci/xrpld:3.2.0';
+export const DEFAULT_IMAGE = 'rippleci/xrpld:3.3.0';
 
 const XRPL_UP_DIR = path.join(os.homedir(), '.xrpl-up');
 const COMPOSE_FILE = path.join(XRPL_UP_DIR, 'docker-compose.yml');
@@ -84,6 +84,9 @@ export { RIPPLED_CFG_FILE };
  */
 export function generateRippledConfig(debug = false): string {
   return `
+[network_id]
+15791
+
 [server]
 port_rpc_admin_local
 port_ws_admin_local
@@ -643,7 +646,22 @@ export function clearLocalNetworkImageRecord(): void {
  * --load (instead of --start) when it exists, so pre-seeded volumes
  * boot immediately into a functioning consensus network.
  */
-function seedConsensusVolumes(): void {
+/**
+ * Returns the "uid:gid" the given image's container runs as, so extracted
+ * genesis DB files can be chowned to match. Falls back to root (0:0 — a
+ * no-op chown) if the image can't be queried, which matches older rippled
+ * images that ran as root anyway.
+ */
+function getImageUidGid(image: string): string {
+  try {
+    const uid = execSync(`docker run --rm --entrypoint id "${image}" -u`, { encoding: 'utf-8' }).trim();
+    const gid = execSync(`docker run --rm --entrypoint id "${image}" -g`, { encoding: 'utf-8' }).trim();
+    if (uid && gid) return `${uid}:${gid}`;
+  } catch { /* fall through to root */ }
+  return '0:0';
+}
+
+function seedConsensusVolumes(image: string): void {
   const genesisDir = getGenesisDbDir();
   const node1Tar = path.join(genesisDir, 'node1-db.tar.gz');
   const node2Tar = path.join(genesisDir, 'node2-db.tar.gz');
@@ -656,6 +674,14 @@ function seedConsensusVolumes(): void {
 
   // Both volumes have data — nothing to do
   if (node1Has && node2Has) return;
+
+  // The genesis tarballs carry whichever UID/GID built them (mode 644/755 —
+  // no "other" write bit). Older rippled images ran their process as root,
+  // so any ownership mismatch was irrelevant; newer images (3.3.0+) run as
+  // a dedicated non-root user, which can't write to files extracted with
+  // the wrong owner. Chown to whatever UID the target image actually runs
+  // as so this self-adapts across image versions.
+  const uidGid = getImageUidGid(image);
 
   // Seed both volumes (even if one already has data, reseed to keep them in sync)
   const pairs: [string, string][] = [
@@ -670,7 +696,7 @@ function seedConsensusVolumes(): void {
       `docker run --rm ` +
       `-v ${vol}:/data ` +
       `-v "${path.dirname(tar)}":/genesis:ro ` +
-      `alpine tar xzf /genesis/${path.basename(tar)} -C /data`,
+      `alpine sh -c "tar xzf /genesis/${path.basename(tar)} -C /data && chown -R ${uidGid} /data"`,
       { stdio: 'ignore' },
     );
   }
@@ -690,7 +716,7 @@ export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debu
   if (noConsensus) composeDown(); // clean slate only in standalone mode
 
   // Pre-seed consensus volumes with genesis DB on first run
-  if (!noConsensus) seedConsensusVolumes();
+  if (!noConsensus) seedConsensusVolumes(image);
 
   // Pull the rippled image if not already cached — gives clear feedback on first run
   // instead of hanging silently inside docker compose up.

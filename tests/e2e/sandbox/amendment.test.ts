@@ -156,6 +156,10 @@ describe("sandbox amendments match mainnet", () => {
       "CryptoConditionsSuite", "NonFungibleTokensV1", "fixNFTokenDirV1",
       "fixNFTokenNegOffer", "fixXChainRewardRounding",
       "XChainBridge", "LendingProtocol", "SingleAssetVault",
+      // New in rippled 3.3.0, 0% validator consensus as of 2026-08-11 — not
+      // yet on mainnet. See https://data.xrpl.org/v1/network/amendments/vote/main.
+      "BatchV1_1", "ConfidentialTransfer", "DynamicMPT", "fixCleanup3_3_0",
+      "PermissionDelegationV1_1", "Sponsor",
     ]);
 
     // Parse all amendment lines from the output

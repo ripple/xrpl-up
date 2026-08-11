@@ -161,7 +161,7 @@ xrpl-up start --network devnet
 |------|---------|-------------|
 | `--local` | — | Run a local rippled node via Docker |
 | `--local-network` | off | Start a 2-node consensus network (persistent state, snapshot support) |
-| `--image <image>` | `rippleci/xrpld:3.2.0` | rippled Docker image |
+| `--image <image>` | `rippleci/xrpld:3.3.0` | rippled Docker image |
 | `--ledger-interval <ms>` | `1000` | Auto-advance ledger every N milliseconds (standalone only) |
 | `--no-auto-advance` | — | Disable automatic ledger closing |
 | `--no-secrets` | — | Suppress seeds and private keys from stdout (auto-enabled with `--detach`) |

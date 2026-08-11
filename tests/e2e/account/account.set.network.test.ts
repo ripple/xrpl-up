@@ -6,7 +6,7 @@ import { tmpdir } from "os";
 import { Client, Wallet } from "xrpl";
 import type { AccountRoot } from "xrpl";
 import { generateMnemonic } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english";
+import { wordlist } from "@scure/bip39/wordlists/english.js";
 import {
   XRPL_WS,
   fundMaster,

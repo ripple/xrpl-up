@@ -1,8 +1,8 @@
 import { Command } from "commander";
 import { Wallet } from "xrpl";
 import type { ECDSA } from "xrpl";
-import { ed25519 } from "@noble/curves/ed25519";
-import { secp256k1 } from "@noble/curves/secp256k1";
+import { ed25519 } from "@noble/curves/ed25519.js";
+import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { deriveAddress, deriveKeypair } from "ripple-keypairs";
 
 type KeyType = "ed25519" | "secp256k1";

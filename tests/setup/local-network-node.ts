@@ -130,6 +130,10 @@ async function prefundWorkerMasters(): Promise<void> {
     });
     let seq: number = infoResp.result.account_data.Sequence;
     const ledgerIndex = await client.getLedgerIndex();
+    // Bypassing autofill (see comment above) means autofill's own NetworkID
+    // injection is skipped too — set it manually or rippled rejects with
+    // telREQUIRES_NETWORK_ID for any network_id > 1024.
+    const networkID = client.networkID;
 
     const wallets: Wallet[] = [];
     for (let i = 0; i < MAX_PREFUND_WORKERS; i++) {
@@ -144,6 +148,7 @@ async function prefundWorkerMasters(): Promise<void> {
         LastLedgerSequence: ledgerIndex + 50,
         Amount: xrpToDrops(String(WORKER_PREFUND_XRP)),
         Destination: w.address,
+        ...(networkID !== undefined && networkID > 1024 ? { NetworkID: networkID } : {}),
       };
       const { tx_blob } = genesis.sign(tx);
       await client.submit(tx_blob);

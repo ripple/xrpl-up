@@ -51,7 +51,7 @@
     "commander": "^12.0.0",
     "inquirer": "^8.2.6",
     "ora": "^5.4.1",
-    "xrpl": "^4.6.0"
+    "xrpl": "^5.0.0"
   },
   "devDependencies": {
     "@cyclonedx/cyclonedx-npm": "4.0.2",
