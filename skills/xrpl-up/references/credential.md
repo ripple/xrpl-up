@@ -79,7 +79,7 @@ xrpl-up credential list rAccount... --json
 
 ```bash
 # 1. Issuer (KYC provider) creates a credential for Alice
-xrpl-up --node testnet credential create \
+xrpl-up --network testnet credential create \
   --subject rAliceXXXX... \
   --credential-type KYCVerified \
   --uri https://kyc.example.com/credentials/alice \
@@ -88,13 +88,13 @@ xrpl-up --node testnet credential create \
 # → {"credentialId":"AABB...","result":"tesSUCCESS"}
 
 # 2. Alice accepts the credential issued to her
-xrpl-up --node testnet credential accept \
+xrpl-up --network testnet credential accept \
   --issuer rIssuerXXXX... \
   --credential-type KYCVerified \
   --seed sEdAliceXXXX...
 
 # 3. Issuer revokes the credential (e.g. Alice failed re-verification)
-xrpl-up --node testnet credential delete \
+xrpl-up --network testnet credential delete \
   --subject rAliceXXXX... \
   --credential-type KYCVerified \
   --seed sEdIssuerXXXX...

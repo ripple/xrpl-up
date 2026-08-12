@@ -316,7 +316,7 @@ on consensus, networking, and amendment behavior inside `xrpld`.
 
 Phase 1 — Private multi-node network:
 
-- `xrpl-up network start --nodes 3` for a local validator cluster in Docker Compose
+- `xrpl-up network start --networks 3` for a local validator cluster in Docker Compose
 - Configurable validator keys, UNL, and amendment voting settings
 - Topology controls for peer links between nodes
 

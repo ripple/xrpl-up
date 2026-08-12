@@ -11,7 +11,7 @@ Payment channels enable fast, low-cost, off-chain micropayments between two part
 ```bash
 xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---

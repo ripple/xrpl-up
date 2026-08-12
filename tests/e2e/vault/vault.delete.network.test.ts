@@ -30,7 +30,7 @@ afterAll(async () => {
 /** Create a fresh XRP vault via CLI using the given wallet seed, return vault ID. */
 function cliCreateVault(seed: string): string {
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "create",
     "--asset", "0",
     "--seed", seed,
@@ -48,7 +48,7 @@ it.concurrent("creates a vault then deletes it; outputs 'Deleted vault' and tesS
   const vaultId = cliCreateVault(wallet.seed!);
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "delete",
     "--vault-id", vaultId,
     "--seed", wallet.seed!,
@@ -81,7 +81,7 @@ it.concurrent("--json outputs {result, vaultId, tx}", async () => {
   const vaultId = cliCreateVault(wallet.seed!);
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "delete",
     "--vault-id", vaultId,
     "--seed", wallet.seed!,
@@ -100,7 +100,7 @@ it.concurrent("--dry-run prints VaultDelete tx JSON without submitting (vault st
   const vaultId = cliCreateVault(wallet.seed!);
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "delete",
     "--vault-id", vaultId,
     "--seed", wallet.seed!,
@@ -135,7 +135,7 @@ it.concurrent("--no-wait submits without waiting and outputs Transaction hash", 
   const vaultId = cliCreateVault(wallet.seed!);
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "delete",
     "--vault-id", vaultId,
     "--seed", wallet.seed!,
@@ -160,7 +160,7 @@ it.concurrent("--account + --keystore + --password key material deletes successf
     expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "devnet",
+      "--network", "devnet",
       "vault", "delete",
       "--vault-id", vaultId,
       "--account", wallet.address,

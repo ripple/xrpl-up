@@ -116,7 +116,7 @@ xrpl-up channel list rSource...
 
 ```bash
 # 1. Alice opens a payment channel locking 10 XRP, with a 24 h settle delay
-xrpl-up --node testnet channel create \
+xrpl-up --network testnet channel create \
   --to rBobXXXX... --amount 10 --settle-delay 86400 \
   --seed sEdAliceXXXX... --json
 # → {"channelId":"AABBCC...64chars","result":"tesSUCCESS"}
@@ -138,23 +138,23 @@ xrpl-up channel verify \
 SIG2=$(xrpl-up channel sign --channel AABBCC...64chars --amount 7 --seed sEdAliceXXXX...)
 
 # 6. Bob redeems the final 7 XRP claim on-chain (submits once, not once per payment)
-xrpl-up --node testnet channel claim \
+xrpl-up --network testnet channel claim \
   --channel AABBCC...64chars \
   --amount 7 --balance 7 \
   --signature "$SIG2" --public-key "$ALICE_PUBKEY" \
   --seed sEdBobXXXX...
 
 # 6. Alice tops up the channel with 5 more XRP
-xrpl-up --node testnet channel fund \
+xrpl-up --network testnet channel fund \
   --channel AABBCC...64chars --amount 5 \
   --seed sEdAliceXXXX...
 
 # 7. Alice requests channel closure (funds return after settle delay)
-xrpl-up --node testnet channel claim \
+xrpl-up --network testnet channel claim \
   --channel AABBCC...64chars --close \
   --seed sEdAliceXXXX...
 
 # 8. List all open channels for Alice
-xrpl-up --node testnet channel list rAliceXXXX...
+xrpl-up --network testnet channel list rAliceXXXX...
 ```
 

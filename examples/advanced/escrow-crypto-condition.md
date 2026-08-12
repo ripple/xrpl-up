@@ -15,7 +15,7 @@ This guide covers:
 ```bash
 xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 
 # Install five-bells-condition for condition generation
 npm install -g five-bells-condition

@@ -62,9 +62,9 @@ program
   .description('XRPL sandbox for local development')
   .version(pkg.version, '-v, --version')
   .option(
-    '-n, --node <url>',
-    'XRPL node URL or network name (local|testnet|devnet)',
-    process.env.XRPL_NODE ?? 'local'
+    '-n, --network <url>',
+    'XRPL network name or node URL (local|testnet|devnet|wss://...) — applies to XRPL interaction commands only',
+    process.env.XRPL_NETWORK ?? 'local'
   );
 
 // ── start ────────────────────────────────────────────────────────────────────

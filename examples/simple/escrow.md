@@ -13,7 +13,7 @@ Two escrow types:
 ```bash
 xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 A standalone sandbox's ledger clock isn't the wall clock — it advances at least 1 second per accepted ledger regardless of real elapsed time, so it can drift well ahead of `Date.now()` after a lot of activity. Compute `--finish-after`/`--cancel-after` relative to the sandbox's actual current ledger time instead:

@@ -42,24 +42,24 @@ xrpl-up trust set --currency USD --issuer rIssuer... --limit 0 --seed sEd...
 
 ```bash
 # 1. Alice (the IOU issuer) enables DefaultRipple so her tokens can ripple between holders
-xrpl-up --node testnet account set \
+xrpl-up --network testnet account set \
   --set-flag defaultRipple --seed sEdAliceXXXX...
 
 # 2. Bob creates a USD trust line to Alice with a limit of 10,000
-xrpl-up --node testnet trust set \
+xrpl-up --network testnet trust set \
   --currency USD --issuer rAliceXXXX... --limit 10000 \
   --seed sEdBobXXXX...
 
 # 3. Alice sends 500 USD to Bob (direct issuance — no SendMax needed)
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rBobXXXX... --amount 500/USD/rAliceXXXX... \
   --seed sEdAliceXXXX...
 
 # 4. Verify Bob's trust lines
-xrpl-up --node testnet account trust-lines rBobXXXX...
+xrpl-up --network testnet account trust-lines rBobXXXX...
 
 # 5. Bob removes the trust line after the balance reaches zero
-xrpl-up --node testnet trust set \
+xrpl-up --network testnet trust set \
   --currency USD --issuer rAliceXXXX... --limit 0 \
   --seed sEdBobXXXX...
 ```

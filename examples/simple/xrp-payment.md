@@ -11,7 +11,7 @@ Start a local sandbox (or skip this and use `--network testnet` instead):
 ```bash
 xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---
@@ -35,7 +35,7 @@ RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 ## 2. Send XRP
 
 ```bash
-xrpl-up payment --to $RECEIVER --amount 10 --seed $SENDER_SEED --node local
+xrpl-up payment --to $RECEIVER --amount 10 --seed $SENDER_SEED --network local
 ```
 
 `payment` (alias `send`) sends one signed `Payment` transaction directly between two existing accounts. `--amount` also accepts IOU (`10/USD/rIssuer...`) and MPT amounts for non-XRP sends.

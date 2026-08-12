@@ -53,7 +53,7 @@ xrpl-up offer cancel --sequence 12 --seed sEd...
 
 # 1. Alice creates a sell offer: she pays 10 USD to get 5 XRP
 #    --json output has "offerSequence" — the value needed for offer cancel
-xrpl-up --node testnet offer create \
+xrpl-up --network testnet offer create \
   --taker-pays 5 \
   --taker-gets 10/USD/rIssuerXXX... \
   --sell \
@@ -61,16 +61,16 @@ xrpl-up --node testnet offer create \
 # → {"hash":"...","result":"tesSUCCESS","offerSequence":16331330}
 
 # 2. Bob creates a matching buy offer: he pays 10 USD to get 5 XRP (crosses Alice's offer)
-xrpl-up --node testnet offer create \
+xrpl-up --network testnet offer create \
   --taker-pays 10/USD/rIssuerXXX... \
   --taker-gets 5 \
   --seed sEdBobXXXX...
 
 # 3. Verify Alice's remaining open offers (should be empty if fully filled)
-xrpl-up --node testnet account offers rAliceXXXX...
+xrpl-up --network testnet account offers rAliceXXXX...
 
 # 4. If Alice's offer was only partially filled, cancel using "offerSequence" from step 1
-xrpl-up --node testnet offer cancel \
+xrpl-up --network testnet offer cancel \
   --sequence 16331330 --seed sEdAliceXXXX...
 ```
 

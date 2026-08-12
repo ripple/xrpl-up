@@ -1,7 +1,7 @@
 ## xrpl-up Local Node Management
 
 These commands manage the local rippled Docker sandbox. They use their own
-`--network` / `--local-network` flags — **not** the global `--node` flag used by
+`--network` / `--local-network` flags — **not** the global `--network` flag used by
 transaction commands (payment, trust, amm, etc.).
 
 ### `start` — Start local sandbox

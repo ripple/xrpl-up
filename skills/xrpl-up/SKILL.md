@@ -34,7 +34,7 @@ If `$ARGUMENTS` is empty, ask the user what they'd like to do on the XRP Ledger.
 ## Global Flags
 
 ```
---node local|testnet|devnet|<ws://...>   default: local (ws://localhost:6006)
+--network local|testnet|devnet|<ws://...>   default: local (ws://localhost:6006)
 --help                                    flag details for any command
 --version
 ```
@@ -42,7 +42,7 @@ If `$ARGUMENTS` is empty, ask the user what they'd like to do on the XRP Ledger.
 Network shorthands: `local` → localhost, `testnet` → altnet.rippletest.net, `devnet` → devnet.rippletest.net
 
 > **Two flag systems:** Transaction commands (payment, trust, amm, nft, etc.) use the
-> global `--node` flag above. Sandbox management commands (start, stop, accounts,
+> global `--network` flag above. Sandbox management commands (start, stop, accounts,
 > faucet, amendment, run) use their own `--network`/`--local-network` flags instead —
 > see `references/node-management.md`.
 
@@ -180,7 +180,7 @@ See `references/account.md` for full options.
 
 **Send XRP on testnet:**
 ```bash
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rDestination... --amount 10 \
   --seed sEdAlice...
 ```
@@ -188,12 +188,12 @@ xrpl-up --node testnet payment \
 **Issue IOU — trust line then payment:**
 ```bash
 # Bob sets up trust line to Alice's USD
-xrpl-up --node testnet trust set \
+xrpl-up --network testnet trust set \
   --currency USD --issuer rAlice... --limit 1000 \
   --seed sEdBob...
 
 # Alice issues 100 USD to Bob
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rBob... --amount 100/USD/rAlice... \
   --seed sEdAlice...
 ```
@@ -204,24 +204,24 @@ xrpl-up --node testnet payment \
 xrpl-up wallet new --save --alias alice --password "$KS_PASS"
 
 # Fund on testnet
-xrpl-up --node testnet wallet fund rAlice...
+xrpl-up --network testnet wallet fund rAlice...
 
 # Use alias for subsequent transactions
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rBob... --amount 5 \
   --account rAlice... --password "$KS_PASS"
 ```
 
 **MPT: create issuance, opt in, send:**
 ```bash
-xrpl-up --node testnet mptoken issuance create \
+xrpl-up --network testnet mptoken issuance create \
   --flags can-transfer --max-amount 1000000 \
   --seed sEdAlice... --json
 # → {"issuanceId":"0000001AABBCC..."}
 
-xrpl-up --node testnet mptoken authorize 0000001AABBCC... --seed sEdBob...
+xrpl-up --network testnet mptoken authorize 0000001AABBCC... --seed sEdBob...
 
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rBob... --amount 500/0000001AABBCC... \
   --seed sEdAlice...
 ```

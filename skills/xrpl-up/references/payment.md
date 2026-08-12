@@ -31,30 +31,30 @@ xrpl-up payment --to rDestination... --amount 1.5 --seed sEd...
 
 ```bash
 # 1. Alice sends 10 XRP to Bob
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rBobXXXX... --amount 10 \
   --seed sEdAliceXXXX...
 
 # 2. Bob sets up a USD trust line, then Alice (as issuer) sends 100 USD to Bob
-xrpl-up --node testnet trust set \
+xrpl-up --network testnet trust set \
   --currency USD --issuer rAliceXXXX... --limit 1000 \
   --seed sEdBobXXXX...
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rBobXXXX... --amount 100/USD/rAliceXXXX... \
   --seed sEdAliceXXXX...
 
 # 3. Alice creates an MPToken issuance with can-transfer flag
-xrpl-up --node testnet mptoken issuance create \
+xrpl-up --network testnet mptoken issuance create \
   --flags can-transfer --max-amount 1000000 \
   --seed sEdAliceXXXX... --json
 # → {"issuanceId":"0000001AABBCC..."}
 
 # 4. Bob opts into the MPT issuance
-xrpl-up --node testnet mptoken authorize 0000001AABBCC... \
+xrpl-up --network testnet mptoken authorize 0000001AABBCC... \
   --seed sEdBobXXXX...
 
 # 5. Alice sends 500 MPT units to Bob
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rBobXXXX... --amount 500/0000001AABBCC... \
   --seed sEdAliceXXXX...
 ```

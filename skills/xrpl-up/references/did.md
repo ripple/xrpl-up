@@ -49,17 +49,17 @@ xrpl-up did delete --seed sEd...
 
 ```bash
 # 1. Alice publishes a DID with a URI pointing to her DID document
-xrpl-up --node testnet did set \
+xrpl-up --network testnet did set \
   --uri https://alice.example.com/did.json \
   --seed sEdAliceXXXX...
 
 # 2. Alice updates the DID to add attestation data
-xrpl-up --node testnet did set \
+xrpl-up --network testnet did set \
   --uri https://alice.example.com/did-v2.json \
   --data "attestation-payload" \
   --seed sEdAliceXXXX...
 
 # 3. Alice deletes her on-chain DID
-xrpl-up --node testnet did delete --seed sEdAliceXXXX...
+xrpl-up --network testnet did delete --seed sEdAliceXXXX...
 ```
 

@@ -24,7 +24,7 @@ A Vault is an on-ledger pooled-asset object: depositors send an asset in and rec
 ```bash
 xrpl-up start --local
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---

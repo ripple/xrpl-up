@@ -84,7 +84,7 @@ xrpl-up escrow list rAccount...
 
 ```bash
 # 1. Alice locks 5 XRP in an escrow for Bob, releasable after 5 minutes, expires in 1 hour
-xrpl-up --node testnet escrow create \
+xrpl-up --network testnet escrow create \
   --to rBobXXXX... --amount 5 \
   --finish-after 2030-06-01T00:05:00Z \
   --cancel-after 2030-06-01T01:00:00Z \
@@ -92,28 +92,28 @@ xrpl-up --node testnet escrow create \
 # → {"sequence":17,"result":"tesSUCCESS"}
 
 # 2. List Alice's pending escrows to confirm
-xrpl-up --node testnet escrow list rAliceXXXX...
+xrpl-up --network testnet escrow list rAliceXXXX...
 
 # 3. After the finish-after time passes, Bob (or anyone) finishes the escrow
-xrpl-up --node testnet escrow finish \
+xrpl-up --network testnet escrow finish \
   --owner rAliceXXXX... --sequence 17 \
   --seed sEdBobXXXX...
 
 # 4. If the escrow expires (after cancel-after), Alice cancels it to reclaim the XRP
-xrpl-up --node testnet escrow cancel \
+xrpl-up --network testnet escrow cancel \
   --owner rAliceXXXX... --sequence 17 \
   --seed sEdAliceXXXX...
 
 # --- Crypto-condition variant ---
 # 5. Alice creates a condition-locked escrow (preimage required to release)
-xrpl-up --node testnet escrow create \
+xrpl-up --network testnet escrow create \
   --to rBobXXXX... --amount 10 \
   --condition A025802066687AADF862BD776C8FC18B8E9F8E20089714856EE233B3902A591D0D5F2925810120 \
   --cancel-after 2030-12-31T00:00:00Z \
   --seed sEdAliceXXXX...
 
 # 6. Bob (who knows the preimage) finishes the condition escrow
-xrpl-up --node testnet escrow finish \
+xrpl-up --network testnet escrow finish \
   --owner rAliceXXXX... --sequence 18 \
   --condition A025802066687AADF862BD776C8FC18B8E9F8E20089714856EE233B3902A591D0D5F2925810120 \
   --fulfillment A0228020000000000000000000000000000000000000000000000000000000000000000081010 \

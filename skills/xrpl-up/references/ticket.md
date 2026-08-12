@@ -33,12 +33,12 @@ xrpl-up ticket list rAccount... --json
 
 ```bash
 # 1. Alice creates 5 tickets (sequence numbers she can use independently of her main sequence)
-xrpl-up --node testnet ticket create \
+xrpl-up --network testnet ticket create \
   --count 5 --seed sEdAliceXXXX... --json
 # → {"hash":"...","result":"tesSUCCESS","sequences":[16331356,16331357,16331358,16331359,16331360]}
 
 # 2. List available ticket sequences on Alice's account
-xrpl-up --node testnet ticket list rAliceXXXX...
+xrpl-up --network testnet ticket list rAliceXXXX...
 # → Ticket sequence: 12
 #   Ticket sequence: 13
 #   ...

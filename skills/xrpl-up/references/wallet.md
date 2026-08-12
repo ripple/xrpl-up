@@ -254,7 +254,7 @@ xrpl-up wallet new --key-type ed25519 --save --alias alice
 # → Address: rAliceXXXX...  (note this address)
 
 # 2. Fund Alice's account from the testnet faucet
-xrpl-up --node testnet wallet fund rAliceXXXX...
+xrpl-up --network testnet wallet fund rAliceXXXX...
 
 # 3. Import Bob's existing seed into the keystore under an alias
 xrpl-up wallet import sEdBobSeedXXXXXXXXXXXXXXXXXXXX --alias bob

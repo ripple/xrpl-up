@@ -122,7 +122,7 @@ it.concurrent("full clawback: holder deposits IOU, issuer claws back all (explic
   await holderDeposit(holder, "10");
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "clawback",
     "--vault-id", vaultId,
     "--holder", holder.address,
@@ -140,7 +140,7 @@ it.concurrent("partial clawback with --amount", async () => {
   await holderDeposit(holder, "10");
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "clawback",
     "--vault-id", vaultId,
     "--holder", holder.address,
@@ -157,7 +157,7 @@ it.concurrent("--json outputs {result, vaultId, holder, tx}", async () => {
   await holderDeposit(holder, "10");
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "clawback",
     "--vault-id", vaultId,
     "--holder", holder.address,
@@ -184,7 +184,7 @@ it.concurrent("--dry-run prints VaultClawback tx JSON without submitting", async
   await holderDeposit(holder, "10");
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "clawback",
     "--vault-id", vaultId,
     "--holder", holder.address,
@@ -207,7 +207,7 @@ it.concurrent("--no-wait submits without waiting and outputs Transaction hash", 
   await holderDeposit(holder, "10");
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "clawback",
     "--vault-id", vaultId,
     "--holder", holder.address,
@@ -233,7 +233,7 @@ it.concurrent("--account + --keystore + --password key material claws back succe
     expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "devnet",
+      "--network", "devnet",
       "vault", "clawback",
       "--vault-id", vaultId,
       "--holder", holder.address,

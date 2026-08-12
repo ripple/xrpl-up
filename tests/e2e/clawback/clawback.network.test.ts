@@ -151,7 +151,7 @@ describe("clawback IOU", () => {
   it.concurrent("claws back IOU tokens from holder and gets tesSUCCESS", async () => {
     const [issuer, holder] = await setupIouClawback("100");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "clawback",
       "--amount",
@@ -166,7 +166,7 @@ describe("clawback IOU", () => {
   it.concurrent("--json outputs JSON with hash and result", async () => {
     const [issuer, holder] = await setupIouClawback("100");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "clawback",
       "--amount",
@@ -190,7 +190,7 @@ describe("clawback IOU", () => {
     const [issuer] = await createFunded(client, master, 1, FUND_AMOUNT);
     const holderAddr = Wallet.generate().address;
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "clawback",
       "--amount",
@@ -211,7 +211,7 @@ describe("clawback IOU", () => {
   it.concurrent("--no-wait submits without waiting for validation", async () => {
     const [issuer, holder] = await setupIouClawback("100");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "clawback",
       "--amount",
@@ -232,7 +232,7 @@ describe("clawback MPT", () => {
   it.concurrent("claws back MPT tokens from holder and gets tesSUCCESS", async () => {
     const [issuer, holder, mptIssuanceId] = await setupMptClawback("100");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "clawback",
       "--amount",
@@ -249,7 +249,7 @@ describe("clawback MPT", () => {
   it.concurrent("--json outputs JSON with hash and result", async () => {
     const [issuer, holder, mptIssuanceId] = await setupMptClawback("100");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "clawback",
       "--amount",
@@ -275,7 +275,7 @@ describe("clawback MPT", () => {
     const [issuer] = await createFunded(client, master, 1, FUND_AMOUNT);
     const holderAddr = Wallet.generate().address;
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "clawback",
       "--amount",

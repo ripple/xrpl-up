@@ -9,7 +9,7 @@ Tickets reserve sequence numbers, allowing you to submit transactions out-of-ord
 ```bash
 xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---

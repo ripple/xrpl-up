@@ -147,7 +147,7 @@ xrpl-up nft offer list <64hexNFTokenID> --json
 
 ```bash
 # 1. Alice mints a transferable NFT with a metadata URI and 1% royalty fee
-xrpl-up --node testnet nft mint \
+xrpl-up --network testnet nft mint \
   --taxon 42 \
   --uri https://example.com/nft-metadata.json \
   --transferable \
@@ -156,48 +156,48 @@ xrpl-up --node testnet nft mint \
 # → {"nftokenId":"AABBCC...64chars","result":"tesSUCCESS"}
 
 # 2. Alice creates a sell offer for 10 XRP
-xrpl-up --node testnet nft offer create \
+xrpl-up --network testnet nft offer create \
   --nft AABBCC...64chars --amount 10 --sell \
   --seed sEdAliceXXXX... --json
 # → {"offerId":"DDEE...64chars","result":"tesSUCCESS"}
 
 # 3. List all buy/sell offers for the NFT
-xrpl-up --node testnet nft offer list AABBCC...64chars
+xrpl-up --network testnet nft offer list AABBCC...64chars
 
 # 4. Bob accepts Alice's sell offer (direct sale — Bob pays 10 XRP, receives NFT)
-xrpl-up --node testnet nft offer accept \
+xrpl-up --network testnet nft offer accept \
   --sell-offer DDEE...64chars --seed sEdBobXXXX...
 
 # 5. Verify Bob now holds the NFT
-xrpl-up --node testnet account nfts rBobXXXX...
+xrpl-up --network testnet account nfts rBobXXXX...
 
 # --- Brokered sale variant ---
 # Alice creates a sell offer, Carol creates a buy offer, broker executes both
 
 # 6. Bob (now owner) creates a sell offer
-xrpl-up --node testnet nft offer create \
+xrpl-up --network testnet nft offer create \
   --nft AABBCC...64chars --amount 15 --sell \
   --seed sEdBobXXXX... --json
 # → {"offerId":"SELL...64chars"}
 
 # 7. Carol creates a buy offer for 16 XRP
-xrpl-up --node testnet nft offer create \
+xrpl-up --network testnet nft offer create \
   --nft AABBCC...64chars --amount 16 --owner rBobXXXX... \
   --seed sEdCarolXXXX... --json
 # → {"offerId":"BUY...64chars"}
 
 # 8. Broker matches both offers (keeping 0.5 XRP as fee)
-xrpl-up --node testnet nft offer accept \
+xrpl-up --network testnet nft offer accept \
   --sell-offer SELL...64chars \
   --buy-offer BUY...64chars \
   --broker-fee 0.5 \
   --seed sEdBrokerXXXX...
 
 # 9. Cancel an unused offer
-xrpl-up --node testnet nft offer cancel \
+xrpl-up --network testnet nft offer cancel \
   --offer DDEE...64chars --seed sEdAliceXXXX...
 
 # 10. Burn the NFT to remove it from the ledger
-xrpl-up --node testnet nft burn --nft AABBCC...64chars --seed sEdAliceXXXX...
+xrpl-up --network testnet nft burn --nft AABBCC...64chars --seed sEdAliceXXXX...
 ```
 

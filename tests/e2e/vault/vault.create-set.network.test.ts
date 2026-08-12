@@ -29,7 +29,7 @@ afterAll(async () => {
 /** Create a vault via CLI using the given wallet seed, return vault ID. */
 function cliCreateVault(seed: string): string {
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "create",
     "--asset", "0",
     "--seed", seed,
@@ -45,7 +45,7 @@ function cliCreateVault(seed: string): string {
 it.concurrent("create: creates an XRP vault and outputs Vault ID", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "create",
     "--asset", "0",
     "--seed", wallet.seed!,
@@ -58,7 +58,7 @@ it.concurrent("create: creates an XRP vault and outputs Vault ID", async () => {
 it.concurrent("create: --assets-maximum appears in dry-run tx", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "create",
     "--asset", "0",
     "--assets-maximum", "1000000000",
@@ -74,7 +74,7 @@ it.concurrent("create: --assets-maximum appears in dry-run tx", async () => {
 it.concurrent("create: --json outputs {result, vaultId, tx}", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "create",
     "--asset", "0",
     "--seed", wallet.seed!,
@@ -92,7 +92,7 @@ it.concurrent("create: --json outputs {result, vaultId, tx}", async () => {
 it.concurrent("create: --dry-run outputs JSON with TransactionType VaultCreate and does not submit", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "create",
     "--asset", "0",
     "--seed", wallet.seed!,
@@ -108,7 +108,7 @@ it.concurrent("create: --dry-run outputs JSON with TransactionType VaultCreate a
 it.concurrent("create: --no-wait submits without waiting and outputs Transaction hash", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "create",
     "--asset", "0",
     "--seed", wallet.seed!,
@@ -121,7 +121,7 @@ it.concurrent("create: --no-wait submits without waiting and outputs Transaction
 it.concurrent("create: --non-transferable flag appears in dry-run tx flags", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "create",
     "--asset", "0",
     "--non-transferable",
@@ -148,7 +148,7 @@ it.concurrent("create: --account + --keystore + --password key material creates 
     expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "devnet",
+      "--network", "devnet",
       "vault", "create",
       "--asset", "0",
       "--account", wallet.address,
@@ -168,7 +168,7 @@ it.concurrent("set: updates --data on an existing vault", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const vaultId = cliCreateVault(wallet.seed!);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "set",
     "--vault-id", vaultId,
     "--data", "DEADBEEF",
@@ -183,7 +183,7 @@ it.concurrent("set: updates --assets-maximum on an existing vault", async () => 
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const vaultId = cliCreateVault(wallet.seed!);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "set",
     "--vault-id", vaultId,
     "--assets-maximum", "500000000",
@@ -198,7 +198,7 @@ it.concurrent("set: --json outputs {result, vaultId, tx}", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const vaultId = cliCreateVault(wallet.seed!);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "set",
     "--vault-id", vaultId,
     "--data", "CAFEBABE",
@@ -217,7 +217,7 @@ it.concurrent("set: --dry-run prints VaultSet tx JSON without submitting", async
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const vaultId = cliCreateVault(wallet.seed!);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "set",
     "--vault-id", vaultId,
     "--data", "AABB",
@@ -239,7 +239,7 @@ it.concurrent("set: --no-wait submits without waiting and outputs Transaction ha
   const [wallet] = await createFundedDevnet(client, master, 1, 3);
   const vaultId = cliCreateVault(wallet.seed!);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "set",
     "--vault-id", vaultId,
     "--assets-maximum", "999999999",
@@ -264,7 +264,7 @@ it.concurrent("set: --account + --keystore + --password key material updates suc
     expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "devnet",
+      "--network", "devnet",
       "vault", "set",
       "--vault-id", vaultId,
       "--data", "FF00FF",

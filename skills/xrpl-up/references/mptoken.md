@@ -120,35 +120,35 @@ xrpl-up mptoken authorize <issuance-id> --unauthorize --seed sHolderEd...
 # 1. Alice creates an MPToken issuance with can-transfer and can-lock flags
 #    Note: --metadata must be a valid JSON string; plain strings produce a warning on stdout.
 #    Use --json and tail -1 to parse the output if warnings are present.
-xrpl-up --node testnet mptoken issuance create \
+xrpl-up --network testnet mptoken issuance create \
   --flags can-transfer,can-lock \
   --max-amount 1000000000 \
   --seed sEdAliceXXXX... --json
 # → {"hash":"...","result":"tesSUCCESS","issuanceId":"00F93262CC0FE0E07B010597BD7364690BE2B042C62003D9"}
 
 # 2. Bob opts into the issuance (MPTokenAuthorize — holds his slot open for this token)
-xrpl-up --node testnet mptoken authorize 0000001AABBCC... \
+xrpl-up --network testnet mptoken authorize 0000001AABBCC... \
   --seed sEdBobXXXX...
 
 # 3. Alice sends 1000 tokens to Bob via payment
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rBobXXXX... --amount 1000/0000001AABBCC... \
   --seed sEdAliceXXXX...
 
 # 4. Alice locks Bob's token balance (freezes his specific holding)
-xrpl-up --node testnet mptoken issuance set 0000001AABBCC... \
+xrpl-up --network testnet mptoken issuance set 0000001AABBCC... \
   --lock --holder rBobXXXX... --seed sEdAliceXXXX...
 
 # 5. Alice unlocks Bob's balance
-xrpl-up --node testnet mptoken issuance set 0000001AABBCC... \
+xrpl-up --network testnet mptoken issuance set 0000001AABBCC... \
   --unlock --holder rBobXXXX... --seed sEdAliceXXXX...
 
 # 6. Bob opts out after his balance reaches zero
-xrpl-up --node testnet mptoken authorize 0000001AABBCC... \
+xrpl-up --network testnet mptoken authorize 0000001AABBCC... \
   --unauthorize --seed sEdBobXXXX...
 
 # 7. Alice destroys the issuance when there is no outstanding supply
-xrpl-up --node testnet mptoken issuance destroy 0000001AABBCC... \
+xrpl-up --network testnet mptoken issuance destroy 0000001AABBCC... \
   --seed sEdAliceXXXX...
 ```
 

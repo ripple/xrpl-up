@@ -28,7 +28,7 @@ let master: Wallet;
  */
 function createDomain(ownerSeed: string, credentialArg: string): string {
   const result = runCLI([
-    "--node", XRPL_WS,
+    "--network", XRPL_WS,
     "permissioned-domain", "create",
     "--credential", credentialArg,
     "--seed", ownerSeed,
@@ -60,7 +60,7 @@ describe("permissioned-domain delete", () => {
     const domainId = createDomain(owner.seed!, `${credIssuer.address}:KYC`);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "permissioned-domain", "delete",
       "--domain-id", domainId,
       "--seed", owner.seed!,
@@ -75,7 +75,7 @@ describe("permissioned-domain delete", () => {
     const domainId = createDomain(owner.seed!, `${credIssuer.address}:KYC`);
 
     const deleteResult = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "permissioned-domain", "delete",
       "--domain-id", domainId,
       "--seed", owner.seed!,
@@ -107,7 +107,7 @@ describe("permissioned-domain delete", () => {
     const domainId = createDomain(owner.seed!, `${credIssuer.address}:JSON_DEL`);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "permissioned-domain", "delete",
       "--domain-id", domainId,
       "--seed", owner.seed!,
@@ -129,7 +129,7 @@ describe("permissioned-domain delete", () => {
     const domainId = createDomain(owner.seed!, `${credIssuer.address}:DRY_DEL`);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "permissioned-domain", "delete",
       "--domain-id", domainId,
       "--seed", owner.seed!,
@@ -150,7 +150,7 @@ describe("permissioned-domain delete", () => {
     const domainId = createDomain(owner.seed!, `${credIssuer.address}:NOWAIT_DEL`);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "permissioned-domain", "delete",
       "--domain-id", domainId,
       "--seed", owner.seed!,
@@ -174,7 +174,7 @@ describe("permissioned-domain delete", () => {
       expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", XRPL_WS,
+        "--network", XRPL_WS,
         "permissioned-domain", "delete",
         "--domain-id", domainId,
         "--account", owner.address,

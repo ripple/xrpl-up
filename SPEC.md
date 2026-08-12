@@ -40,7 +40,7 @@
 1. **Local sandbox** — a standalone rippled node in Docker with pre-funded accounts and all modern amendments enabled. Ephemeral by default; resets on every `start`.
 2. **Local network** — a 2-node consensus network (`--local-network`) with persistent ledger state across restarts.
 3. **Transaction wrappers** — 20 commands covering AMM, NFT, MPT, DEX, escrow, channels, checks, tickets, credentials, DIDs, oracles, vaults, and more. Designed for demos and quick experiments, not as a full RPC client.
-4. **Multi-network support** — target local, testnet, or devnet with `--node` or `XRPL_NODE`. Custom networks can be added via config file.
+4. **Multi-network support** — target local, testnet, or devnet with `--network` or `XRPL_NETWORK`. Custom networks can be added via config file.
 5. **Snapshots** — save and restore ledger state by name (requires `--local-network`). Useful for reproducible test scenarios and rollback.
 6. **Scripting** — run TypeScript/JavaScript scripts against any network via `xrpl-up run`. The CLI is also importable as a library (`src/index.ts`).
 7. **Amendment management** (experimental) — list, query, and enable XRPL amendments on the local sandbox. Compare amendment status across networks with `--diff`.
@@ -214,7 +214,7 @@ const store = new WalletStore(networkKey);
 |---|---|
 | `-v, --version` | Print version and exit |
 | `--help` | Print help for any command or subcommand |
-| `-n, --node <url\|name>` | XRPL node for interaction commands: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NODE` env var. Ignored by sandbox lifecycle commands. |
+| `-n, --network <url\|name>` | XRPL node for interaction commands: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NETWORK` env var. Ignored by sandbox lifecycle commands. |
 
 Each command supports `--help` for detailed flag documentation. Run `xrpl-up <command> --help` or `xrpl-up <command> <subcommand> --help` for usage details.
 
@@ -458,7 +458,7 @@ When `--exit-on-crash` is active and the foreground process is running, a `docke
 
 ### 8.2 Production URL Detection
 
-`isMainnet()` detects known production URLs (`xrplcluster.com`, `s1.ripple.com`, `s2.ripple.com`). "Mainnet" is not a named network — users cannot pass `--network mainnet`. However, if a user provides a raw production URL (e.g. `--node wss://xrplcluster.com`), the CLI detects this and:
+`isMainnet()` detects known production URLs (`xrplcluster.com`, `s1.ripple.com`, `s2.ripple.com`). "Mainnet" is not a named network — users cannot pass `--network mainnet`. However, if a user provides a raw production URL (e.g. `--network wss://xrplcluster.com`), the CLI detects this and:
 - `faucet` and `start` commands refuse to proceed.
 - Wrapper commands (e.g. `payment`, `nft mint`) print a stderr warning: "xrpl-up is intended for local and test network development only."
 - The local genesis seed (`snoPBrXtMeMyMHUVTgbuqAfg1SUTb`) is only usable on the local sandbox. It controls 100B XRP that exist only in the isolated Docker container.

@@ -66,7 +66,7 @@ it.concurrent("deposit: XRP into a vault and outputs Vault ID", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 5);
   const vaultId = await xrplCreateVault(wallet);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "deposit",
     "--vault-id", vaultId,
     "--amount", "1",
@@ -81,7 +81,7 @@ it.concurrent("deposit: --json outputs {result, vaultId, tx}", async () => {
   const [wallet] = await createFundedDevnet(client, master, 1, 5);
   const vaultId = await xrplCreateVault(wallet);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "deposit",
     "--vault-id", vaultId,
     "--amount", "1",
@@ -100,7 +100,7 @@ it.concurrent("deposit: --dry-run prints VaultDeposit tx JSON without submitting
   const [wallet] = await createFundedDevnet(client, master, 1, 5);
   const vaultId = await xrplCreateVault(wallet);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "deposit",
     "--vault-id", vaultId,
     "--amount", "1",
@@ -122,7 +122,7 @@ it.concurrent("deposit: --no-wait submits without waiting and outputs Transactio
   const [wallet] = await createFundedDevnet(client, master, 1, 5);
   const vaultId = await xrplCreateVault(wallet);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "deposit",
     "--vault-id", vaultId,
     "--amount", "1",
@@ -147,7 +147,7 @@ it.concurrent("deposit: --account + --keystore + --password key material deposit
     expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "devnet",
+      "--network", "devnet",
       "vault", "deposit",
       "--vault-id", vaultId,
       "--amount", "1",
@@ -170,7 +170,7 @@ it.concurrent("withdraw: deposits XRP then withdraws, outputs Vault ID and tesSU
   const vaultId = await xrplCreateVault(wallet);
   await xrplDeposit(wallet, vaultId, "2");
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "withdraw",
     "--vault-id", vaultId,
     "--amount", "1",
@@ -199,7 +199,7 @@ it.concurrent("withdraw: --destination sends redeemed assets to a different acco
   );
 
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "withdraw",
     "--vault-id", vaultId,
     "--amount", "1",
@@ -216,7 +216,7 @@ it.concurrent("withdraw: --json outputs {result, vaultId, tx}", async () => {
   const vaultId = await xrplCreateVault(wallet);
   await xrplDeposit(wallet, vaultId, "2");
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "withdraw",
     "--vault-id", vaultId,
     "--amount", "1",
@@ -235,7 +235,7 @@ it.concurrent("withdraw: --dry-run prints VaultWithdraw tx JSON without submitti
   const [wallet] = await createFundedDevnet(client, master, 1, 5);
   const vaultId = await xrplCreateVault(wallet);
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "withdraw",
     "--vault-id", vaultId,
     "--amount", "1",
@@ -258,7 +258,7 @@ it.concurrent("withdraw: --no-wait submits without waiting and outputs Transacti
   const vaultId = await xrplCreateVault(wallet);
   await xrplDeposit(wallet, vaultId, "2");
   const result = runCLI([
-    "--node", "devnet",
+    "--network", "devnet",
     "vault", "withdraw",
     "--vault-id", vaultId,
     "--amount", "1",
@@ -284,7 +284,7 @@ it.concurrent("withdraw: --account + --keystore + --password key material withdr
     expect(importResult.status, `import: ${importResult.stderr}`).toBe(0);
 
     const result = runCLI([
-      "--node", "devnet",
+      "--network", "devnet",
       "vault", "withdraw",
       "--vault-id", vaultId,
       "--amount", "1",

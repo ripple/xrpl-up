@@ -21,7 +21,7 @@ const TESTNET_ALIASES = new Set([
 function applyNodeOverride(args: string[], override: string): string[] {
   const result = [...args];
   for (let i = 0; i < result.length; i++) {
-    if (result[i] === "--node" && i + 1 < result.length && TESTNET_ALIASES.has(result[i + 1])) {
+    if (result[i] === "--network" && i + 1 < result.length && TESTNET_ALIASES.has(result[i + 1])) {
       result[i + 1] = override;
     }
   }
@@ -31,10 +31,10 @@ function applyNodeOverride(args: string[], override: string): string[] {
 export function runCLI(args: string[], extraEnv: Record<string, string> = {}, timeout = 120_000) {
   const nodeOverride = process.env.XRPL_NODE_OVERRIDE;
   const effectiveArgs = nodeOverride ? applyNodeOverride(args, nodeOverride) : args;
-  // Also override XRPL_NODE env var so tests that pass { XRPL_NODE: "testnet" }
+  // Also override XRPL_NETWORK env var so tests that pass { XRPL_NETWORK: "testnet" }
   // via extraEnv are redirected to the local node in local test runs.
   const effectiveEnv = nodeOverride
-    ? { ...process.env, PATH: E2E_PATH, ...extraEnv, XRPL_NODE: nodeOverride }
+    ? { ...process.env, PATH: E2E_PATH, ...extraEnv, XRPL_NETWORK: nodeOverride }
     : { ...process.env, PATH: E2E_PATH, ...extraEnv };
   return spawnSync(TSX, [CLI, ...effectiveArgs], {
     encoding: "utf-8",

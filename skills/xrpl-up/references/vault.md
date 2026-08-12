@@ -134,21 +134,21 @@ xrpl-up vault clawback --vault-id <64hexID> --holder rHolderXXX... --amount 50/U
 ```bash
 # 1. Alice creates an XRP vault with a maximum capacity of 1,000,000 drops
 #    Use --asset 0 for XRP (not --asset XRP); vault is devnet-only (XLS-65)
-xrpl-up --node devnet vault create \
+xrpl-up --network devnet vault create \
   --asset 0 --assets-maximum 1000000 \
   --seed sEdAliceXXXX... --json
 # → {"result":"success","vaultId":"69FE309...64chars","tx":"2DE659..."}
 
 # 2. Alice deposits 1 XRP into the vault
-xrpl-up --node devnet vault deposit \
+xrpl-up --network devnet vault deposit \
   --vault-id AABBCC...64chars --amount 1 --seed sEdAliceXXXX...
 
 # 3. Alice withdraws 0.5 XRP from the vault
-xrpl-up --node devnet vault withdraw \
+xrpl-up --network devnet vault withdraw \
   --vault-id AABBCC...64chars --amount 0.5 --seed sEdAliceXXXX...
 
 # 4. Alice deletes the vault after withdrawing all assets
-xrpl-up --node devnet vault delete \
+xrpl-up --network devnet vault delete \
   --vault-id AABBCC...64chars --seed sEdAliceXXXX...
 ```
 

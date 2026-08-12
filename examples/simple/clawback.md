@@ -11,7 +11,7 @@ Both **IOU (trust line)** and **MPT** tokens support clawback.
 ```bash
 xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---

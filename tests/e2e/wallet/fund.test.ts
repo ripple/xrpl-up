@@ -13,7 +13,7 @@ describe("wallet fund", () => {
     expect(wallet.address).toMatch(/^r/);
 
     // Fund it from testnet faucet
-    const fundResult = runCLI(["--node", "testnet", "wallet", "fund", wallet.address]);
+    const fundResult = runCLI(["--network", "testnet", "wallet", "fund", wallet.address]);
     expect(fundResult.status).toBe(0);
     expect(fundResult.stdout).toContain(`Funded ${wallet.address}`);
     expect(fundResult.stdout).toContain("Balance:");
@@ -24,7 +24,7 @@ describe("wallet fund", () => {
     expect(newResult.status).toBe(0);
     const wallet = JSON.parse(newResult.stdout) as { address: string };
 
-    const fundResult = runCLI(["--node", "testnet", "wallet", "fund", wallet.address, "--json"]);
+    const fundResult = runCLI(["--network", "testnet", "wallet", "fund", wallet.address, "--json"]);
     expect(fundResult.status).toBe(0);
     const data = JSON.parse(fundResult.stdout) as {
       address: string;
@@ -40,7 +40,7 @@ describe("wallet fund", () => {
   });
 
   it.concurrent("exits 1 with error on mainnet", () => {
-    const result = runCLI(["--node", "wss://xrplcluster.com", "wallet", "fund", "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"]);
+    const result = runCLI(["--network", "wss://xrplcluster.com", "wallet", "fund", "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh"]);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("only available on testnet and devnet");
   });
@@ -50,7 +50,7 @@ describe("wallet fund", () => {
     expect(newResult.status).toBe(0);
     const wallet = JSON.parse(newResult.stdout) as { address: string };
 
-    const fundResult = runCLI(["--node", "testnet", "wallet", "f", wallet.address]);
+    const fundResult = runCLI(["--network", "testnet", "wallet", "f", wallet.address]);
     expect(fundResult.status).toBe(0);
     expect(fundResult.stdout).toContain(`Funded ${wallet.address}`);
   });

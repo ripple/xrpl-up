@@ -75,13 +75,13 @@ xrpl-up accounts
 xrpl-up run scripts/example-payment.ts
 
 # Create an XRP/USD AMM pool (100 XRP + 100 USD, 0.5% fee)
-xrpl-up amm create --asset XRP --asset2 USD/rIssuer... --amount 100 --amount2 100 --trading-fee 500 --node local --seed sEd...
+xrpl-up amm create --asset XRP --asset2 USD/rIssuer... --amount 100 --amount2 100 --trading-fee 500 --seed sEd...
 
 # Mint a transferable NFT
 xrpl-up nft mint --taxon 0 --uri https://example.com/meta.json --transferable --seed sn3nxiW7...
 
 # Create an MPT issuance (Multi-Purpose Token)
-xrpl-up mptoken issuance create --node local --max-amount 1000000 --asset-scale 6
+xrpl-up mptoken issuance create --max-amount 1000000 --asset-scale 6
 
 # Open a payment channel
 xrpl-up channel create --to rDestination... --amount 10 --settle-delay 86400 --seed sSrc...
@@ -113,22 +113,31 @@ Two modes are available:
 
 **Local network** (`--local-network`) runs a 2-node private consensus network. Ledgers close via real consensus (~4s), state persists across stop/start, and snapshots are supported. Use this when you're building an app over hours or days against a stable environment — set up AMM pools, trust lines, and funded accounts once, snapshot the state, and roll back when you need to.
 
-Once started (either mode), interaction commands default to the local sandbox — no flag needed. To target something else, pass `--node testnet`, `--node devnet`, or `--node <wss://...>`:
+Once started (either mode), interaction commands default to the local sandbox — no flag needed. To target something else, pass `--network testnet`, `--network devnet`, or `--network <wss://...>`:
 
 ```bash
 # Start the sandbox once (either mode)
 xrpl-up start                       # standalone: fast, ephemeral
 xrpl-up start --local-network       # persistent, real consensus
 
-# Then run interaction commands — --node defaults to local, no flag needed
+# `xrpl-up start` already funded 10 local accounts and printed their
+# addresses — run `xrpl-up accounts` to list them again.
 xrpl-up account info rMyAddress
-xrpl-up account info rMyAddress --node testnet
-xrpl-up account info rMyAddress --node devnet
-xrpl-up account info rMyAddress --node wss://your-own-rippled-server:6006  # any other rippled node you run/control
 
-# Or set XRPL_NODE once instead of passing --node on every command
-export XRPL_NODE=testnet
-xrpl-up payment --to rDest --amount 10   # uses testnet, no --node needed
+# testnet/devnet addresses aren't auto-funded like the local sandbox —
+# get one first with `xrpl-up faucet --network testnet`, then query it:
+xrpl-up account info rMyTestnetAddress --network testnet
+xrpl-up account info rMyDevnetAddress --network devnet
+
+# any other rippled node you already have an account on
+xrpl-up account info rMyAddress --network wss://your-own-rippled-server:6006
+
+# Or set XRPL_NETWORK once instead of passing --network on every interaction command
+export XRPL_NETWORK=testnet
+xrpl-up faucet --network testnet --json   # sandbox lifecycle commands (start/faucet/accounts/status/run)
+                                           # have their own --network option and don't read XRPL_NETWORK —
+                                           # it must be passed explicitly here even with the env var set
+xrpl-up payment --to rDest --amount 10 --seed <seed from faucet output>   # uses testnet via XRPL_NETWORK
 ```
 
 Run `xrpl-up start --help` for all options.
@@ -317,7 +326,7 @@ Run `xrpl-up channel create --help` / `channel fund --help` / `channel sign --he
 
 ### `xrpl-up mptoken`
 
-Multi-Purpose Token (MPT / XLS-33) operations. MPT is enabled automatically in the local sandbox. Use `--node local` to target the local sandbox, or `--node testnet` for Testnet.
+Multi-Purpose Token (MPT / XLS-33) operations. MPT is enabled automatically in the local sandbox (the `--network` default — no flag needed); pass `--network testnet` for Testnet.
 
 See [MPT — Multi-Purpose Token (XLS-33)](examples/simple/mpt.md) for a full walkthrough, and [MPT Policy Lifecycle: RequireAuth + Lock + Clawback](examples/advanced/mpt-policy-lifecycle.md) for a deeper dive on authorization, locking, and clawback.
 
@@ -370,8 +379,8 @@ Run `xrpl-up check create --help` / `check cash --help` / `check cancel --help` 
 Enable or disable account flags (replaces the old `accountset` command).
 
 ```bash
-xrpl-up account set --set-flag requireDestTag --node local --seed sn3nxiW7...
-xrpl-up account set --clear-flag requireDestTag --node local --seed sn3nxiW7...
+xrpl-up account set --set-flag requireDestTag --seed sn3nxiW7...
+xrpl-up account set --clear-flag requireDestTag --seed sn3nxiW7...
 ```
 
 | Flag name | Description |
@@ -396,8 +405,8 @@ For IOU clawback, use `--allow-clawback --confirm` (irreversible, not a `--set-f
 The `tx` command has been removed. Use `xrpl-up account transactions`:
 
 ```bash
-xrpl-up account transactions rMyAddress... --node local
-xrpl-up account transactions rMyAddress... --node testnet
+xrpl-up account transactions rMyAddress...
+xrpl-up account transactions rMyTestnetAddress... --network testnet   # fund one first: xrpl-up faucet --network testnet
 ```
 
 ---
@@ -439,7 +448,7 @@ Lists existing tickets (reserved sequence numbers) for an account. `<address>` i
 Issuer clawback operations. The issuer account must have clawback enabled before use.
 
 > **Prerequisites:**
-> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set --allow-clawback --confirm --node local --seed <issuer-seed>`
+> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set --allow-clawback --confirm --network local --seed <issuer-seed>`
 > - **MPT clawback:** The issuance must have been created with `xrpl-up mptoken issuance create --flags can-clawback`
 
 See [Clawback — Reclaim Issued Tokens](examples/simple/clawback.md) for a full walkthrough.
@@ -496,10 +505,10 @@ Account query and management. The `account` command provides both query subcomma
 | `delete` | Delete the account |
 
 ```bash
-xrpl-up account info rMyAddress --node local
-xrpl-up account transactions rMyAddress --node local
-xrpl-up account trust-lines rMyAddress --node local
-xrpl-up account balance rMyAddress --node testnet
+xrpl-up account info rMyAddress --network local
+xrpl-up account transactions rMyAddress --network local
+xrpl-up account trust-lines rMyAddress --network local
+xrpl-up account balance rMyAddress --network testnet
 ```
 
 ---

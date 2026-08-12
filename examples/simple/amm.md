@@ -11,7 +11,7 @@ XRPL's built-in AMM (XLS-30) lets you provide liquidity to a constant-product po
 ```bash
 xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---
@@ -31,11 +31,11 @@ LP_SEED=$(echo "$LP_JSON" | jq -r .seed)
 LP=$(echo "$LP_JSON" | jq -r .address)
 
 # Let the issuer's USD ripple through trust lines (needed for it to settle payments)
-xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED --node local
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED --network local
 
 # LP trusts the issuer for USD, then the issuer sends USD to the LP
-xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $LP_SEED --node local
-xrpl-up payment --to $LP --amount 1000/USD/$ISSUER --seed $ISSUER_SEED --node local
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $LP_SEED --network local
+xrpl-up payment --to $LP --amount 1000/USD/$ISSUER --seed $ISSUER_SEED --network local
 ```
 
 ---
@@ -46,7 +46,7 @@ xrpl-up payment --to $LP --amount 1000/USD/$ISSUER --seed $ISSUER_SEED --node lo
 # 100 XRP / 100 USD pool, 0.5% trading fee (amounts: decimal for both XRP and IOU)
 xrpl-up amm create --asset XRP --asset2 USD/$ISSUER \
   --amount 100 --amount2 100 --trading-fee 500 \
-  --seed $LP_SEED --node local
+  --seed $LP_SEED --network local
 ```
 
 ---
@@ -54,7 +54,7 @@ xrpl-up amm create --asset XRP --asset2 USD/$ISSUER \
 ## 3. Inspect the pool
 
 ```bash
-xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --node local
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --network local
 ```
 
 ---
@@ -68,10 +68,10 @@ Once the pool is live, any account can trade against it using the DEX `offer cre
 TRADER_JSON=$(xrpl-up faucet --network local --json)
 TRADER_SEED=$(echo "$TRADER_JSON" | jq -r .seed)
 TRADER=$(echo "$TRADER_JSON" | jq -r .address)
-xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $TRADER_SEED --node local
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $TRADER_SEED --network local
 
 # Trader sells 5 XRP into the pool (gets USD back) — price includes the 0.5% fee + slippage
-xrpl-up offer create --taker-pays 4.5/USD/$ISSUER --taker-gets 5 --seed $TRADER_SEED --node local \
+xrpl-up offer create --taker-pays 4.5/USD/$ISSUER --taker-gets 5 --seed $TRADER_SEED --network local \
   --immediate-or-cancel
 # The AMM fills the offer at the current pool price
 ```
@@ -83,7 +83,7 @@ xrpl-up offer create --taker-pays 4.5/USD/$ISSUER --taker-gets 5 --seed $TRADER_
 After swaps the pool ratio shifts (and the price moves):
 
 ```bash
-xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --node local
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --network local
 # Asset 1: 104.735721 XRP   ← increased
 # Asset 2: 95.5 USD         ← decreased
 ```

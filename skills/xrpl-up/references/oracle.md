@@ -58,7 +58,7 @@ xrpl-up oracle get rOracleXXX... 1 --json
 
 ```bash
 # 1. Publish a BTC/USD price feed (oracle document ID = 1)
-xrpl-up --node testnet oracle set \
+xrpl-up --network testnet oracle set \
   --document-id 1 \
   --price BTC/USD:155000:6 \
   --provider pyth \
@@ -66,7 +66,7 @@ xrpl-up --node testnet oracle set \
   --seed sEdOracleXXXX...
 
 # 2. Update the price — same document-id overwrites the previous entry
-xrpl-up --node testnet oracle set \
+xrpl-up --network testnet oracle set \
   --document-id 1 \
   --price BTC/USD:160000:6 \
   --provider pyth \
@@ -74,7 +74,7 @@ xrpl-up --node testnet oracle set \
   --seed sEdOracleXXXX...
 
 # 3. Publish multiple pairs in one transaction using --price-data
-xrpl-up --node testnet oracle set \
+xrpl-up --network testnet oracle set \
   --document-id 2 \
   --price-data '[{"BaseAsset":"ETH","QuoteAsset":"USD","AssetPrice":3000000,"Scale":6},{"BaseAsset":"XRP","QuoteAsset":"USD","AssetPrice":5000,"Scale":6}]' \
   --provider chainlink \
@@ -82,7 +82,7 @@ xrpl-up --node testnet oracle set \
   --seed sEdOracleXXXX...
 
 # 4. Delete the oracle when the feed is discontinued
-xrpl-up --node testnet oracle delete \
+xrpl-up --network testnet oracle delete \
   --document-id 1 --seed sEdOracleXXXX...
 ```
 

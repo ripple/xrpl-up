@@ -51,7 +51,7 @@ SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
 RECEIVER_JSON=$(xrpl-up faucet --network local --json)
 RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 
-xrpl-up payment --to $RECEIVER --amount 10 --seed $SENDER_SEED --node local
+xrpl-up payment --to $RECEIVER --amount 10 --seed $SENDER_SEED --network local
 xrpl-up account transactions $(echo "$SENDER_JSON" | jq -r .address) --limit 5
 ```
 
@@ -118,40 +118,40 @@ LP_SEED=$(echo "$LP_JSON" | jq -r .seed)
 LP=$(echo "$LP_JSON" | jq -r .address)
 
 # Let the issuer's USD ripple through trust lines, then fund the LP with USD
-xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED --node local
-xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $LP_SEED --node local
-xrpl-up payment --to $LP --amount 1000/USD/$ISSUER --seed $ISSUER_SEED --node local
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED --network local
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $LP_SEED --network local
+xrpl-up payment --to $LP --amount 1000/USD/$ISSUER --seed $ISSUER_SEED --network local
 
 # Create the pool
 xrpl-up amm create --asset XRP --asset2 USD/$ISSUER \
   --amount 100 --amount2 100 --trading-fee 500 \
-  --seed $LP_SEED --node local
+  --seed $LP_SEED --network local
 
 # Snapshot this exact pool state
 xrpl-up snapshot save before-my-feature
 
 # BEFORE: pool is 100 XRP / 100 USD
-xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --node local
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --network local
 
 # Iterate on your integration code — e.g. trade against the pool, shifting its balance
 TRADER_JSON=$(xrpl-up faucet --network local --json)
 TRADER_SEED=$(echo "$TRADER_JSON" | jq -r .seed)
 TRADER=$(echo "$TRADER_JSON" | jq -r .address)
-xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $TRADER_SEED --node local
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $TRADER_SEED --network local
 
 # Trader sells 5 XRP into the pool (gets USD back) — price includes the 0.5% fee + slippage
-xrpl-up offer create --taker-pays 4.5/USD/$ISSUER --taker-gets 5 --seed $TRADER_SEED --node local \
+xrpl-up offer create --taker-pays 4.5/USD/$ISSUER --taker-gets 5 --seed $TRADER_SEED --network local \
   --immediate-or-cancel
 # The AMM fills the offer at the current pool price
 
 # AFTER: pool has moved — no longer 100/100
-xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --node local
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --network local
 
 # Rewind instantly instead of re-funding/re-creating the pool by hand:
 xrpl-up snapshot restore before-my-feature
 
 # RESTORED: pool is back to exactly 100 XRP / 100 USD — the trade never happened
-xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --node local
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --network local
 ```
 
 This is the single biggest iteration-speed win over Testnet: on a public network you can't roll back shared state. Here you can, as many times as you need.
@@ -202,7 +202,7 @@ npm run test:e2e:local                  # run your test suite against it
 xrpl-up stop
 ```
 
-`xrpl-up`'s own `.github/workflows/test.yml` does exactly this across `standalone`/`local-network`/`snapshot` modes — a real, working example of wiring a local rippled sandbox into GitHub Actions instead of hitting public Testnet from CI (which this project has hit real flakiness from — timeouts and `LastLedgerSequence` expiration against the real network, unrelated to any code bug — see the `testnet` mode's `--node testnet`/`--node devnet` targeted tests for what that looks like when it happens).
+`xrpl-up`'s own `.github/workflows/test.yml` does exactly this across `standalone`/`local-network`/`snapshot` modes — a real, working example of wiring a local rippled sandbox into GitHub Actions instead of hitting public Testnet from CI (which this project has hit real flakiness from — timeouts and `LastLedgerSequence` expiration against the real network, unrelated to any code bug — see the `testnet` mode's `--network testnet`/`--network devnet` targeted tests for what that looks like when it happens).
 
 ### 5. Early access to unmerged xrpl.js features
 
