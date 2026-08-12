@@ -105,7 +105,7 @@ export async function statusCommand(options: StatusOptions = {}): Promise<void> 
     if (isLocal) {
       logger.dim('  Is the local sandbox running? Check with:');
       logger.dim('    docker ps | grep xrpl-up');
-      logger.dim('  Start it with: xrpl-up start --local --detach');
+      logger.dim('  Start it with: xrpl-up start --local');
     }
     await manager.disconnect();
     process.exit(1);

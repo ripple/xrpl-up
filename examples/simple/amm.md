@@ -9,7 +9,7 @@ XRPL's built-in AMM (XLS-30) lets you provide liquidity to a constant-product po
 ## Prerequisites
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```

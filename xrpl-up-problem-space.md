@@ -81,7 +81,7 @@ should use `xrpl.js` directly or call `xrpld` RPC endpoints.
 
 ### Example Workflow
 
-1. Start local sandbox: `xrpl-up node --local --persist --detach`
+1. Start local sandbox: `xrpl-up node --local --persist` (detaches by default)
 2. Do expensive setup once (AMM pool, issuers, trust lines): `xrpl-up amm create ... --local`
 3. Save a checkpoint: `xrpl-up snapshot save after-setup`
 4. Run scripts/tests against stable state: `xrpl-up run scripts/...`
@@ -175,13 +175,15 @@ xrpl-up logs      # streams Docker Compose logs for xrpld and faucet
 
 #### CI/CD Pipeline Support
 
-`xrpl-up node --local` is a blocking interactive command. CI/CD pipelines use:
+`xrpl-up node --local` detaches (backgrounds) by default, which is what CI/CD pipelines want:
 
 ```bash
-xrpl-up node --local --detach   # starts sandbox, prints ready, exits 0
+xrpl-up node --local   # starts sandbox, prints ready, exits 0
 npm test
-xrpl-up stop                    # tears down Docker stack (use if: always() in CI)
+xrpl-up stop           # tears down Docker stack (use if: always() in CI)
 ```
+
+Pass `--foreground` instead to keep it blocking/interactive with live logs.
 
 - GitHub Actions compatible (Docker available on `ubuntu-latest`, `macos-latest`)
 - Faucet server takes over `ledger_accept` when detached

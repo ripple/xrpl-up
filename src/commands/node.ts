@@ -30,9 +30,9 @@ export interface NodeOptions {
   image?: string;
   ledgerInterval?: number;
   noAutoAdvance?: boolean;
-  noSecrets?: boolean;  // suppress private key output (auto-enabled with --detach)
+  noSecrets?: boolean;  // suppress private key output (auto-enabled unless --foreground is used)
   debug?: boolean;
-  detach?: boolean;
+  detach?: boolean;  // computed by cli.ts: true by default for local sandboxes, false with --foreground
   noRestart?: boolean;  // bypass wrapper entrypoint so container exits with rippled's code
   config?: string;  // path to a custom rippled.cfg (local mode only)
   bindAddress?: string;  // IP address for Docker port bindings (default: 127.0.0.1)
@@ -405,7 +405,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   printTable(table.toString());
   logger.blank();
 
-  // ── Private keys (suppressed in --detach / --no-secrets) ──────────────────
+  // ── Private keys (suppressed when detached / --no-secrets) ────────────────
   if (printSecrets) {
     logger.section('Private Keys');
     for (const [i, { wallet }] of funded.entries()) {

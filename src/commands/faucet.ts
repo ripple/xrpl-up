@@ -66,7 +66,7 @@ export async function faucetCommand(options: FaucetOptions = {}): Promise<void> 
         (err instanceof Error && err.message.includes('fetch failed'));
       if (isConnRefused) {
         logger.error(`Cannot reach local faucet at ${FAUCET_URL}`);
-        logger.error('Is the sandbox running?  Try: xrpl-up start --local --detach');
+        logger.error('Is the sandbox running?  Try: xrpl-up start --local');
       } else {
         logger.error(err instanceof Error ? err.message : String(err));
       }

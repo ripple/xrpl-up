@@ -9,7 +9,7 @@ Send XRP between accounts on XRPL. This is the most basic operation and a good s
 Start a local sandbox (or skip this and use `--network testnet` instead):
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```

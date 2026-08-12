@@ -9,7 +9,7 @@ A fully-regulated IOU token flow where the issuer controls every step: only appr
 ## Prerequisites
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```

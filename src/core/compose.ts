@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import net from 'node:net';
+import crypto from 'node:crypto';
 
 export const COMPOSE_PROJECT = 'xrpl-up-local';
 export const LOCAL_WS_PORT = 6006;
@@ -76,6 +77,19 @@ const VALIDATORS_CFG_FILE    = path.join(XRPL_UP_DIR, 'validators.txt');
 export const EXTRA_AMENDMENTS_FILE = path.join(XRPL_UP_DIR, 'genesis-amendments.txt');
 /** Records which image last started the persistent --local-network volumes. */
 const LOCAL_NETWORK_IMAGE_FILE = path.join(XRPL_UP_DIR, 'local-network-image.txt');
+/**
+ * Identifies which genesis ledger the current --local-network volumes descend
+ * from ("lineage"). Snapshots record this so `snapshot restore` can tell
+ * whether a snapshot belongs to the sandbox it is being restored into.
+ *
+ * A snapshot only restores correctly onto the same lineage: the tarball is a
+ * copy of that ledger chain's database. Seeding from the pre-built genesis DB
+ * always yields the same lineage (`seed`), while force-enabling an amendment
+ * requires building a brand-new genesis, which starts a different one.
+ */
+const GENESIS_LINEAGE_FILE = path.join(XRPL_UP_DIR, 'genesis-lineage.txt');
+/** Lineage of the pre-built genesis DB tarballs shipped with xrpl-up. */
+const SEED_LINEAGE = 'seed';
 export { RIPPLED_CFG_FILE };
 
 /**
@@ -631,6 +645,67 @@ function recordLocalNetworkImage(image: string): void {
 }
 
 /** Called by `xrpl-up reset` — the volumes are gone, so the recorded image is stale. */
+/**
+ * Current --local-network lineage, or null if no sandbox has been created yet.
+ * `seed` means "descends from the shipped pre-built genesis DB"; anything else
+ * is a fingerprint of the amendment set a locally-built genesis was created
+ * with (see GENESIS_LINEAGE_FILE).
+ */
+export function readGenesisLineage(): string | null {
+  try {
+    return fs.readFileSync(GENESIS_LINEAGE_FILE, 'utf-8').trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeGenesisLineage(lineage: string): void {
+  fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
+  fs.writeFileSync(GENESIS_LINEAGE_FILE, lineage);
+}
+
+/**
+ * Make this machine's config match a restored snapshot's genesis.
+ *
+ * `snapshot restore` replaces the ledger wholesale, so the amendment set is
+ * whatever that ledger was built with. Writing those amendments back (and
+ * regenerating the config) keeps config and ledger in agreement, so restoring
+ * across an `amendment enable` just works instead of leaving a mismatch.
+ */
+export function adoptGenesisLineage(lineage: string, amendments: string): void {
+  fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
+  if (amendments.trim()) {
+    fs.writeFileSync(EXTRA_AMENDMENTS_FILE, amendments.endsWith('\n') ? amendments : amendments + '\n');
+  } else {
+    try { fs.unlinkSync(EXTRA_AMENDMENTS_FILE); } catch { /* already absent */ }
+  }
+  writeRippledConfig(false, !isConsensusMode());
+  writeGenesisLineage(lineage);
+}
+
+/** Called by `xrpl-up reset` — the volumes are gone, so the lineage is stale. */
+export function clearGenesisLineage(): void {
+  try { fs.unlinkSync(GENESIS_LINEAGE_FILE); } catch { /* not present — ok */ }
+}
+
+/**
+ * Lineage a genesis built from the current config would have: a short digest of
+ * the extra (manually enabled) amendments, since those are what make a locally
+ * built genesis differ from the shipped seed.
+ */
+function pendingGenesisLineage(): string {
+  const extra = fs.existsSync(EXTRA_AMENDMENTS_FILE)
+    ? fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8').trim()
+    : '';
+  if (!extra) return SEED_LINEAGE;
+  const hashes = extra.split('\n')
+    .map((l) => l.trim().split(/\s+/)[0])
+    .filter(Boolean)
+    .sort()
+    .join(',');
+  return 'amd-' + crypto.createHash('sha256').update(hashes).digest('hex').slice(0, 12);
+}
+
 export function clearLocalNetworkImageRecord(): void {
   try { fs.unlinkSync(LOCAL_NETWORK_IMAGE_FILE); } catch { /* not present — ok */ }
 }
@@ -653,9 +728,17 @@ export function clearLocalNetworkImageRecord(): void {
  * images that ran as root anyway.
  */
 function getImageUidGid(image: string): string {
+  // Pin the platform on ARM hosts, matching the compose file — the official
+  // xrpld image is amd64-only, and omitting it makes Docker print a noisy
+  // "requested image's platform does not match" warning on every call.
+  const platformArg = os.arch() === 'arm64' ? '--platform linux/amd64 ' : '';
   try {
-    const uid = execSync(`docker run --rm --entrypoint id "${image}" -u`, { encoding: 'utf-8' }).trim();
-    const gid = execSync(`docker run --rm --entrypoint id "${image}" -g`, { encoding: 'utf-8' }).trim();
+    // One container, both values — halves the (emulated, slow) container starts.
+    const out = execSync(
+      `docker run --rm ${platformArg}--entrypoint sh "${image}" -c "id -u; id -g"`,
+      { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] },
+    ).trim();
+    const [uid, gid] = out.split('\n').map((s) => s.trim());
     if (uid && gid) return `${uid}:${gid}`;
   } catch { /* fall through to root */ }
   return '0:0';
@@ -669,19 +752,20 @@ function seedConsensusVolumes(image: string): void {
   // If tarballs are missing (e.g. dev build without them), skip silently
   if (!fs.existsSync(node1Tar) || !fs.existsSync(node2Tar)) return;
 
-  // The pre-built snapshot bakes in whatever amendments were active when it was
-  // built. If the user has since queued additional amendments via `amendment
-  // enable` (extra-amendments file non-empty), the snapshot predates them and
-  // doesn't have them active — seeding from it would make the entrypoint find an
-  // existing ledger.db and boot with --load, silently bypassing the [amendments]
-  // genesis-forcing config entirely (it only takes effect on a real --start from
-  // a blank ledger). Skip seeding so the volume stays empty and the entrypoint
-  // does a real --start instead, the same way standalone mode already does.
-  if (fs.existsSync(EXTRA_AMENDMENTS_FILE) && fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8').trim()) {
-    // Docker creates named volumes as root:root by default. Older rippled images
-    // ran as root, so --start could create its own genesis DB directories fine;
-    // newer images (3.3.0+) run as a non-root user and get a permission error
-    // creating those directories unless the empty volume is pre-chowned.
+  // If the user queued extra amendments via `amendment enable`, the shipped
+  // tarball predates them: seeding it would leave an existing ledger.db, so the
+  // entrypoint boots with --load and the [amendments] stanza (which only applies
+  // on a genesis --start) is silently ignored. Skip seeding so the volumes stay
+  // empty and rippled builds a real genesis with those amendments active.
+  //
+  // That genesis starts a NEW ledger lineage, so snapshots taken on the old one
+  // can no longer be restored here — snapshot restore compares lineages and
+  // reports that clearly instead of half-restoring (see snapshot.ts).
+  const lineage = pendingGenesisLineage();
+  if (lineage !== SEED_LINEAGE) {
+    // Docker creates named volumes as root:root. Older rippled images ran as
+    // root so --start could create its genesis DB directories; 3.3.0+ runs as a
+    // non-root user and fails with a permission error unless we pre-chown.
     const uidGid = getImageUidGid(image);
     for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
       if (!volumeHasData(vol)) {
@@ -689,6 +773,7 @@ function seedConsensusVolumes(image: string): void {
         execSync(`docker run --rm -v ${vol}:/data alpine chown -R ${uidGid} /data`, { stdio: 'ignore' });
       }
     }
+    writeGenesisLineage(lineage);
     return;
   }
 
@@ -723,6 +808,7 @@ function seedConsensusVolumes(image: string): void {
       { stdio: 'ignore' },
     );
   }
+  writeGenesisLineage(SEED_LINEAGE);
 }
 
 /**

@@ -88,7 +88,7 @@ USD/rIssuerAddress...            IOU asset
 | Command | Description |
 |---------|-------------|
 | `xrpl-up start` | Start local rippled Docker sandbox |
-| `xrpl-up start --detach` | Start in background (CI) |
+| `xrpl-up start` | Starts in background by default (CI-friendly); add `--foreground` to stay attached |
 | `xrpl-up start --local-network` | 2-node consensus network with snapshot support |
 | `xrpl-up stop` | Stop local sandbox |
 | `xrpl-up reset` | Wipe all local state |

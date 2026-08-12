@@ -102,12 +102,12 @@ program
     'Disable automatic ledger advancement'
   )
   .option(
-    '--detach',
-    'Start sandbox in the background and exit (for CI/CD pipelines)'
+    '--foreground',
+    'Keep the sandbox attached in the foreground with live logs (local sandboxes only; Ctrl+C stops it)'
   )
   .option(
     '--no-secrets',
-    'Do not print seeds or private keys to stdout (auto-enabled with --detach)'
+    'Do not print seeds or private keys to stdout (auto-enabled unless --foreground is used)'
   )
   .option(
     '--debug',
@@ -135,13 +135,20 @@ program
     ledgerInterval: string;
     autoAdvance?: boolean;
     debug?: boolean;
-    detach?: boolean;
+    foreground?: boolean;
     secrets?: boolean;
     exitOnCrash?: boolean;
     config?: string;
     bindAddress: string;
   }) => {
     const isLocal = opts.local || opts.localNetwork || !opts.network || opts.network === 'local';
+    // Local sandboxes detach by default (every real usage pattern wants this —
+    // docs, CI, and scripting all attached-and-blocked before this change);
+    // --foreground opts back into the old blocking/live-log behavior.
+    // --exit-on-crash implies foreground too — its crash watcher only makes
+    // sense while attached. Remote (testnet/devnet) start is unaffected — it
+    // has always stayed attached regardless of these flags.
+    const detach = isLocal ? !(opts.foreground || opts.exitOnCrash) : false;
     nodeCommand({
       network: isLocal ? undefined : opts.network,
       accountCount: opts.accounts !== undefined ? parseInt(opts.accounts, 10) : undefined,
@@ -152,7 +159,7 @@ program
       noAutoAdvance: opts.autoAdvance === false,
       noSecrets: opts.secrets === false,
       debug: opts.debug,
-      detach: opts.detach,
+      detach,
       noRestart: opts.exitOnCrash,
       config: opts.config,
       bindAddress: opts.bindAddress,
@@ -236,10 +243,11 @@ program
 // ── reset ──────────────────────────────────────────────────────────────────────
 program
   .command('reset')
-  .description('Wipe all local sandbox state (containers, ledger volume, accounts)')
+  .description('Wipe all local sandbox state (containers, ledger volume, accounts, manually enabled amendments)')
   .option('--snapshots', 'Also delete all saved snapshots')
-  .action((opts: { snapshots?: boolean }) => {
-    resetCommand({ snapshots: opts.snapshots });
+  .option('--keep-amendments', 'Preserve amendments added via `amendment enable` instead of clearing them')
+  .action((opts: { snapshots?: boolean; keepAmendments?: boolean }) => {
+    resetCommand({ snapshots: opts.snapshots, keepAmendments: opts.keepAmendments });
   });
 
 // ── snapshot ──────────────────────────────────────────────────────────────────
@@ -319,12 +327,12 @@ amendment
   });
 
 amendment
-  .command('enable <nameOrHash>')
-  .description('Queue an amendment for activation in the local sandbox genesis config')
+  .command('enable <nameOrHash...>')
+  .description('Queue one or more amendments for activation in the local sandbox genesis config')
   .option('--local', 'Use the local Docker sandbox')
   .option('--auto-reset', 'Automatically reset and restart the node without prompting')
-  .action((nameOrHash: string, opts: { local?: boolean; autoReset?: boolean }) => {
-    amendmentEnableCommand(nameOrHash, { local: opts.local, autoReset: opts.autoReset })
+  .action((namesOrHashes: string[], opts: { local?: boolean; autoReset?: boolean }) => {
+    amendmentEnableCommand(namesOrHashes, { local: opts.local, autoReset: opts.autoReset })
       .catch(handleError);
   });
 
@@ -359,7 +367,7 @@ function handleError(err: unknown): void {
   if (isLocalFail) {
     console.error('\n  Local XRPL node is not running.');
     console.error('  Check:                 docker ps | grep xrpl-up');
-    console.error('  Start it:              xrpl-up start --detach');
+    console.error('  Start it:              xrpl-up start --local');
     console.error('  Or target a network:   xrpl-up <sandbox-cmd> --network testnet');
     console.error('                         xrpl-up <xrpl-cmd> -n testnet');
   }

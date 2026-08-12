@@ -24,10 +24,10 @@ You don't need a testnet account, a faucet, or patience for 4-second ledger clos
 ### 1. Zero-to-funded-account in one command
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 ```
 
-No faucet request, no rate limit, no wait. You get 10 funded accounts (1000 XRP each) printed to the terminal immediately — this is standalone mode, which wipes and restarts fresh every time, so it's safe to break things and start over. `--detach` returns control of the terminal right away instead of blocking in the foreground — needed so you can run the next commands in the same session.
+No faucet request, no rate limit, no wait. You get 10 funded accounts (1000 XRP each) printed to the terminal immediately — this is standalone mode, which wipes and restarts fresh every time, so it's safe to break things and start over. Control returns to your terminal right away so you can run the next commands in the same session; pass `--foreground` instead if you want it to stay attached with live logs.
 
 ### 2. Explore the ledger without writing code
 
@@ -98,7 +98,7 @@ Building against public Testnet/Devnet means faucet limits, shared state you don
 ### 1. Persistent, realistic environment for real dev sessions
 
 ```bash
-xrpl-up start --local-network --detach
+xrpl-up start --local-network
 ```
 
 Real consensus (~4s ledger close, not instant), state survives `xrpl-up stop`/restart, and snapshots are supported — this is the mode for building over hours or days, not a one-shot script.
@@ -164,13 +164,16 @@ The [Vault](examples/advanced/vault.md) example is a good concrete case — `Sin
 xrpl-up amendment info SingleAssetVault --local     # check support + mainnet status
 ```
 
-**Important:** `amendment enable` queues the amendment into the genesis config and always requires a full reset to activate — the same reset+restart flow in both standalone and `--local-network` mode. There is currently no no-reset/live-voting path for `--local-network`, and (live-verified) `--local-network` mode has a separate bug where the reset doesn't actually activate the amendment at all: `xrpl-up start --local-network` re-seeds its ledger from a pre-built snapshot rather than a truly blank genesis, which silently bypasses the genesis-forcing. Only **standalone** mode (below) reliably works today.
+**Important:** `amendment enable` queues the amendment into the genesis config and requires a reset to activate — works in both standalone and `--local-network` mode. In `--local-network`, the next start builds a real 2-node consensus genesis from scratch instead of resuming the pre-built ledger, which takes ~30-60s instead of ~5s and starts a new ledger lineage; `snapshot restore` detects that automatically and realigns the amendment config to whatever the snapshot being restored was built with, so save/restore keeps working across an `enable`.
 
 ```bash
-# Standalone mode: force-enable from a fresh genesis (destructive — wipes ledger/accounts)
+# Force-enable from a fresh genesis (destructive — wipes ledger/accounts)
 xrpl-up amendment enable SingleAssetVault --local
-xrpl-up start --detach
+xrpl-up start --local-network
 xrpl-up amendment info SingleAssetVault --local   # → Enabled: yes
+
+# Enabling several amendments together is one command, one reset:
+xrpl-up amendment enable SingleAssetVault DynamicMPT LendingProtocol --local
 ```
 
 Then build a vault:
@@ -194,7 +197,7 @@ If you're building against a feature that's still new (Vault, Lending Protocol, 
 ### 4. CI integration — this repo's own test suite is the reference example
 
 ```bash
-xrpl-up start --local --detach          # or --local-network for consensus-mode tests
+xrpl-up start --local          # or --local-network for consensus-mode tests
 npm run test:e2e:local                  # run your test suite against it
 xrpl-up stop
 ```

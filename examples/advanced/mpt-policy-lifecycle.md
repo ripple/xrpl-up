@@ -9,7 +9,7 @@ This guide complements [MPT](mpt.md) with a focus on the **policy controls** rat
 ## Prerequisites
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```

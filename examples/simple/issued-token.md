@@ -7,7 +7,7 @@ XRPL's native support for custom currencies. An issuer account mints tokens; hol
 ## Prerequisites
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```

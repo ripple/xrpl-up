@@ -8,7 +8,8 @@ import { Client } from 'xrpl';
 import {
   waitForPort, isConsensusMode,
   LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT, COMPOSE_FILE, COMPOSE_PROJECT,
-  VOLUME_NAME, PEER_VOLUME_NAME,
+  VOLUME_NAME, PEER_VOLUME_NAME, readGenesisLineage, adoptGenesisLineage,
+  EXTRA_AMENDMENTS_FILE,
 } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
@@ -42,6 +43,25 @@ function metaSidecarPath(name: string): string {
   return path.join(SNAPSHOTS_DIR, `${name}-meta.json`);
 }
 
+/**
+ * Genesis lineage + amendment set recorded in a snapshot's meta sidecar.
+ * Both are absent for snapshots saved before this was recorded, in which case
+ * the restore proceeds unchanged (nothing to reconcile).
+ */
+function readSnapshotMeta(name: string): { lineage: string | null; amendments: string } {
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaSidecarPath(name), 'utf-8')) as {
+      lineage?: string; amendments?: string;
+    };
+    return {
+      lineage: meta.lineage && meta.lineage !== 'unknown' ? meta.lineage : null,
+      amendments: meta.amendments ?? '',
+    };
+  } catch {
+    return { lineage: null, amendments: '' };
+  }
+}
+
 function backupPath(filePath: string): string {
   return `${filePath}.bak`;
 }
@@ -53,6 +73,52 @@ function safeCommandOutput(command: string): string {
     const stdout = (err as { stdout?: string | Buffer }).stdout?.toString() ?? '';
     const stderr = (err as { stderr?: string | Buffer }).stderr?.toString() ?? '';
     return [stdout, stderr].filter(Boolean).join('\n').trim() || '(no output)';
+  }
+}
+
+/**
+ * Wait until every account in the wallet store exists on the validated ledger.
+ *
+ * Keeps `snapshot save` from capturing a ledger that predates its own accounts
+ * sidecar (see call site). Best-effort: on timeout it warns rather than failing,
+ * so a snapshot is still produced.
+ */
+async function waitForWalletStoreValidated(timeoutMs = 30_000): Promise<void> {
+  let addresses: string[] = [];
+  try {
+    const store = JSON.parse(fs.readFileSync(WALLET_STORE_PATH, 'utf-8')) as { address?: string }[];
+    addresses = store.map((a) => a.address).filter((a): a is string => Boolean(a));
+  } catch {
+    return;   // no wallet store — nothing to wait for
+  }
+  if (addresses.length === 0) return;
+
+  const spinner = ora({ text: chalk.dim('Waiting for accounts to be validated…'), prefixText: ' ' }).start();
+  const deadline = Date.now() + timeoutMs;
+  const client = new Client(LOCAL_WS_URL, { timeout: 10_000 });
+  try {
+    await client.connect();
+    while (Date.now() < deadline) {
+      const results = await Promise.all(addresses.map(async (address) => {
+        try {
+          await client.request({ command: 'account_info', account: address, ledger_index: 'validated' });
+          return null;
+        } catch {
+          return address;
+        }
+      }));
+      const missing = results.filter((a): a is string => a !== null);
+      if (missing.length === 0) {
+        spinner.succeed(chalk.dim(`All ${addresses.length} accounts validated`));
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 2_000));
+    }
+    spinner.warn(chalk.yellow('Some accounts are not yet validated — snapshot may not include them'));
+  } catch {
+    spinner.stop();   // node unreachable; the save itself will surface the problem
+  } finally {
+    await client.disconnect().catch(() => {});
   }
 }
 
@@ -116,6 +182,16 @@ export async function snapshotSave(name: string): Promise<void> {
 
   logger.blank();
 
+  // ── Wait for the accounts we're about to record to be on a validated ledger ─
+  // The accounts sidecar comes from the wallet store, which is written as soon
+  // as a funding transaction is submitted. In consensus mode validation takes
+  // ~4s, so saving immediately after `start`/`faucet` can capture a ledger that
+  // predates those accounts — the snapshot then restores a ledger the sidecar
+  // does not match, and post-restore verification fails with "account ... not
+  // found". Block until they are actually validated so the tarball and the
+  // sidecar always agree.
+  await waitForWalletStoreValidated();
+
   // ── Stop services first ────────────────────────────────────────────────────
   // Graceful shutdown ensures rippled flushes all buffers, checkpoints SQLite
   // WAL, and closes NuDB cleanly. Tarring a stopped volume gives a guaranteed-
@@ -170,7 +246,17 @@ export async function snapshotSave(name: string): Promise<void> {
   } else {
     fs.writeFileSync(tmpSidecar, '[]');
   }
-  fs.writeFileSync(tmpMeta, JSON.stringify({ format: 'consensus-v1' }));
+  // Record which genesis lineage this ledger descends from. A snapshot only
+  // restores correctly onto the same lineage — see readGenesisLineage().
+  fs.writeFileSync(tmpMeta, JSON.stringify({
+    format: 'consensus-v1',
+    lineage: readGenesisLineage() ?? 'unknown',
+    // The manually enabled amendments this genesis was built with, so restore
+    // can rebuild a matching config instead of asking the user to remember.
+    amendments: fs.existsSync(EXTRA_AMENDMENTS_FILE)
+      ? fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8')
+      : '',
+  }));
 
   const finalSidecar = walletSidecarPath(name);
   const finalMeta = metaSidecarPath(name);
@@ -258,6 +344,17 @@ export async function snapshotRestore(name: string): Promise<void> {
     );
   }
 
+  // A snapshot is a copy of one ledger chain's database, so it only restores
+  // onto a sandbox descending from the same genesis. Enabling or clearing
+  // amendments rebuilds genesis (that is how the stanza takes effect) and so
+  // starts a new lineage. Rather than refusing, adopt the snapshot's amendment
+  // set below so the regenerated config matches the ledger being restored.
+  const snapshotMeta = readSnapshotMeta(name);
+  const currentLineage = readGenesisLineage();
+  const adopting = Boolean(
+    snapshotMeta.lineage && currentLineage && snapshotMeta.lineage !== currentLineage,
+  );
+
   logger.blank();
 
   // ── Stop all services ──────────────────────────────────────────────────────
@@ -315,6 +412,19 @@ export async function snapshotRestore(name: string): Promise<void> {
     fs.copyFileSync(sidecar, WALLET_STORE_PATH);
   } else if (fs.existsSync(WALLET_STORE_PATH)) {
     fs.unlinkSync(WALLET_STORE_PATH);
+  }
+
+  // ── Align the amendment config with the restored ledger ────────────────────
+  // Must happen before the containers come back up so rippled reads a config
+  // that matches the ledger it is about to load.
+  if (adopting && snapshotMeta.lineage) {
+    adoptGenesisLineage(snapshotMeta.lineage, snapshotMeta.amendments);
+    const count = snapshotMeta.amendments.split('\n').filter((l) => l.trim()).length;
+    logger.dim(
+      count > 0
+        ? `  Restored the ${count} manually enabled amendment${count === 1 ? '' : 's'} this snapshot was saved with`
+        : '  Cleared manually enabled amendments to match this snapshot',
+    );
   }
 
   // ── Restart all services ───────────────────────────────────────────────────

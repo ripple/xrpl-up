@@ -129,7 +129,7 @@ async function startNode(): Promise<void> {
   if (customImage) {
     console.log(`[local-node] Using custom rippled image: ${customImage}`);
   }
-  const result = spawnSync(TSX, [CLI, "start", "--local", "--detach", ...imageArgs], {
+  const result = spawnSync(TSX, [CLI, "start", "--local", ...imageArgs], {
     encoding: "utf-8",
     timeout: 120_000,   // standalone is fast but first run pulls Docker image
     env: { ...process.env },
@@ -241,7 +241,7 @@ export async function setup(): Promise<void> {
     if (process.env.XRPL_LOCAL_NO_AUTOSTART === "1") {
       throw new Error(
         "Local rippled is not running on port 6006.\n" +
-          "Start it manually with: xrpl-up start --local --detach\n" +
+          "Start it manually with: xrpl-up start --local\n" +
           "Or unset XRPL_LOCAL_NO_AUTOSTART to allow auto-start.",
       );
     }

@@ -9,7 +9,7 @@ This guide goes beyond the quick-start [payment-channel.md](../simple/payment-ch
 ## Prerequisites
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```

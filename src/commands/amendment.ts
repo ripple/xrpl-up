@@ -260,14 +260,16 @@ export interface AmendmentToggleOptions {
   autoReset?: boolean;
 }
 
-export async function amendmentEnableCommand(nameOrHash: string, options: AmendmentToggleOptions): Promise<void> {
+export async function amendmentEnableCommand(namesOrHashes: string[], options: AmendmentToggleOptions): Promise<void> {
   if (!options.local) {
     logger.error('amendment enable only works with --local (cannot admin-RPC a public node).');
     process.exit(1);
   }
 
   const spinner = ora({
-    text: `Enabling amendment ${chalk.cyan(nameOrHash)} on local sandbox…`,
+    text: namesOrHashes.length === 1
+      ? `Enabling amendment ${chalk.cyan(namesOrHashes[0])} on local sandbox…`
+      : `Enabling ${namesOrHashes.length} amendments on local sandbox…`,
     color: 'cyan',
     indent: 2,
   }).start();
@@ -276,60 +278,89 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
   try {
     await client.connect();
 
-    // Resolve name → hash
+    // Resolve each name/hash up front — fail fast on the first bad one before
+    // queuing anything, so a typo in a batch doesn't leave a partial queue.
     const amendments = await fetchFeatures(LOCAL_WS_URL);
-    const query = nameOrHash.toLowerCase();
-    const found = amendments.find(
-      a => a.name.toLowerCase() === query || a.hash.toLowerCase() === query || a.hash.toLowerCase().startsWith(query)
-    );
+    const toQueue: AmendmentInfo[] = [];
+    const alreadyEnabled: AmendmentInfo[] = [];
 
-    if (!found) {
-      spinner.fail(`Amendment not found: ${nameOrHash}`);
-      logger.dim('  Run: xrpl-up amendment list --local to see available amendments.');
-      await client.disconnect();
-      process.exit(1);
+    for (const nameOrHash of namesOrHashes) {
+      const query = nameOrHash.toLowerCase();
+      const found = amendments.find(
+        a => a.name.toLowerCase() === query || a.hash.toLowerCase() === query || a.hash.toLowerCase().startsWith(query)
+      );
+
+      if (!found) {
+        spinner.fail(`Amendment not found: ${nameOrHash}`);
+        logger.dim('  Run: xrpl-up amendment list --local to see available amendments.');
+        await client.disconnect();
+        process.exit(1);
+      }
+
+      if (!found.supported) {
+        spinner.fail(`Amendment not supported by local rippled build: ${found.name}`);
+        logger.dim('  Upgrade the local rippled image to include this amendment.');
+        await client.disconnect();
+        process.exit(1);
+      }
+
+      if (found.enabled) {
+        alreadyEnabled.push(found);
+      } else if (!toQueue.some(a => a.hash === found.hash)) {
+        toQueue.push(found);
+      }
     }
 
-    if (!found.supported) {
-      spinner.fail(`Amendment not supported by local rippled build: ${found.name}`);
-      logger.dim('  Upgrade the local rippled image to include this amendment.');
-      await client.disconnect();
-      process.exit(1);
+    for (const a of alreadyEnabled) {
+      logger.dim(`  Already enabled: ${a.name}`);
     }
 
-    if (found.enabled) {
-      spinner.succeed(chalk.green(`Already enabled: ${found.name}`));
+    if (toQueue.length === 0) {
+      spinner.succeed(chalk.green('Nothing to do — all requested amendments are already enabled.'));
       await client.disconnect();
       return;
     }
 
     // Amendments cannot be activated at runtime in standalone mode — the voting
     // process requires validator messages that ledger_accept does not generate.
-    // Instead, add the amendment to the genesis config so it activates on the
+    // Instead, add them to the genesis config so they activate on the
     // next fresh start (after xrpl-up reset).
-    spinner.text = `Adding ${chalk.cyan(found.name)} to genesis config…`;
+    spinner.text = toQueue.length === 1
+      ? `Adding ${chalk.cyan(toQueue[0].name)} to genesis config…`
+      : `Adding ${toQueue.length} amendments to genesis config…`;
 
-    const line = `${found.hash} ${found.name}`;
     const existing = fs.existsSync(EXTRA_AMENDMENTS_FILE)
       ? fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8')
       : '';
+    let updated = existing;
+    for (const found of toQueue) {
+      if (!updated.includes(found.hash)) {
+        updated += `${found.hash} ${found.name}\n`;
+      }
+    }
 
-    if (!existing.includes(found.hash)) {
+    if (updated !== existing) {
       fs.mkdirSync(path.dirname(EXTRA_AMENDMENTS_FILE), { recursive: true });
-      fs.writeFileSync(EXTRA_AMENDMENTS_FILE, existing + line + '\n', 'utf-8');
+      fs.writeFileSync(EXTRA_AMENDMENTS_FILE, updated, 'utf-8');
     }
 
     // Regenerate rippled.cfg so the next `xrpl-up start` picks it up automatically.
     writeRippledConfig();
 
-    spinner.succeed(chalk.green(`Amendment queued for next genesis: ${found.name}`));
+    spinner.succeed(chalk.green(
+      toQueue.length === 1
+        ? `Amendment queued for next genesis: ${toQueue[0].name}`
+        : `${toQueue.length} amendments queued for next genesis: ${toQueue.map(a => a.name).join(', ')}`
+    ));
     logger.blank();
-    logger.dim(`  Hash: ${found.hash}`);
+    for (const a of toQueue) {
+      logger.dim(`  ${a.name}: ${a.hash}`);
+    }
     logger.blank();
 
     logger.log(
-      chalk.yellow('  ⚠  Activating this amendment requires a full node reset.\n') +
-      chalk.dim('     All ledger data, funded accounts, and snapshots will be wiped.')
+      chalk.yellow(`  ⚠  Activating ${toQueue.length === 1 ? 'this amendment' : 'these amendments'} requires a full node reset.\n`) +
+      chalk.dim('     Ledger data and funded accounts will be wiped. Saved snapshots are kept.')
     );
     logger.blank();
 
@@ -337,9 +368,11 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
 
     if (yes) {
       logger.blank();
-      resetCommand();
+      // keepAmendments: the reset here exists purely to rebuild genesis with the
+      // amendments just queued above — clearing them would defeat the point.
+      resetCommand({ keepAmendments: true });
       printQueuedAmendments();
-      logger.dim('  Run the following to start with the new amendment active:');
+      logger.dim('  Run the following to start with the new amendment(s) active:');
       logger.dim('    xrpl-up start --local');
       logger.blank();
     } else {
@@ -351,7 +384,7 @@ export async function amendmentEnableCommand(nameOrHash: string, options: Amendm
     }
   } catch (err: unknown) {
     await client.disconnect().catch(() => {});
-    spinner.fail('Failed to enable amendment');
+    spinner.fail('Failed to enable amendment(s)');
     logger.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }

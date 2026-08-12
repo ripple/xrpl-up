@@ -7,7 +7,7 @@ XRPL has a fully on-chain order book built into the protocol. No smart contracts
 ## Prerequisites
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```

@@ -174,18 +174,22 @@ xrpl-up stop
 Wipes all local sandbox state and starts with a clean slate. Useful after a `--local-network` session or when you want to discard all ledger state and funded accounts.
 
 ```bash
-# Wipe containers, ledger volume, and accounts — keep snapshots
+# Wipe containers, ledger volume, accounts, and manually enabled amendments — keep snapshots
 xrpl-up reset
 
 # Wipe everything including saved snapshots
 xrpl-up reset --snapshots
+
+# Keep amendments you enabled with `amendment enable`
+xrpl-up reset --keep-amendments
 ```
 
 What `xrpl-up reset` removes:
 - Running Docker containers (`docker compose down`)
 - Ledger volumes (`xrpl-up-local-db` and `xrpl-up-local-peer-db` in consensus mode)
-- `~/.xrpl-up/local-accounts.json`
-- With `--snapshots`: `~/.xrpl-up/snapshots/` and all snapshot files
+- Funded sandbox accounts
+- Amendments you added with `amendment enable` — so the next start really is factory state, not silently carrying them forward. Pass `--keep-amendments` to preserve them.
+- With `--snapshots`: all saved snapshots
 
 > Snapshots are kept by default since they are the only way to recover a previous state. Use `--snapshots` only when you want a complete wipe.
 
@@ -624,21 +628,30 @@ xrpl-up amendment info AMM --network testnet
 xrpl-up amendment info A730EB18 --local   # hash prefix lookup
 ```
 
-#### `xrpl-up amendment enable <nameOrHash>`
+#### `xrpl-up amendment enable <nameOrHash...>`
 
-Queues an amendment for genesis activation on the local sandbox. Requires a reset to take effect — you'll be prompted automatically, or pass `--auto-reset` to skip the prompt.
+Queues one or more amendments for genesis activation on the local sandbox. Requires a reset to take effect — you'll be prompted automatically (once, for the whole batch), or pass `--auto-reset` to skip the prompt.
 
 ```bash
 xrpl-up amendment enable PermissionedDomains --local
 # ⚠  Activating this amendment requires a full node reset.
-#    All ledger data, funded accounts, and snapshots will be wiped.
+#    Ledger data and funded accounts will be wiped. Saved snapshots are kept.
 #  Reset and restart the local node now? [y/N]
+
+# Enable multiple amendments together — one queue, one reset:
+xrpl-up amendment enable SingleAssetVault DynamicMPT LendingProtocol --local
 
 # Skip the prompt and reset automatically:
 xrpl-up amendment enable PermissionedDomains --local --auto-reset
 ```
 
-> **Works in both modes, but takes longer under `--local-network`.** `enable` modifies the genesis config and only takes effect after a reset. In standalone mode, `xrpl-up reset && xrpl-up start` picks up the new genesis config in seconds. In `--local-network` (consensus) mode, queuing a new amendment forces both nodes to build a fresh genesis ledger from scratch on the next start instead of reusing the pre-seeded snapshot — this takes roughly a minute instead of ~5s, but the amendment does activate. To undo an `enable`, simply run `xrpl-up reset` without re-enabling the amendment.
+Amendments you enable stay in effect across restarts until you `xrpl-up reset` (which clears them — use `reset --keep-amendments` to keep them).
+
+> **Works in both modes, but takes longer under `--local-network`.** `enable` changes the genesis config, which only takes effect when a genesis ledger is created. In standalone mode, `xrpl-up reset && xrpl-up start --local` picks it up in seconds. In `--local-network` mode, queuing an amendment makes the next start build a real 2-node consensus genesis from scratch instead of resuming the pre-built ledger — this takes roughly a minute (real peer discovery + consensus bootstrap) instead of ~5s, and it starts a **new ledger lineage**.
+>
+> That lineage change is why `xrpl-up snapshot save`/`restore` records which amendment set each snapshot's genesis was built with: restoring a snapshot taken before an `amendment enable` automatically reverts the sandbox's amendment config to match it (and vice versa) — the ledger and the config always agree after a restore. See `xrpl-up reset` above for undoing an `enable` without a snapshot.
+
+> **Some amendments always report `Enabled: ✗ no` — this is cosmetic, not a failure.** rippled compiles the long-standing amendments (`Checks`, `Escrow`, `PayChan`, `MultiSign`, `DepositAuth`, `Clawback`, the old `fix*` set, …) in as permanently active, so they work even though they never appear in a freshly created genesis ledger's amendment set. Live-verified: `check create`, `escrow create`, and `account set --set-flag depositAuth` all succeed while `amendment list` shows those amendments disabled. Only newer amendments (AMM, MPT, Credentials, DID, PermissionedDEX, SingleAssetVault, …) reflect their real state in that column, and those are the ones `amendment enable` affects.
 
 ---
 
@@ -691,18 +704,18 @@ xrpl-up snapshot list
 xrpl-up snapshot restore before-amm
 ```
 
-Each snapshot saves both the ledger volume **and** a copy of the account store (`local-accounts.json`), so `xrpl-up accounts` reflects the accounts that existed at snapshot time. The account store sidecar is copied as-is — it is not validated against the ledger. The `snapshot list` output shows `+accounts` for any snapshot that includes the account sidecar.
+Each snapshot saves the ledger volume, a copy of the account store (`local-accounts.json`), and the manually enabled amendments (`amendment enable`) the ledger's genesis was built with. `snapshot save` waits for every account in the store to appear on a validated ledger before archiving, so the tarball and the account sidecar always agree — `xrpl-up accounts` reflects exactly the accounts that existed at snapshot time. `snapshot restore` verifies this after restoring and fails loudly if an account is missing, rather than leaving a silently inconsistent sandbox. The `snapshot list` output shows `+accounts` for any snapshot that includes the account sidecar.
+
+**Restoring across an `amendment enable`:** enabling an amendment rebuilds the genesis ledger (see `amendment enable` above), which starts a new ledger lineage — a snapshot taken before that change belongs to a different lineage than the sandbox now running. `snapshot restore` detects this automatically and reverts the amendment config to match the snapshot being restored, so the ledger and the config always agree afterward. No special handling needed on your part — just restore.
 
 **Typical workflow:**
 
 ```bash
-xrpl-up start --local-network --detach
+xrpl-up start --local-network
 
 # Run expensive setup (fund accounts, create AMM pool, set trust lines...)
 xrpl-up faucet --network local
-# Wait for funded accounts to appear on the validated ledger (~4s consensus close).
-# Snapshot save stops services before archiving — unvalidated transactions may be lost.
-xrpl-up accounts --local                        # confirm accounts are on-ledger
+# `snapshot save` waits for accounts to be validated before archiving — no manual wait needed.
 xrpl-up snapshot save after-setup
 
 # Run tests, mutate state...
@@ -716,7 +729,7 @@ xrpl-up accounts --local    # shows accounts as of snapshot time
 
 ```bash
 xrpl-up reset                                    # wipe everything
-xrpl-up start --local-network --detach          # start sandbox (creates new volume)
+xrpl-up start --local-network          # start sandbox (creates new volume)
 xrpl-up snapshot restore after-setup             # restore saved state
 xrpl-up accounts --local                         # snapshot accounts restored
 ```
@@ -799,7 +812,7 @@ Standalone mode (the default) is recommended for CI — it starts in seconds, ha
 ```yaml
 # .github/workflows/test.yml
 steps:
-  - run: xrpl-up start --local --detach
+  - run: xrpl-up start --local
   - run: npm test
   - run: xrpl-up stop
     if: always()

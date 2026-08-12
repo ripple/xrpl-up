@@ -14,7 +14,7 @@ connect to testnet/devnet instead.
 xrpl-up start
 
 # Run in background (detached)
-xrpl-up start --detach
+xrpl-up start
 
 # 2-node consensus network with persistent state and snapshot support
 xrpl-up start --local-network

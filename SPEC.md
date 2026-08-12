@@ -121,7 +121,7 @@ Host
 - Entrypoint checks for `ledger.db` — uses `--start` on first boot, `--load` on resume
 - Amendments activate through voting (~30–60 s on first boot), not instantly
 - Pre-seeded genesis DB (`src/core/genesis/*.tar.gz`) extracted into empty volumes for fast first boot. Extraction chowns the volume to the target image's runtime uid/gid (queried via `docker run --entrypoint id`) so newer non-root images (3.3.0+) can write to it; older root-based images no-op this chown.
-- If `xrpl-up amendment enable <name> --local` has queued an amendment not baked into the pre-built genesis snapshot, seeding is skipped entirely (volumes stay empty) so the next start does a real `--start` from a blank ledger with the `[amendments]` genesis stanza applied — see §5.6.
+- Seeding is skipped (leaving the volumes empty for a real genesis `--start`) when `amendment enable` has queued amendments — see §5.6 for why, and how the resulting ledger lineage interacts with `snapshot save`/`restore`.
 
 ### 2.4 Persistent State Layout (`~/.xrpl-up/`)
 
@@ -235,12 +235,12 @@ Each command supports `--help` for detailed flag documentation. Run `xrpl-up <co
 8. Wait for port 3001 to accept TCP connections (30 s timeout)
 9. Fund N accounts (default 10) via the local faucet
 10. Save accounts to `~/.xrpl-up/local-accounts.json`
-11. Print account addresses and seeds (unless `--no-secrets` or `--detach`)
-12. If foreground: subscribe to ledger events and stream ledger close notifications to stdout. If `--exit-on-crash`: also start a `docker wait` watcher for exit code propagation.
+11. Print account addresses and seeds (unless `--no-secrets`, or unless detached — local sandboxes detach by default; pass `--foreground` to stay attached)
+12. If attached (`--foreground` or `--exit-on-crash`): subscribe to ledger events and stream ledger close notifications to stdout. If `--exit-on-crash`: also start a `docker wait` watcher for exit code propagation.
 
 **`xrpl-up stop`**: runs `docker compose down` on the project `xrpl-up-local`.
 
-**`xrpl-up reset`**: runs `docker compose down`, removes the `xrpl-up-local-db` volume, deletes `~/.xrpl-up/local-accounts.json`. With `--snapshots`, also deletes `~/.xrpl-up/snapshots/`.
+**`xrpl-up reset`**: runs `docker compose down`, removes the `xrpl-up-local-db` volume, deletes `~/.xrpl-up/local-accounts.json`, and clears `~/.xrpl-up/genesis-amendments.txt` (then regenerates the config) so manually enabled amendments do not silently carry into the next genesis. With `--snapshots`, also deletes `~/.xrpl-up/snapshots/`. With `--keep-amendments`, preserves the amendment queue.
 
 ### 5.2 Account Funding (Faucet / WalletStore)
 
@@ -290,20 +290,23 @@ When `local` is the default network, example scripts use the local faucet endpoi
 
 ### 5.5 Snapshots
 
-Snapshots capture the full state of a `--local-network` session: ledger database + account store.
+Snapshots capture the full state of a `--local-network` session: ledger database, account store, and the manually enabled amendment set (see §5.6 for why the last one matters).
 
 **`snapshot save <name>`**:
-1. Stops all services (via `docker compose stop`)
-2. Runs `docker run --rm -v xrpl-up-local-db:/data -v ... busybox tar czf /out/<name>.tar.gz -C /data .`
-3. Copies `~/.xrpl-up/local-accounts.json` → `~/.xrpl-up/snapshots/<name>-accounts.json`
-4. Restarts `rippled` and `faucet` services
+1. Waits for every account in `~/.xrpl-up/local-accounts.json` to appear on a validated ledger (`waitForWalletStoreValidated()`, up to 30s, best-effort). Without this, saving immediately after `start`/`faucet` could archive a ledger that predates the accounts it records, so a later restore fails post-restore verification with "account ... not found."
+2. Stops all services (via `docker compose stop`)
+3. Runs `docker run --rm -v xrpl-up-local-db:/data -v ... alpine tar czf /out/<name>.tar.gz -C /data .`
+4. Writes sidecars: `<name>-accounts.json` (copy of the account store), `<name>-meta.json` (`{ format, lineage, amendments }` — see §5.6), atomically swapped in together with the tarball
+5. Restarts `rippled` and `faucet` services
 
 **`snapshot restore <name>`**:
-1. Stops the entire stack (`docker compose down`)
-2. Removes the existing `xrpl-up-local-db` volume
-3. Re-creates the volume and extracts `<name>.tar.gz` into it
-4. Copies `<name>-accounts.json` → `~/.xrpl-up/local-accounts.json`
-5. Restarts the stack (`docker compose up -d`)
+1. Compares the snapshot's recorded lineage (`<name>-meta.json`) against the sandbox's current lineage (`~/.xrpl-up/genesis-lineage.txt`). On a mismatch, adopts the snapshot's amendment set (`adoptGenesisLineage()`): writes it to `genesis-amendments.txt`, regenerates the config, updates the lineage marker — so the ledger about to be loaded and the running config agree.
+2. Stops the entire stack (`docker compose down`)
+3. Removes the existing `xrpl-up-local-db` volume
+4. Re-creates the volume and extracts `<name>.tar.gz` into it
+5. Copies `<name>-accounts.json` → `~/.xrpl-up/local-accounts.json`
+6. Restarts the stack (`docker compose up -d`)
+7. Verifies at least one account from the sidecar exists on the restored ledger; fails loudly if not, rather than leaving a silently inconsistent sandbox
 
 **`snapshot list`**: reads `~/.xrpl-up/snapshots/`, prints name, file size, modification date, and `+accounts` tag if the sidecar JSON exists.
 
@@ -323,15 +326,20 @@ Snapshots capture the full state of a `--local-network` session: ledger database
 - Looks up by exact name or hash prefix
 - Shows: full hash, name, enabled status, supported status, vote count
 
-**`amendment enable <nameOrHash>`** (local only):
-- Appends `<hash> <name>` to `~/.xrpl-up/genesis-amendments.txt`
-- Regenerates `rippled.cfg` so the amendment is present in the `[amendments]` genesis stanza
-- Prompts to reset and restart (a full node reset is required for the genesis config to take effect)
+**`amendment enable <nameOrHash...>`** (local only):
+- Accepts one or more names/hashes in a single invocation; all are resolved up front (fails fast, before queuing anything, if any one is unknown or unsupported)
+- Appends `<hash> <name>` to `~/.xrpl-up/genesis-amendments.txt` for each amendment not already enabled (already-enabled ones are reported and skipped, not re-queued)
+- Regenerates `rippled.cfg` so the amendments are present in the `[amendments]` genesis stanza
+- Prompts to reset and restart once for the whole batch (a full node reset is required for the genesis config to take effect)
 - `--auto-reset`: skips the prompt and resets immediately
 
-**`--local-network` activation caveat (fixed):** the pre-seeded genesis DB used to speed up first boot on `--local-network` (see §2.3, §2.4) previously reseeded from a pre-built snapshot on every start, which silently bypassed the `[amendments]` genesis-forcing stanza even after a `reset` + restart — the entrypoint found an existing `ledger.db` in the reseeded volume and booted with `--load` instead of a genesis `--start`, so a just-enabled amendment never actually activated. This is now fixed: when `~/.xrpl-up/genesis-amendments.txt` is non-empty, `seedConsensusVolumes()` (`src/core/compose.ts`) skips reseeding and leaves the volume empty, so the entrypoint performs a real genesis `--start` and the queued amendment does take effect. Net effect: `amendment enable <name> --local` followed by `xrpl-up reset --local && xrpl-up start --local-network` now takes ~30–60 s (consensus + amendment activation) instead of the ~5–15 s a pre-seeded `--load` boot would take, but the amendment is now actually enabled — previously it silently was not.
+**`--local-network` amendment activation and genesis lineage.** The pre-built genesis DB is normally seeded into empty volumes (§2.3), so the entrypoint finds an existing `ledger.db` and boots with `--load`; the `[amendments]` stanza only applies on a genesis `--start`, so a newly queued amendment would otherwise never activate. When `~/.xrpl-up/genesis-amendments.txt` is non-empty, `seedConsensusVolumes()` skips seeding instead, leaving the volumes empty so rippled builds a real genesis with the queued amendments active — at the cost of a slower boot (~30-60s of real peer discovery + consensus bootstrap, vs. ~5s for the seeded path).
 
-To undo an `enable`, run `xrpl-up reset` without re-enabling the amendment — the next start will use the default genesis config (and, on `--local-network`, will resume using the fast pre-seeded snapshot again since the queue file is empty).
+That genesis is a **new ledger lineage** — a fingerprint (`~/.xrpl-up/genesis-lineage.txt`; `seed` for the shipped tarball, else a digest of the enabled amendment hashes) distinct from whatever the sandbox had before. This matters because `snapshot save` records the lineage and amendment set alongside the ledger tarball, and `snapshot restore` compares lineages: on a mismatch it writes the snapshot's amendment set back to `genesis-amendments.txt`, regenerates the config, and updates the lineage marker (`adoptGenesisLineage()`), so the restored ledger and the running config always agree — restoring across an `amendment enable` (in either direction) just works rather than silently applying half of the state. `xrpl-up reset` clears both the amendment queue and the lineage marker (`--keep-amendments` preserves the queue).
+
+To undo an `enable`, run `xrpl-up reset` — it clears `~/.xrpl-up/genesis-amendments.txt` and regenerates the config, so the next start uses the default genesis list (and, on `--local-network`, resumes using the fast pre-seeded snapshot since the queue file is empty). `reset --keep-amendments` preserves the queue instead; the internal reset performed by `amendment enable` itself always preserves it, since clearing it would discard what was just queued.
+
+**Legacy amendments always report `enabled: false`.** rippled compiles the long-standing amendments (`Checks`, `Escrow`, `PayChan`, `MultiSign`, `DepositAuth`, `Clawback`, `EnforceInvariants`, the old `fix*` set, …) in as permanently active, so they are never written into a freshly created genesis ledger's amendment set regardless of the `[amendments]` stanza. On a fresh genesis about 64 of ~104 known amendments report `enabled: false` while being fully functional (live-verified: `check create`, `escrow create`, and `depositAuth` all succeed in that state). This is not mode-specific — it applies to standalone and `--local-network` alike. It was previously invisible on `--local-network` because the pre-seeded snapshot was built in standalone `-a --start` mode, where rippled force-enables everything into the ledger. Consequence for tests: never assert activation on an arbitrary entry from `amendment list --disabled`; pick a newer amendment that genuinely activates via the genesis stanza (see `ACTIVATABLE_CANDIDATES` in `tests/e2e/sandbox/amendment.activate.test.ts`).
 
 ---
 
@@ -443,9 +451,9 @@ When `--exit-on-crash` is active and the foreground process is running, a `docke
 
 ### 8.1 Key Handling
 
-- Seeds and private keys are **printed to stdout by default** in local mode. This is intentional — local sandbox accounts have no real value.
+- Seeds and private keys are printed to stdout when the sandbox stays attached (`--foreground`); local sandbox accounts have no real value, so this is intentional.
 - `--no-secrets` suppresses all seed/private key output.
-- `--detach` automatically enables `--no-secrets` (no terminal to read from in CI).
+- Local sandboxes detach by default, which automatically enables `--no-secrets` too (no terminal to read from in CI).
 - Seeds are stored in plaintext in `~/.xrpl-up/{network}-accounts.json`.
 
 ### 8.2 Production URL Detection

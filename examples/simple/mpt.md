@@ -9,7 +9,7 @@ MPT is XRPL's next-generation fungible token standard. Unlike IOU trust lines, M
 ## Prerequisites
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```

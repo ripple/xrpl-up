@@ -6,25 +6,23 @@ A Vault is an on-ledger pooled-asset object: depositors send an asset in and rec
 >
 > ```bash
 > xrpl-up amendment enable SingleAssetVault --local
-> # This wipes and resets the sandbox, then force-enables the amendment from a fresh genesis.
+> # Wipes and resets the sandbox, then force-enables the amendment from a fresh genesis.
 >
-> xrpl-up start --local --detach
+> xrpl-up start --local
 > ```
 >
-> Use plain standalone mode (not `--local-network`) here: `--local-network` mode boots from a
-> pre-seeded ledger snapshot instead of a truly fresh genesis, which silently skips genesis-forced
-> amendments entirely — the amendment would only activate later via real validator voting
-> (~15-40 min), not immediately. Standalone mode always does a fresh `--start`, so the genesis
-> force-enable takes effect right away (live-verified). The tradeoff is standalone wipes its
-> ledger on every restart — fine for this walkthrough, since it doesn't rely on `xrpl-up snapshot
-> save`/`restore`, which do require `--local-network`.
+> Works in `--local-network` mode too (`xrpl-up start --local-network` in place of the last line
+> above) — the next start there builds a real consensus genesis instead of resuming the pre-built
+> ledger, which takes ~30-60s instead of ~5s. If you're already using `--local-network` with saved
+> snapshots, `snapshot restore` automatically realigns the amendment config to whatever each
+> snapshot was built with, so save/restore keeps working across this change.
 
 ---
 
 ## Prerequisites
 
 ```bash
-xrpl-up start --local --detach
+xrpl-up start --local
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```

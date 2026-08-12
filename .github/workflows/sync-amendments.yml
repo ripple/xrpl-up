@@ -38,10 +38,9 @@ jobs:
 
       # Start a local rippled node so we can query which amendments the
       # pinned Docker image (rippleci/xrpld:3.3.0) supports.
-      # The node --local --persist --detach command blocks until rippled
-      # is accepting connections, then exits 0.
+      # Local sandboxes detach (background, non-blocking) by default.
       - name: Start local rippled
-        run: npx tsx src/cli.ts node --local --persist --detach
+        run: npx tsx src/cli.ts node --local --persist
         timeout-minutes: 5
 
       # The faucet container starts after rippled; wait for its health endpoint

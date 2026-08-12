@@ -146,7 +146,7 @@ export async function setup(): Promise<void> {
   console.log("[snapshot-setup] Starting node in --local-network consensus mode…");
   const result = spawnSync(
     TSX,
-    [CLI, "start", "--local", "--local-network", "--detach"],
+    [CLI, "start", "--local", "--local-network"],
     {
       encoding: "utf-8",
       timeout: 180_000,   // consensus bootstrap: ~60s for consensus + faucet

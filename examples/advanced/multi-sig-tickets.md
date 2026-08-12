@@ -9,7 +9,7 @@ Combine a **SignerList** (2-of-3 multi-signature) with **Tickets** (reserved seq
 ## Prerequisites
 
 ```bash
-xrpl-up start --detach
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
