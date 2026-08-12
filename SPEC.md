@@ -1,6 +1,6 @@
 # xrpl-up — Product Specification
 
-> **Version:** 0.1.7
+> **Version:** 0.2.0-beta.0
 > **Status:** Pre-release (not yet published to npm)
 > **Source of truth:** This document supersedes inline comments when they conflict.
 
@@ -99,7 +99,7 @@ Host
 
 | Service | Image / Build | Ports | Key details |
 |---|---|---|---|
-| `rippled` | `rippleci/xrpld:3.2.0` (`--image`) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. |
+| `rippled` | `rippleci/xrpld:3.3.0` (`--image`) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. Runs as a non-root user (uid 999) as of the 3.3.0 image (was root in 3.2.0). |
 | `faucet` | Built from `dist/faucet-server/` | `3001:3001` | Depends on rippled healthcheck. Connects via `host.docker.internal`. |
 
 Both share `xrpl-net` (bridge driver). `--exit-on-crash` disables restart and wraps rippled in a shell that detects `Logic error:` in stderr and exits 134.
@@ -120,7 +120,8 @@ Host
 - Named volumes: `xrpl-up-local-db` (node 1) and `xrpl-up-local-peer-db` (node 2)
 - Entrypoint checks for `ledger.db` — uses `--start` on first boot, `--load` on resume
 - Amendments activate through voting (~30–60 s on first boot), not instantly
-- Pre-seeded genesis DB (`src/core/genesis/*.tar.gz`) extracted into empty volumes for fast first boot
+- Pre-seeded genesis DB (`src/core/genesis/*.tar.gz`) extracted into empty volumes for fast first boot. Extraction chowns the volume to the target image's runtime uid/gid (queried via `docker run --entrypoint id`) so newer non-root images (3.3.0+) can write to it; older root-based images no-op this chown.
+- If `xrpl-up amendment enable <name> --local` has queued an amendment not baked into the pre-built genesis snapshot, seeding is skipped entirely (volumes stay empty) so the next start does a real `--start` from a blank ledger with the `[amendments]` genesis stanza applied — see §5.6.
 
 ### 2.4 Persistent State Layout (`~/.xrpl-up/`)
 
@@ -213,7 +214,7 @@ const store = new WalletStore(networkKey);
 |---|---|
 | `-v, --version` | Print version and exit |
 | `--help` | Print help for any command or subcommand |
-| `--node <url\|name>` | XRPL node for interaction commands: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NODE` env var. Ignored by sandbox lifecycle commands. |
+| `-n, --node <url\|name>` | XRPL node for interaction commands: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NODE` env var. Ignored by sandbox lifecycle commands. |
 
 Each command supports `--help` for detailed flag documentation. Run `xrpl-up <command> --help` or `xrpl-up <command> <subcommand> --help` for usage details.
 
@@ -310,7 +311,7 @@ Snapshots capture the full state of a `--local-network` session: ledger database
 
 ### 5.6 Amendment Management
 
-**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). This stanza lists all amendments known to rippled 3.2.0 by hash and name. Approximately 70+ amendments are pre-enabled.
+**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). This stanza lists all amendments known to rippled 3.3.0 by hash and name. Approximately 70+ amendments are pre-enabled.
 
 **`amendment list`**:
 - Calls `feature` RPC on the target network
@@ -328,7 +329,9 @@ Snapshots capture the full state of a `--local-network` session: ledger database
 - Prompts to reset and restart (a full node reset is required for the genesis config to take effect)
 - `--auto-reset`: skips the prompt and resets immediately
 
-To undo an `enable`, run `xrpl-up reset` without re-enabling the amendment — the next start will use the default genesis config.
+**`--local-network` activation caveat (fixed):** the pre-seeded genesis DB used to speed up first boot on `--local-network` (see §2.3, §2.4) previously reseeded from a pre-built snapshot on every start, which silently bypassed the `[amendments]` genesis-forcing stanza even after a `reset` + restart — the entrypoint found an existing `ledger.db` in the reseeded volume and booted with `--load` instead of a genesis `--start`, so a just-enabled amendment never actually activated. This is now fixed: when `~/.xrpl-up/genesis-amendments.txt` is non-empty, `seedConsensusVolumes()` (`src/core/compose.ts`) skips reseeding and leaves the volume empty, so the entrypoint performs a real genesis `--start` and the queued amendment does take effect. Net effect: `amendment enable <name> --local` followed by `xrpl-up reset --local && xrpl-up start --local-network` now takes ~30–60 s (consensus + amendment activation) instead of the ~5–15 s a pre-seeded `--load` boot would take, but the amendment is now actually enabled — previously it silently was not.
+
+To undo an `enable`, run `xrpl-up reset` without re-enabling the amendment — the next start will use the default genesis config (and, on `--local-network`, will resume using the fast pre-seeded snapshot again since the queue file is empty).
 
 ---
 
@@ -472,9 +475,10 @@ Required for all `--local` commands. Any Docker Engine version that supports Com
 
 ### 9.3 rippled Version Pinning Strategy
 
-- Default image: `rippleci/xrpld:3.2.0`
-- The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.2.0**.
-- Pinning to a specific tag (`--image rippleci/xrpld:3.2.0`) is supported via `--image`.
+- Default image: `rippleci/xrpld:3.3.0`
+- The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.3.0**.
+- Pinning to a specific tag (`--image rippleci/xrpld:3.3.0`) is supported via `--image`.
+- rippled 3.3.0 runs its process as a non-root user (uid 999) inside the container; 3.2.0 and earlier ran as root. This affects the pre-seeded genesis DB volumes for `--local-network` mode (see §2.3), which are now chowned to the target image's runtime uid/gid on extraction.
 - If a new rippled release adds amendments not in the `[amendments]` stanza, use `xrpl-up amendment enable <name> --local` to queue them for the next genesis start.
 - **Devnet compatibility:** XRPL Devnet may enable pre-release amendments ahead of the rippled version bundled with this tool. Transactions relying on such amendments may fail on the local sandbox. Use `xrpl-up amendment list --local --diff devnet` to identify gaps.
 

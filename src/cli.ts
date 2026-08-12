@@ -77,7 +77,7 @@ program
   )
   .option(
     '-a, --accounts <number>',
-    'Number of accounts to fund (default: 0 with --fork, 10 otherwise)'
+    'Number of accounts to fund (default: 10)'
   )
   .option(
     '--local',
