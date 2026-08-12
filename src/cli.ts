@@ -63,7 +63,7 @@ program
   .version(pkg.version, '-v, --version')
   .option(
     '-n, --network <url>',
-    'XRPL network name or node URL (local|testnet|devnet|wss://...) — applies to XRPL interaction commands only',
+    'XRPL network name or node URL (local|testnet|devnet|wss://...)',
     process.env.XRPL_NETWORK ?? 'local'
   );
 
@@ -71,10 +71,6 @@ program
 program
   .command('start')
   .description('Start an XRPL sandbox with pre-funded accounts')
-  .option(
-    '--network <network>',
-    'Network to connect to (testnet | devnet) — omit to run locally'
-  )
   .option(
     '-a, --accounts <number>',
     'Number of accounts to fund (default: 10)'
@@ -127,7 +123,6 @@ program
     '127.0.0.1'
   )
   .action((opts: {
-    network?: string;
     accounts?: string;
     local?: boolean;
     localNetwork?: boolean;
@@ -140,8 +135,9 @@ program
     exitOnCrash?: boolean;
     config?: string;
     bindAddress: string;
-  }) => {
-    const isLocal = opts.local || opts.localNetwork || !opts.network || opts.network === 'local';
+  }, cmd: Command) => {
+    const network = cmd.optsWithGlobals().network as string;
+    const isLocal = opts.local || opts.localNetwork || network === 'local';
     // Local sandboxes detach by default (every real usage pattern wants this —
     // docs, CI, and scripting all attached-and-blocked before this change);
     // --foreground opts back into the old blocking/live-log behavior.
@@ -150,7 +146,7 @@ program
     // has always stayed attached regardless of these flags.
     const detach = isLocal ? !(opts.foreground || opts.exitOnCrash) : false;
     nodeCommand({
-      network: isLocal ? undefined : opts.network,
+      network: isLocal ? undefined : network,
       accountCount: opts.accounts !== undefined ? parseInt(opts.accounts, 10) : undefined,
       local: isLocal,
       localNetwork: opts.localNetwork ?? false,
@@ -170,24 +166,23 @@ program
 program
   .command('accounts')
   .description('List sandbox accounts and their live XRP balances')
-  .option('--network <network>', 'Network (testnet | devnet) — omit for local sandbox')
   .option('--local', 'Show accounts for the local Docker sandbox')
   .option('--address <address>', 'Query a specific address directly (bypasses wallet store)')
-  .action((opts: { network?: string; local?: boolean; address?: string }) => {
-    const local = opts.local ?? !opts.network;
-    accountsCommand({ network: opts.network, local, address: opts.address }).catch(handleError);
+  .action((opts: { local?: boolean; address?: string }, cmd: Command) => {
+    const network = cmd.optsWithGlobals().network as string;
+    const local = opts.local ?? (network === 'local');
+    accountsCommand({ network, local, address: opts.address }).catch(handleError);
   });
 
 // ── faucet ────────────────────────────────────────────────────────────────────
 program
   .command('faucet')
   .description('Fund an account using the faucet')
-  .option('--network <network>', 'Network: local | testnet | devnet — omit for local')
   .option('--local', '[deprecated] Alias for --network local')
   .option('-s, --seed <seed>', 'Wallet seed to fund (insecure, prefer $WALLET_SEED env var; omit to generate a new wallet)')
   .option('--json', 'Output as JSON', false)
-  .action((opts: { network?: string; local?: boolean; seed?: string; json?: boolean }) => {
-    const network = opts.local ? 'local' : (opts.network ?? 'local');
+  .action((opts: { local?: boolean; seed?: string; json?: boolean }, cmd: Command) => {
+    const network = opts.local ? 'local' : (cmd.optsWithGlobals().network as string);
     const seed = opts.seed ?? process.env['WALLET_SEED'];
     if (opts.seed) process.stderr.write('Warning: passing seed via flag is insecure. Use $WALLET_SEED env var instead.\n');
     faucetCommand({ network, seed, json: opts.json }).catch(handleError);
@@ -197,10 +192,9 @@ program
 program
   .command('run <script> [scriptArgs...]')
   .description('Run a TypeScript/JavaScript script against an XRPL network')
-  .option('--network <network>', 'Network: local | testnet | devnet — omit for local')
   .option('--local', 'Alias for --network local')
-  .action((script: string, scriptArgs: string[], opts: { network?: string; local?: boolean }) => {
-    const network = opts.local ? 'local' : (opts.network ?? 'local');
+  .action((script: string, scriptArgs: string[], opts: { local?: boolean }, cmd: Command) => {
+    const network = opts.local ? 'local' : (cmd.optsWithGlobals().network as string);
     runCommand({ script, network, scriptArgs }).catch(handleError);
   });
 
@@ -216,11 +210,11 @@ program
 program
   .command('status')
   .description('Show rippled server info and faucet health (defaults to local sandbox)')
-  .option('--network <network>', 'Remote network to query: testnet | devnet')
   .option('--local', 'Show status for the local Docker sandbox')
-  .action((opts: { network?: string; local?: boolean }) => {
-    const local = opts.local ?? !opts.network;
-    statusCommand({ network: opts.network, local }).catch(handleError);
+  .action((opts: { local?: boolean }, cmd: Command) => {
+    const network = cmd.optsWithGlobals().network as string;
+    const local = opts.local ?? (network === 'local');
+    statusCommand({ network, local }).catch(handleError);
   });
 
 // ── logs ──────────────────────────────────────────────────────────────────────
@@ -306,12 +300,12 @@ amendment
   .command('list')
   .description('List all amendments and their status')
   .option('--local', 'Use the local Docker sandbox')
-  .option('--network <network>', 'Network to query (testnet | devnet) — omit for local')
   .option('--diff <network>', 'Compare against another network (e.g. --diff testnet)')
   .option('--disabled', 'Show only disabled amendments')
-  .action((opts: { local?: boolean; network?: string; diff?: string; disabled?: boolean }) => {
-    const local = opts.local ?? !opts.network;
-    amendmentListCommand({ local, network: opts.network, diff: opts.diff, disabled: opts.disabled })
+  .action((opts: { local?: boolean; diff?: string; disabled?: boolean }, cmd: Command) => {
+    const network = cmd.optsWithGlobals().network as string;
+    const local = opts.local ?? (network === 'local');
+    amendmentListCommand({ local, network, diff: opts.diff, disabled: opts.disabled })
       .catch(handleError);
   });
 
@@ -319,10 +313,10 @@ amendment
   .command('info <nameOrHash>')
   .description('Show details for a single amendment (look up by name or hash prefix)')
   .option('--local', 'Use the local Docker sandbox')
-  .option('--network <network>', 'Network to query (testnet | devnet) — omit for local')
-  .action((nameOrHash: string, opts: { local?: boolean; network?: string }) => {
-    const local = opts.local ?? !opts.network;
-    amendmentInfoCommand(nameOrHash, { local, network: opts.network })
+  .action((nameOrHash: string, opts: { local?: boolean }, cmd: Command) => {
+    const network = cmd.optsWithGlobals().network as string;
+    const local = opts.local ?? (network === 'local');
+    amendmentInfoCommand(nameOrHash, { local, network })
       .catch(handleError);
   });
 
