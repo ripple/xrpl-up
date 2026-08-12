@@ -38,6 +38,22 @@ export interface NodeOptions {
   bindAddress?: string;  // IP address for Docker port bindings (default: 127.0.0.1)
 }
 
+/**
+ * `--config` (writeComposeFile in compose.ts) always forces standalone mode —
+ * a custom rippled.cfg replaces the generated 2-node consensus setup entirely.
+ * Reject the combination up front instead of silently downgrading a mode the
+ * user explicitly asked for.
+ */
+export function assertConfigCompatibleWithMode(options: NodeOptions): void {
+  if (options.config && options.localNetwork) {
+    throw new Error(
+      '--config and --local-network cannot be used together — a custom rippled.cfg always ' +
+        'runs standalone (see --config in `xrpl-up start --help`). Drop --local-network, or ' +
+        'drop --config and use `xrpl-up config export` / `amendment enable` instead.'
+    );
+  }
+}
+
 /** Call the local faucet HTTP server to fund a fresh wallet. */
 async function callFaucet(): Promise<{ address: string; seed: string; balance: number }> {
   return new Promise((resolve, reject) => {
@@ -126,6 +142,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   const store = new WalletStore(networkName);
 
   // ── Start Docker Compose stack (local mode only) ───────────────────────────
+  assertConfigCompatibleWithMode(options);
   const localNetwork = isLocal && (options.localNetwork ?? false);
   const noConsensus = isLocal && !localNetwork;
   const persist = isLocal && localNetwork; // --local-network always persists

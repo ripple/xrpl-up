@@ -98,34 +98,6 @@ xrpl-up channel create --to rDestination... --amount 10 --settle-delay 86400 --s
 
 XRPL interaction commands are intentionally non-exhaustive. For complex or production-grade flows, use `xrpl.js` directly or call `rippled` RPC endpoints.
 
-### Global flag: `--node`
-
-All XRPL interaction commands accept a global `--node` option that sets the network target:
-
-| Value | Connects to |
-|-------|-------------|
-| `local` (default) | Local sandbox (`ws://localhost:6006`) |
-| `testnet` | XRPL Testnet |
-| `devnet` | XRPL Devnet (may include pre-release amendments not yet supported by this tool) |
-| `wss://...` | Any custom WebSocket URL |
-
-```bash
-# Use local sandbox (default — no --node needed; start first with: xrpl-up start)
-xrpl-up account info rMyAddress
-
-# Use testnet
-xrpl-up account info rMyAddress --node testnet
-
-# Use a custom WebSocket URL
-xrpl-up account info rMyAddress --node ws://my-node:6006
-
-# Set via environment variable
-export XRPL_NODE=local
-xrpl-up payment --to rDest --amount 10
-```
-
-`--node` only applies to XRPL interaction commands; sandbox lifecycle commands (`start`, `stop`, `reset`, etc.) use `--local` / `--local-network` for the local sandbox and `--network` for remote networks.
-
 ### `xrpl-up start`
 
 Starts a local sandbox (via Docker) and funds accounts.
@@ -141,13 +113,25 @@ Two modes are available:
 
 **Local network** (`--local-network`) runs a 2-node private consensus network. Ledgers close via real consensus (~4s), state persists across stop/start, and snapshots are supported. Use this when you're building an app over hours or days against a stable environment — set up AMM pools, trust lines, and funded accounts once, snapshot the state, and roll back when you need to.
 
-```bash
-# Quick sandbox — fast, ephemeral (CI, scripting, sanity tests)
-xrpl-up start
+Both modes listen on `ws://localhost:6006`. Once started (either mode), XRPL interaction commands (`account`, `payment`, `trust`, etc.) reach the sandbox via the global `--node` flag, which defaults to `local` — no flag needed for the common case. `--node` also accepts `testnet`, `devnet` (may include pre-release amendments not yet supported by this tool), or any `wss://...` URL:
 
-# Persistent local network — real consensus, snapshots, survives restarts
-xrpl-up start --local-network
+```bash
+# Start the sandbox once (either mode)
+xrpl-up start                       # standalone: fast, ephemeral
+xrpl-up start --local-network       # persistent, real consensus
+
+# Then run interaction commands — --node defaults to local, no flag needed
+xrpl-up account info rMyAddress
+xrpl-up account info rMyAddress --node testnet
+xrpl-up account info rMyAddress --node devnet
+xrpl-up account info rMyAddress --node wss://your-own-rippled-server:6006  # any other rippled node you run/control
+
+# Or set XRPL_NODE once instead of passing --node on every command
+export XRPL_NODE=testnet
+xrpl-up payment --to rDest --amount 10   # uses testnet, no --node needed
 ```
+
+`--node` only applies to XRPL interaction commands; sandbox lifecycle commands (`start`, `stop`, `reset`, etc.) use `--local` / `--local-network` for the local sandbox and `--network` for remote networks.
 
 Run `xrpl-up start --help` for all options.
 
@@ -800,6 +784,8 @@ xrpl-up start --local --config my-rippled.cfg
 ```
 
 Validation also runs automatically when `--config` is passed to `xrpl-up start --local` — the sandbox will not start if there are blocking errors.
+
+> **`--config` always runs standalone.** A custom `rippled.cfg` replaces the generated config entirely, including the 2-node consensus setup — `--config` and `--local-network` cannot be combined, and `xrpl-up start` rejects that combination with an error.
 
 ---
 

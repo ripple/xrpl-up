@@ -115,7 +115,7 @@ program
   )
   .option(
     '--config <path>',
-    'Path to a custom rippled.cfg — skips auto-generation (local mode only)'
+    'Path to a custom rippled.cfg — skips auto-generation (local mode only; forces standalone, incompatible with --local-network)'
   )
   .option(
     '--exit-on-crash',
