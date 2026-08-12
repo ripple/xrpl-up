@@ -124,7 +124,7 @@ xrpl-up payment --to $LP --amount 1000/USD/$ISSUER --seed $ISSUER_SEED --node lo
 
 # Create the pool
 xrpl-up amm create --asset XRP --asset2 USD/$ISSUER \
-  --amount 100000000 --amount2 100 --trading-fee 500 \
+  --amount 100 --amount2 100 --trading-fee 500 \
   --seed $LP_SEED --node local
 
 # Snapshot this exact pool state

@@ -75,7 +75,7 @@ xrpl-up accounts
 xrpl-up run scripts/example-payment.ts
 
 # Create an XRP/USD AMM pool (100 XRP + 100 USD, 0.5% fee)
-xrpl-up amm create --asset XRP --asset2 USD/rIssuer... --amount 100000000 --amount2 100 --trading-fee 500 --node local --seed sEd...
+xrpl-up amm create --asset XRP --asset2 USD/rIssuer... --amount 100 --amount2 100 --trading-fee 500 --node local --seed sEd...
 
 # Mint a transferable NFT
 xrpl-up nft mint --taxon 0 --uri https://example.com/meta.json --transferable --seed sn3nxiW7...
@@ -113,7 +113,7 @@ Two modes are available:
 
 **Local network** (`--local-network`) runs a 2-node private consensus network. Ledgers close via real consensus (~4s), state persists across stop/start, and snapshots are supported. Use this when you're building an app over hours or days against a stable environment — set up AMM pools, trust lines, and funded accounts once, snapshot the state, and roll back when you need to.
 
-Both modes listen on `ws://localhost:6006`. Once started (either mode), XRPL interaction commands (`account`, `payment`, `trust`, etc.) reach the sandbox via the global `--node` flag, which defaults to `local` — no flag needed for the common case. `--node` also accepts `testnet`, `devnet` (may include pre-release amendments not yet supported by this tool), or any `wss://...` URL:
+Once started (either mode), interaction commands default to the local sandbox — no flag needed. To target something else, pass `--node testnet`, `--node devnet`, or `--node <wss://...>`:
 
 ```bash
 # Start the sandbox once (either mode)
@@ -130,8 +130,6 @@ xrpl-up account info rMyAddress --node wss://your-own-rippled-server:6006  # any
 export XRPL_NODE=testnet
 xrpl-up payment --to rDest --amount 10   # uses testnet, no --node needed
 ```
-
-`--node` only applies to XRPL interaction commands; sandbox lifecycle commands (`start`, `stop`, `reset`, etc.) use `--local` / `--local-network` for the local sandbox and `--network` for remote networks.
 
 Run `xrpl-up start --help` for all options.
 

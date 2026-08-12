@@ -380,4 +380,13 @@ function handleError(err: unknown): void {
   process.exit(1);
 }
 
+// The 19 XRPL interaction commands added via program.addCommand(...) above
+// (account, payment, trust, amm, nft, etc.) have async actions with no
+// per-command .catch(handleError) — unlike the sandbox lifecycle commands
+// defined directly on `program`. Without this, a rejected action promise
+// (network error, invalid address, etc.) crashes with a raw Node.js stack
+// trace instead of a clean CLI error message.
+process.on('unhandledRejection', handleError);
+process.on('uncaughtException', handleError);
+
 program.parse();

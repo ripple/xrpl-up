@@ -4,6 +4,32 @@ import { XRPL_WS } from "../helpers/fund";
 
 // All query tests use a well-known funded testnet address — no faucet call needed.
 const KNOWN_TESTNET_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
+// ACCOUNT_ZERO — valid address format, never funded on any network.
+const UNFUNDED_ADDRESS = "rrrrrrrrrrrrrrrrrrrrrhoLvTp";
+
+// ─── error handling ───────────────────────────────────────────────────────────
+// Regression test: the 19 XRPL interaction commands (account, payment, trust,
+// amm, etc.) are added via program.addCommand() with no per-command
+// .catch(handleError) — a rejected action promise (network error, account not
+// found, invalid address) used to crash with a raw Node.js stack trace instead
+// of a clean CLI message. Fixed with a global unhandledRejection/uncaughtException
+// handler in src/cli.ts. This exercises that path end-to-end.
+describe("account balance error handling", () => {
+  it.concurrent("nonexistent account exits 1 with a clean message, no stack trace", () => {
+    const result = runCLI(["--node", XRPL_WS, "account", "balance", UNFUNDED_ADDRESS]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Account not found");
+    expect(result.stderr).not.toContain(" at ");
+    expect(result.stderr).not.toContain("node:internal");
+  });
+
+  it.concurrent("address too short to be valid exits 1 with a clean message, no stack trace", () => {
+    const result = runCLI(["--node", XRPL_WS, "account", "balance", "rTooShort"]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).not.toContain(" at ");
+    expect(result.stderr).not.toContain("node:internal");
+  });
+});
 
 // ─── account info ─────────────────────────────────────────────────────────────
 

@@ -66,7 +66,9 @@ function assetSpecToXrplCurrency(spec: AssetSpec): Currency {
 
 /**
  * Build an xrpl Amount from an asset spec and a plain number string.
- * XRP: amount is in drops (integer string).
+ * XRP: amount is decimal XRP (e.g. "100"), matching every other command
+ * (payment, trust, channel, escrow, ...). Append "drops" for exact drops
+ * (e.g. "100drops"), matching parseAmount() in utils/amount.ts.
  * IOU: amount is decimal value string.
  */
 function buildAmmAmount(
@@ -74,9 +76,22 @@ function buildAmmAmount(
   amountStr: string
 ): string | IssuedCurrencyAmount {
   if (spec.currency === "XRP") {
-    const drops = Math.round(Number(amountStr));
-    if (isNaN(drops) || drops <= 0 || !Number.isFinite(drops)) {
-      throw new Error(`Invalid XRP drop amount "${amountStr}" — must be a positive integer (drops)`);
+    let drops: number;
+    if (amountStr.endsWith("drops")) {
+      const dropsStr = amountStr.slice(0, -5).trim();
+      drops = Number(dropsStr);
+      if (!/^\d+$/.test(dropsStr) || !Number.isFinite(drops)) {
+        throw new Error(`Invalid XRP drop amount "${amountStr}" — expected an integer number of drops`);
+      }
+    } else {
+      const xrp = Number(amountStr);
+      if (isNaN(xrp) || xrp <= 0 || !Number.isFinite(xrp)) {
+        throw new Error(`Invalid XRP amount "${amountStr}" — must be a positive number (e.g. "100", or "100000000drops" for exact drops)`);
+      }
+      drops = Math.round(xrp * 1_000_000);
+    }
+    if (drops <= 0) {
+      throw new Error(`Invalid XRP amount "${amountStr}" — must be a positive amount`);
     }
     return drops.toString();
   } else {
@@ -177,8 +192,8 @@ const ammCreateCommand = new Command("create")
   .description("Create a new AMM liquidity pool")
   .requiredOption("--asset <spec>", 'First asset: "XRP" or "CURRENCY/issuer" (e.g. "USD/rIssuer")')
   .requiredOption("--asset2 <spec>", 'Second asset: "XRP" or "CURRENCY/issuer"')
-  .requiredOption("--amount <value>", "Amount of first asset (XRP: drops, IOU: decimal)")
-  .requiredOption("--amount2 <value>", "Amount of second asset (XRP: drops, IOU: decimal)")
+  .requiredOption("--amount <value>", "Amount of first asset (XRP: decimal, IOU: decimal)")
+  .requiredOption("--amount2 <value>", "Amount of second asset (XRP: decimal, IOU: decimal)")
   .requiredOption("--trading-fee <n>", "Trading fee in units of 1/100000 (0–1000, where 1000 = 1%)")
   .option("--seed <seed>", "Family seed for signing")
   .option("--mnemonic <phrase>", "BIP39 mnemonic for signing")
@@ -261,7 +276,6 @@ const ammCreateCommand = new Command("create")
       };
 
       const filled = await client.autofill(baseTx);
-      filled.LastLedgerSequence = (filled.LastLedgerSequence ?? 0) + 200;
 
       if (options.dryRun) {
         const signed = signerWallet.sign(filled);
@@ -414,7 +428,6 @@ async function submitTx(
   options: { wait: boolean; json: boolean; dryRun: boolean }
 ): Promise<void> {
   const filled = await client.autofill(baseTx);
-  filled.LastLedgerSequence = (filled.LastLedgerSequence ?? 0) + 200;
 
   // autofill uses ledger_index:'current' for sequence, which can be stale on a
   // fresh WebSocket connection routed to a server that hasn't applied the latest
@@ -521,8 +534,8 @@ const ammDepositCommand = new Command("deposit")
   .description("Deposit assets into an AMM pool")
   .requiredOption("--asset <spec>", 'First asset: "XRP" or "CURRENCY/issuer"')
   .requiredOption("--asset2 <spec>", 'Second asset: "XRP" or "CURRENCY/issuer"')
-  .option("--amount <value>", "Amount of first asset to deposit (XRP: drops, IOU: decimal)")
-  .option("--amount2 <value>", "Amount of second asset to deposit (XRP: drops, IOU: decimal)")
+  .option("--amount <value>", "Amount of first asset to deposit (XRP: decimal, IOU: decimal)")
+  .option("--amount2 <value>", "Amount of second asset to deposit (XRP: decimal, IOU: decimal)")
   .option("--lp-token-out <value>", "LP token amount to receive (auto-fetches currency/issuer)")
   .option("--ePrice <value>", "Maximum effective price per LP token received")
   .option("--for-empty", "Use tfTwoAssetIfEmpty mode (deposit to empty pool)", false)
@@ -651,8 +664,8 @@ const ammWithdrawCommand = new Command("withdraw")
   .requiredOption("--asset <spec>", 'First asset: "XRP" or "CURRENCY/issuer"')
   .requiredOption("--asset2 <spec>", 'Second asset: "XRP" or "CURRENCY/issuer"')
   .option("--lp-token-in <value>", "LP token amount to redeem (auto-fetches currency/issuer)")
-  .option("--amount <value>", "Amount of first asset to withdraw (XRP: drops, IOU: decimal)")
-  .option("--amount2 <value>", "Amount of second asset to withdraw (XRP: drops, IOU: decimal)")
+  .option("--amount <value>", "Amount of first asset to withdraw (XRP: decimal, IOU: decimal)")
+  .option("--amount2 <value>", "Amount of second asset to withdraw (XRP: decimal, IOU: decimal)")
   .option("--ePrice <value>", "Minimum effective price in LP tokens per unit withdrawn")
   .option("--all", "Withdraw all LP tokens (tfWithdrawAll or tfOneAssetWithdrawAll)", false)
   .option("--seed <seed>", "Family seed for signing")
@@ -692,10 +705,10 @@ const ammWithdrawCommand = new Command("withdraw")
       | "tfLimitLPToken";
 
     let mode: WithdrawMode | null = null;
-    if (lpTokenIn && !amount && !amount2)                             mode = "tfLPToken";
-    else if (all && !amount && !amount2)                              mode = "tfWithdrawAll";
-    else if (all && amount && !amount2)                               mode = "tfOneAssetWithdrawAll";
-    else if (amount && lpTokenIn)                                     mode = "tfOneAssetLPToken";
+    if (lpTokenIn && !amount && !amount2 && !all)                     mode = "tfLPToken";
+    else if (all && !amount && !amount2 && !lpTokenIn)                mode = "tfWithdrawAll";
+    else if (all && amount && !amount2 && !lpTokenIn)                 mode = "tfOneAssetWithdrawAll";
+    else if (amount && lpTokenIn && !all)                             mode = "tfOneAssetLPToken";
     else if (amount && ePrice && !amount2 && !lpTokenIn && !all)      mode = "tfLimitLPToken";
     else if (amount && amount2 && !lpTokenIn && !ePrice && !all)      mode = "tfTwoAsset";
     else if (amount && !amount2 && !lpTokenIn && !ePrice && !all)     mode = "tfSingleAsset";

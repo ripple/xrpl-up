@@ -43,9 +43,9 @@ xrpl-up payment --to $LP --amount 1000/USD/$ISSUER --seed $ISSUER_SEED --node lo
 ## 2. Create an XRP / USD pool
 
 ```bash
-# 100 XRP / 100 USD pool, 0.5% trading fee (amounts: XRP in drops, IOU as decimal)
+# 100 XRP / 100 USD pool, 0.5% trading fee (amounts: decimal for both XRP and IOU)
 xrpl-up amm create --asset XRP --asset2 USD/$ISSUER \
-  --amount 100000000 --amount2 100 --trading-fee 500 \
+  --amount 100 --amount2 100 --trading-fee 500 \
   --seed $LP_SEED --node local
 ```
 
