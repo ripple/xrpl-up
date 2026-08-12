@@ -191,11 +191,17 @@ xrpl-up payment --to $HOLDER_C --amount 100/$MPT_ID --seed $HOLDER_A_SEED
 
 ```bash
 xrpl-up mptoken issuance set $MPT_ID --seed $ISSUER_SEED --lock
-# ✔ Issuance locked (all holders frozen)
+# ✔ Issuance locked (all holder-to-holder transfers frozen)
 
-# All payments fail during global lock, even for Holder A
-xrpl-up payment --to $HOLDER_A --amount 100/$MPT_ID --seed $ISSUER_SEED
+# Holder-to-holder transfers fail during global lock...
+xrpl-up payment --to $HOLDER_A --amount 100/$MPT_ID --seed $HOLDER_C_SEED
 # ✗  tecLOCKED
+
+# ...but the issuer can still distribute new tokens even while locked —
+# global lock freezes trading between holders, not issuance/minting.
+# Live-verified: this succeeds tesSUCCESS despite the lock being active.
+xrpl-up payment --to $HOLDER_A --amount 100/$MPT_ID --seed $ISSUER_SEED
+# ✔ MPT payment sent  100  →  rHolderAXXX...
 ```
 
 ---

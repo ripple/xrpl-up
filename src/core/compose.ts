@@ -155,7 +155,7 @@ validators.txt
 # To enable additional amendments, run:
 #   xrpl-up amendment enable <name> --local
 # then reset and restart the node.
-# Hashes verified against s1.ripple.com on 2026-06-23 (rippled 3.2.0).
+# Hashes verified against s1.ripple.com on 2026-08-11 (rippled 3.3.0).
 [amendments]
 00C1FC4A53E60AB02C864641002B3172F38677E29C26C5406685179B37E1EDAC RequireFullyCanonicalSig
 03BDC0099C4E14163ADA272C1B6F6FABB448CC3E51F522F978041E4B57D9158C fixNFTokenReserve
@@ -668,6 +668,29 @@ function seedConsensusVolumes(image: string): void {
 
   // If tarballs are missing (e.g. dev build without them), skip silently
   if (!fs.existsSync(node1Tar) || !fs.existsSync(node2Tar)) return;
+
+  // The pre-built snapshot bakes in whatever amendments were active when it was
+  // built. If the user has since queued additional amendments via `amendment
+  // enable` (extra-amendments file non-empty), the snapshot predates them and
+  // doesn't have them active — seeding from it would make the entrypoint find an
+  // existing ledger.db and boot with --load, silently bypassing the [amendments]
+  // genesis-forcing config entirely (it only takes effect on a real --start from
+  // a blank ledger). Skip seeding so the volume stays empty and the entrypoint
+  // does a real --start instead, the same way standalone mode already does.
+  if (fs.existsSync(EXTRA_AMENDMENTS_FILE) && fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8').trim()) {
+    // Docker creates named volumes as root:root by default. Older rippled images
+    // ran as root, so --start could create its own genesis DB directories fine;
+    // newer images (3.3.0+) run as a non-root user and get a permission error
+    // creating those directories unless the empty volume is pre-chowned.
+    const uidGid = getImageUidGid(image);
+    for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
+      if (!volumeHasData(vol)) {
+        execSync(`docker volume create ${vol}`, { stdio: 'ignore' });
+        execSync(`docker run --rm -v ${vol}:/data alpine chown -R ${uidGid} /data`, { stdio: 'ignore' });
+      }
+    }
+    return;
+  }
 
   const node1Has = volumeHasData(VOLUME_NAME);
   const node2Has = volumeHasData(PEER_VOLUME_NAME);

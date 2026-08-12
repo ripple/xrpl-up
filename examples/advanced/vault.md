@@ -8,19 +8,23 @@ A Vault is an on-ledger pooled-asset object: depositors send an asset in and rec
 > xrpl-up amendment enable SingleAssetVault --local
 > # This wipes and resets the sandbox, then force-enables the amendment from a fresh genesis.
 >
-> xrpl-up start --local-network --detach
-> # Restart in --local-network mode specifically, not plain standalone — standalone wipes
-> # its ledger on every restart, so you'd lose the vaults you build below the moment you
-> # stop the sandbox. --local-network persists state across restarts and is what
-> # `xrpl-up snapshot save`/`restore` require.
+> xrpl-up start --local --detach
 > ```
+>
+> Use plain standalone mode (not `--local-network`) here: `--local-network` mode boots from a
+> pre-seeded ledger snapshot instead of a truly fresh genesis, which silently skips genesis-forced
+> amendments entirely — the amendment would only activate later via real validator voting
+> (~15-40 min), not immediately. Standalone mode always does a fresh `--start`, so the genesis
+> force-enable takes effect right away (live-verified). The tradeoff is standalone wipes its
+> ledger on every restart — fine for this walkthrough, since it doesn't rely on `xrpl-up snapshot
+> save`/`restore`, which do require `--local-network`.
 
 ---
 
 ## Prerequisites
 
 ```bash
-xrpl-up start --local-network --detach
+xrpl-up start --local --detach
 xrpl-up status   # wait until "healthy"
 export XRPL_NODE=local
 ```
@@ -116,8 +120,10 @@ xrpl-up account info $DEPOSITOR
 # vault shares appear as an MPT balance — the vault mints a share MPT issuance internally
 
 xrpl-up account mptokens $DEPOSITOR
-# MPTokenIssuanceID  <vault's share MPT ID>   MPTAmount  100
+# MPTokenIssuanceID  <vault's share MPT ID>   MPTAmount  100000000
 ```
+
+> Live-verified: for an XRP-asset vault, shares are minted 1:1 with **drops**, not whole XRP — a 100 XRP deposit mints `100000000` shares, not `100`.
 
 ---
 
@@ -198,8 +204,10 @@ xrpl-up vault clawback --vault-id $CB_VAULT_ID --holder $CB_DEPOSITOR \
 
 ```bash
 # Withdraw everything first — vault must hold zero assets to delete.
-# Depositor put in 100 and already withdrew 40 in step 4, so 60 remains; depositor2's full 50 remains.
-xrpl-up vault withdraw --vault-id $VAULT_ID --amount 60 --seed $DEPOSITOR_SEED
+# Depositor put in 100 and already withdrew 40 + 10 (the second one sent to depositor2's
+# address in step 4, but still drawn from depositor's own shares) — 50 remains, not 60.
+# Depositor2 never withdrew, so their full 50 remains.
+xrpl-up vault withdraw --vault-id $VAULT_ID --amount 50 --seed $DEPOSITOR_SEED
 xrpl-up vault withdraw --vault-id $VAULT_ID --amount 50 --seed $DEPOSITOR2_SEED
 
 xrpl-up vault delete --vault-id $VAULT_ID --seed $OWNER_SEED

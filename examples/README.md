@@ -73,12 +73,6 @@ Start here. Each guide covers one feature end-to-end with minimal setup.
 
 Builds on the simple guides. Each covers a multi-step workflow combining several XRPL primitives.
 
-### Trading
-
-| Guide | Description |
-|-------|-------------|
-| [AMM + DEX Arbitrage](advanced/amm-dex-arbitrage.md) | Compare pool vs order-book quotes; execute best route with IOC offers; observe price convergence |
-
 ### Tokens
 
 | Guide | Description |

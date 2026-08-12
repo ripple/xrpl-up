@@ -22,6 +22,23 @@ npm install -g five-bells-condition
 # or in a project: npm install five-bells-condition
 ```
 
+A standalone sandbox's ledger clock isn't the wall clock — it advances at least 1 second per accepted ledger regardless of real elapsed time, so it can drift well ahead of `Date.now()` after a lot of activity. Compute `--cancel-after` relative to the sandbox's actual current ledger time instead:
+
+```bash
+ledger_plus() {
+  SECS=$1 node -e "
+    const { Client } = require('xrpl');
+    (async () => {
+      const client = new Client('ws://localhost:6006');
+      await client.connect();
+      const r = await client.request({ command: 'ledger', ledger_index: 'validated' });
+      console.log(new Date((r.result.ledger.close_time + 946684800 + Number(process.env.SECS)) * 1000).toISOString());
+      await client.disconnect();
+    })();
+  "
+}
+```
+
 ---
 
 ## Step 1: Generate a condition/fulfillment pair
@@ -74,7 +91,7 @@ The sender locks 25 XRP behind the condition. The escrow auto-cancels after 7 da
 
 ```bash
 ESCROW_OWNER=$SENDER
-CANCEL_AFTER=$(node -e "console.log(new Date(Date.now()+7*86400000).toISOString())")
+CANCEL_AFTER=$(ledger_plus $((7*86400)))
 
 ESCROW_SEQ=$(xrpl-up escrow create --to $RECEIVER --amount 25 --seed $SENDER_SEED \
   --condition $CONDITION \
@@ -167,7 +184,7 @@ If the receiver never presents the fulfillment and `CancelAfter` passes, anyone 
 # (after CancelAfter time has passed — in the sandbox you can advance time
 #  by waiting, or create a short --cancel-after for testing)
 
-SHORT_CANCEL_AFTER=$(node -e "console.log(new Date(Date.now()+30*1000).toISOString())")
+SHORT_CANCEL_AFTER=$(ledger_plus 30)
 
 ESCROW_SEQ_SHORT=$(xrpl-up escrow create --to $RECEIVER --amount 10 --seed $SENDER_SEED \
   --condition $CONDITION \

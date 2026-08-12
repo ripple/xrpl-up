@@ -50,12 +50,12 @@ xrpl-up trust set --currency USD --issuer $ISSUER --limit 50000 --seed $TRADER_B
 
 ## 2. Place a sell offer — Trader A sells XRP for USD
 
-Format: `offer create --taker-pays <pays> --taker-gets <gets>` — `pays` is what you put in, `gets` is what you want back.
+Format: `offer create --taker-gets <gets> --taker-pays <pays>` — `--taker-gets` is what you (the offer creator) provide, `--taker-pays` is what you request back.
 
 ```bash
-# Trader A offers 10 XRP in exchange for 20 USD
+# Trader A provides 10 XRP and requests 20 USD in return
 # (i.e. selling XRP at 2 USD per XRP)
-OFFER_A_SEQ=$(xrpl-up offer create --taker-pays 10 --taker-gets 20/USD/$ISSUER --seed $TRADER_A_SEED --json | jq -r .offerSequence)
+OFFER_A_SEQ=$(xrpl-up offer create --taker-gets 10 --taker-pays 20/USD/$ISSUER --seed $TRADER_A_SEED --json | jq -r .offerSequence)
 ```
 
 ---
@@ -63,8 +63,8 @@ OFFER_A_SEQ=$(xrpl-up offer create --taker-pays 10 --taker-gets 20/USD/$ISSUER -
 ## 3. Place a matching buy offer — Trader B buys XRP with USD
 
 ```bash
-# Trader B offers 20 USD to get 10 XRP (matches Trader A's offer exactly)
-xrpl-up offer create --taker-pays 20/USD/$ISSUER --taker-gets 10 --seed $TRADER_B_SEED
+# Trader B provides 20 USD and requests 10 XRP (matches Trader A's offer exactly)
+xrpl-up offer create --taker-gets 20/USD/$ISSUER --taker-pays 10 --seed $TRADER_B_SEED
 # ✔ Offer filled immediately (matched Trader A)
 ```
 
@@ -83,10 +83,10 @@ xrpl-up account offers $TRADER_A
 
 ```bash
 # Place an offer that is too large to fill right away
-OFFER_A_SEQ=$(xrpl-up offer create --taker-pays 100 --taker-gets 200/USD/$ISSUER --seed $TRADER_A_SEED --json | jq -r .offerSequence)
+OFFER_A_SEQ=$(xrpl-up offer create --taker-gets 100 --taker-pays 200/USD/$ISSUER --seed $TRADER_A_SEED --json | jq -r .offerSequence)
 
 # Place a counter-offer that only fills half
-xrpl-up offer create --taker-pays 100/USD/$ISSUER --taker-gets 50 --seed $TRADER_B_SEED
+xrpl-up offer create --taker-gets 100/USD/$ISSUER --taker-pays 50 --seed $TRADER_B_SEED
 # Trader A's offer is now half-filled; the remaining 50 XRP / 100 USD stays on the book
 ```
 
@@ -107,13 +107,13 @@ xrpl-up offer cancel --sequence $OFFER_A_SEQ --seed $TRADER_A_SEED
 | Flag | When to use |
 |------|-------------|
 | `--passive` | List price without consuming matching offers at the same price |
-| `--sell` | Sell exactly `TakerPays`; ledger won't give you more than `TakerGets` |
+| `--sell` | Sell exactly `TakerGets`; accept less than `TakerPays` if that's all the market offers |
 | `--immediate-or-cancel` | Fill what's available right now; cancel the rest immediately |
 | `--fill-or-kill` | Fill the entire offer or cancel entirely — no partial fills |
 
 ```bash
 # Immediate-or-cancel sell offer: sell 10 XRP, cancel if not fully filled
-xrpl-up offer create --taker-pays 10 --taker-gets 20/USD/$ISSUER --seed $TRADER_A_SEED \
+xrpl-up offer create --taker-gets 10 --taker-pays 20/USD/$ISSUER --seed $TRADER_A_SEED \
   --sell --immediate-or-cancel
 ```
 

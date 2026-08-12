@@ -33,6 +33,7 @@ export default defineConfig({
       "tests/e2e/vault/**",
       "tests/e2e/permissioned-domain/**",
       "tests/e2e/sandbox/snapshot.test.ts",
+      "tests/e2e/sandbox/amendment.activate.test.ts",
     ],
     globalSetup: ["tests/setup/local-network-node.ts"],
   },
