@@ -167,4 +167,4 @@ xrpl-up account mptokens $MPT_HOLDER
 
 - [Issued Token](issued-token.md) — IOU trust line setup
 - [MPT](mpt.md) — MPT full lifecycle
-- [Account Settings](accountset.md) — all account flags
+- [Deposit Auth](deposit-auth.md) — control which senders can pay you

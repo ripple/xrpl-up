@@ -174,8 +174,9 @@ xrpl-up clawback --amount 500/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
 ## 9. Unauthorize a holder
 
 ```bash
-# Balance must be zero first — claw back what step 8 left behind (500 remaining)
-xrpl-up clawback --amount 500/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
+# Balance must be zero first — claw back what step 8 left behind
+# (1000 minted - 250 transferred to Holder 2 in step 6 - 500 clawed back in step 8 = 250 remaining)
+xrpl-up clawback --amount 250/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
 
 # Holder opts back out
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED --unauthorize

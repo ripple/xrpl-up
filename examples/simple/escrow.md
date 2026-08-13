@@ -94,11 +94,19 @@ The destination receives the XRP minus a small transaction fee.
 
 ### 4. Cancel an expired escrow
 
-If the escrow's `CancelAfter` time has passed and it hasn't been finished, anyone can cancel it to return the XRP to the sender:
+If the escrow's `CancelAfter` time has passed and it hasn't been finished, anyone can cancel it to return the XRP to the sender. `$ESCROW_SEQ` from step 1 was already consumed by step 3's `finish` — a cancellable demo needs its own fresh escrow with a short `--cancel-after` (an `EscrowCreate` also requires `--finish-after` or `--condition`, so a short `--finish-after` is included too, just not used):
 
 ```bash
-xrpl-up escrow cancel --owner $SENDER --sequence $ESCROW_SEQ --seed $SENDER_SEED
-# ✔ Escrow cancelled  10 XRP returned to rSenderXXX...
+SHORT_FINISH_AFTER=$(ledger_plus 20)
+SHORT_CANCEL_AFTER=$(ledger_plus 30)
+
+CANCEL_ESCROW_SEQ=$(xrpl-up escrow create --to $DEST --amount 5 --seed $SENDER_SEED \
+  --finish-after $SHORT_FINISH_AFTER --cancel-after $SHORT_CANCEL_AFTER \
+  --json | jq -r .sequence)
+
+sleep 35   # wait for the ledger clock to pass CancelAfter (30s + margin)
+xrpl-up escrow cancel --owner $SENDER --sequence $CANCEL_ESCROW_SEQ --seed $SENDER_SEED
+# ✔ Escrow cancelled  5 XRP returned to rSenderXXX...
 ```
 
 ---
@@ -109,7 +117,11 @@ A crypto-condition escrow requires a secret preimage — only the party who know
 
 ### 1. Generate a condition and fulfillment
 
-Use the `five-bells-condition` library (or any PREIMAGE-SHA-256 tool):
+Use the `five-bells-condition` library (or any PREIMAGE-SHA-256 tool). Install it first — it's not a dependency of xrpl-up itself. A plain `node -e "require(...)"` only resolves packages installed local to the current directory (a global `npm install -g` won't be found unless `NODE_PATH` is set up for it), so install it locally in whatever directory you're running these commands from:
+
+```bash
+npm install five-bells-condition
+```
 
 ```bash
 # Example using Node.js — print as JSON so it can be captured directly, no manual copying

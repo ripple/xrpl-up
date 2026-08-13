@@ -2,7 +2,7 @@
 
 A fully-controlled MPT issuance where the issuer governs every phase: holders must be explicitly authorized, individual balances can be locked (compliance hold), and tokens can be clawed back at any time. Covers the complete lifecycle through to issuance destruction.
 
-This guide complements [MPT](mpt.md) with a focus on the **policy controls** rather than the basic flow.
+This guide complements [MPT](../simple/mpt.md) with a focus on the **policy controls** rather than the basic flow.
 
 ---
 

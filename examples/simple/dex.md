@@ -62,6 +62,12 @@ OFFER_A_SEQ=$(xrpl-up offer create --taker-gets 10 --taker-pays 20/USD/$ISSUER -
 
 ## 3. Place a matching buy offer — Trader B buys XRP with USD
 
+Trader B needs an actual USD balance before they can offer to sell it — the issuer sends some first:
+
+```bash
+xrpl-up payment --to $TRADER_B --amount 5000/USD/$ISSUER --seed $ISSUER_SEED
+```
+
 ```bash
 # Trader B provides 20 USD and requests 10 XRP (matches Trader A's offer exactly)
 xrpl-up offer create --taker-gets 20/USD/$ISSUER --taker-pays 10 --seed $TRADER_B_SEED
@@ -123,7 +129,7 @@ xrpl-up offer create --taker-gets 10 --taker-pays 20/USD/$ISSUER --seed $TRADER_
 
 ```bash
 xrpl-up account transactions $TRADER_A --limit 10
-# Each row shows type OfferCreate / OfferCancel, result, and a summary like "buy 10 XRP for 20 USD"
+# Each row shows: ledger index, transaction type (OfferCreate / OfferCancel), result, and hash
 ```
 
 ---

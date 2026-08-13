@@ -17,9 +17,12 @@ xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NETWORK=local
 
-# Install five-bells-condition for condition generation
-npm install -g five-bells-condition
-# or in a project: npm install five-bells-condition
+# Install five-bells-condition for condition generation.
+# `xrpl-up run` executes scripts with Node's normal module resolution, which
+# only finds packages under the local node_modules of the project the script
+# lives in — a global `npm install -g` is NOT picked up (unless you've set up
+# NODE_PATH yourself). Install it locally in the project you're running from:
+npm install five-bells-condition
 ```
 
 A standalone sandbox's ledger clock isn't the wall clock — it advances at least 1 second per accepted ledger regardless of real elapsed time, so it can drift well ahead of `Date.now()` after a lot of activity. Compute `--cancel-after` relative to the sandbox's actual current ledger time instead:

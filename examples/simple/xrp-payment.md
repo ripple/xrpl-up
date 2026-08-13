@@ -70,7 +70,7 @@ xrpl-up account transactions $SENDER
 xrpl-up account transactions $SENDER --limit 5
 ```
 
-Each row shows: date, transaction type, result (`tesSUCCESS` / error), hash, and a short summary.
+Each row shows: ledger index, transaction type, result (`tesSUCCESS` / error), and hash.
 
 ---
 

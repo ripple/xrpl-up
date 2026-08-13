@@ -15,6 +15,8 @@ interface TrustLine {
   quality_out?: number;
   freeze?: boolean;
   freeze_peer?: boolean;
+  authorized?: boolean;
+  peer_authorized?: boolean;
 }
 
 export const trustLinesCommand = new Command("trust-lines")
@@ -71,7 +73,20 @@ export const trustLinesCommand = new Command("trust-lines")
       }
 
       for (const line of lines) {
-        console.log(`${line.currency}/${line.account}  balance: ${line.balance}  limit: ${line.limit}`);
+        // `account_lines` omits boolean fields entirely when they're false,
+        // so a missing field here means false, not "unknown".
+        const freeze = Boolean(line.freeze || line.freeze_peer);
+        const noRipple = Boolean(line.no_ripple || line.no_ripple_peer);
+        // `authorized` is whether the queried account itself is authorized on
+        // this line; `peer_authorized` is whether the counterparty (typically
+        // the issuer, under RequireAuth) has authorized it — the one most
+        // examples care about.
+        const authorized = Boolean(line.authorized || line.peer_authorized);
+
+        console.log(
+          `${line.currency}/${line.account}  balance: ${line.balance}  limit: ${line.limit}  ` +
+          `noRipple: ${noRipple}  freeze: ${freeze}  authorized: ${authorized}`
+        );
       }
     });
   });
