@@ -20,14 +20,16 @@ export const infoCommand = new Command("info")
           command: "account_info",
           account: address,
           ledger_index: "validated",
+          signer_lists: true,
         }),
         client.request({ command: "server_state" }),
       ]);
 
       const data = infoResp.result.account_data;
+      const signerLists = infoResp.result.signer_lists;
 
       if (options.json) {
-        console.log(JSON.stringify(data, null, 2));
+        console.log(JSON.stringify(signerLists && signerLists.length > 0 ? { ...data, signer_lists: signerLists } : data, null, 2));
         return;
       }
 
@@ -75,6 +77,14 @@ export const infoCommand = new Command("info")
 
       if (data.RegularKey) {
         console.log(`Regular Key:  ${data.RegularKey}`);
+      }
+
+      if (signerLists && signerLists.length > 0) {
+        const signerList = signerLists[0];
+        console.log(`Signer List:  quorum ${signerList.SignerQuorum}`);
+        for (const entry of signerList.SignerEntries) {
+          console.log(`  - ${entry.SignerEntry.Account} (weight ${entry.SignerEntry.SignerWeight})`);
+        }
       }
     });
   });

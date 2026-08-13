@@ -81,7 +81,7 @@ xrpl-up amm create --asset XRP --asset2 USD/rIssuer... --amount 100 --amount2 10
 xrpl-up nft mint --taxon 0 --uri https://example.com/meta.json --transferable --seed sn3nxiW7...
 
 # Create an MPT issuance (Multi-Purpose Token)
-xrpl-up mptoken issuance create --max-amount 1000000 --asset-scale 6
+xrpl-up mptoken issuance create --max-amount 1000000 --asset-scale 6 --seed sn3nxiW7...
 
 # Open a payment channel
 xrpl-up channel create --to rDestination... --amount 10 --settle-delay 86400 --seed sSrc...
@@ -447,7 +447,7 @@ Lists existing tickets (reserved sequence numbers) for an account. `<address>` i
 Issuer clawback operations. The issuer account must have clawback enabled before use.
 
 > **Prerequisites:**
-> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set --allow-clawback --confirm --network local --seed <issuer-seed>`
+> - **IOU clawback:** Enable `asfAllowTrustLineClawback` with `xrpl-up account set --allow-clawback --confirm --seed <issuer-seed>`
 > - **MPT clawback:** The issuance must have been created with `xrpl-up mptoken issuance create --flags can-clawback`
 
 See [Clawback — Reclaim Issued Tokens](examples/simple/clawback.md) for a full walkthrough.
@@ -466,9 +466,9 @@ Wallet management — create, import, and manage XRPL key pairs in a local keyst
 | `new-mnemonic` | Generate a wallet from a BIP39 mnemonic |
 | `import` | Import a wallet by seed or mnemonic |
 | `list` | List all wallets in the keystore |
-| `address` | Print the address for a wallet |
-| `private-key` | Print the private key (requires password) |
-| `public-key` | Print the public key |
+| `address` | Derive the address from a seed, mnemonic, or private key (no keystore access) |
+| `private-key` | Derive the private key from a seed or mnemonic (`--seed`/`--mnemonic`; no keystore access) |
+| `public-key` | Derive the public key from a seed, mnemonic, or private key (no keystore access) |
 | `sign` | Sign arbitrary data |
 | `verify` | Verify a signature |
 | `alias` | Set or clear a human-readable alias for a wallet |
@@ -479,7 +479,7 @@ Wallet management — create, import, and manage XRPL key pairs in a local keyst
 
 ```bash
 xrpl-up wallet new
-xrpl-up wallet fund rMyAddress
+xrpl-up wallet fund rMyAddress --network testnet   # only testnet/devnet have a wallet-fund faucet
 xrpl-up wallet list
 ```
 
@@ -504,9 +504,9 @@ Account query and management. The `account` command provides both query subcomma
 | `delete` | Delete the account |
 
 ```bash
-xrpl-up account info rMyAddress --network local
-xrpl-up account transactions rMyAddress --network local
-xrpl-up account trust-lines rMyAddress --network local
+xrpl-up account info rMyAddress
+xrpl-up account transactions rMyAddress
+xrpl-up account trust-lines rMyAddress
 xrpl-up account balance rMyAddress --network testnet
 ```
 
@@ -534,7 +534,7 @@ Run `xrpl-up multisig set --help` / `multisig delete --help` / `multisig list --
 
 ### `xrpl-up credential`
 
-Manage DID-based credentials on the XRP Ledger.
+Manage on-chain verifiable credentials on the XRP Ledger (independent of the `did` command — credentials reference a subject account, not a DID).
 
 ```bash
 xrpl-up credential --help
@@ -704,7 +704,7 @@ Each snapshot saves the ledger volume, a copy of the account store (`local-accou
 xrpl-up start --local-network
 
 # Run expensive setup (fund accounts, create AMM pool, set trust lines...)
-xrpl-up faucet --network local
+xrpl-up faucet
 # `snapshot save` waits for accounts to be validated before archiving — no manual wait needed.
 xrpl-up snapshot save after-setup
 
@@ -873,8 +873,10 @@ Account seeds, generated configs, and snapshots are stored at:
   rippled.cfg                 # standalone mode only (or custom via --config)
   rippled-node1.cfg           # --local-network mode only
   rippled-node2.cfg           # --local-network mode only
-  validators.txt              # generated on each start (empty in standalone, validator keys in --local-network)
+  validators.txt              # standalone: written once if missing (empty); --local-network: regenerated every start (validator keys)
   genesis-amendments.txt      # queued by `amendment enable`, merged into the config above
+  genesis-lineage.txt         # fingerprint of the current --local-network genesis (see amendment enable)
+  local-network-image.txt     # records which --image last started the --local-network volumes
   snapshots/
     before-amm.tar.gz         # node DB volume snapshot (--local-network mode)
     before-amm-accounts.json  # account store at snapshot time

@@ -131,13 +131,17 @@ Host
 ├── rippled.cfg                  # Standalone mode config (auto-generated or custom via --config)
 ├── rippled-node1.cfg            # Local-network mode: node 1 config
 ├── rippled-node2.cfg            # Local-network mode: node 2 config
-├── validators.txt               # Companion to rippled.cfg (written once if missing)
+├── validators.txt               # Standalone: written once if missing (empty). Local-network: regenerated every start (validator keys)
+├── genesis-amendments.txt       # Queued by `amendment enable`; merged into the config above
+├── genesis-lineage.txt          # Fingerprint of the current --local-network genesis (see §5.6)
+├── local-network-image.txt      # Records which --image last started the --local-network volumes
 ├── local-accounts.json          # WalletStore for local network
 ├── testnet-accounts.json        # WalletStore for testnet
 ├── devnet-accounts.json         # WalletStore for devnet
 └── snapshots/
     ├── <name>.tar.gz            # Compressed NuDB ledger volume (--local-network mode only)
-    └── <name>-accounts.json     # Account store at snapshot time
+    ├── <name>-accounts.json     # Account store at snapshot time
+    └── <name>-meta.json         # Snapshot metadata ({ format, lineage, amendments })
 ```
 
 **WalletStore file format** (`{network}-accounts.json`):
