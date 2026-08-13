@@ -218,7 +218,7 @@ const store = new WalletStore(networkKey);
 |---|---|
 | `-v, --version` | Print version and exit |
 | `--help` | Print help for any command or subcommand |
-| `-n, --network <url\|name>` | XRPL network target: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NETWORK` env var. Applies to XRPL interaction commands and to any sandbox lifecycle command that has a network concept (`start`, `accounts`, `faucet`, `run`, `status`, `amendment list`/`info`) — those commands read the same global option (no per-command duplicate). Commands with no network concept (`stop`, `reset`, `logs`, `init`, `config`, `snapshot`) ignore it. |
+| `-n, --network <url\|name>` | XRPL network target: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NETWORK` env var. Applies to XRPL interaction commands and to any sandbox lifecycle command that has a network concept (`start`, `accounts`, `faucet`, `run`, `status`, `amendment list`/`info`) — those commands read the same global option (no per-command duplicate). Commands with no network concept (`stop`, `reset`, `logs`, `init`, `config`, `snapshot`) ignore it. **Value resolution differs by command group**: sandbox lifecycle commands resolve the value against `xrpl-up.config.js`'s `networks` map (so a custom config-defined name works), while XRPL interaction commands only recognize the literals `local`/`testnet`/`devnet` or a raw URL — a config-defined custom network name is not resolved and fails. |
 
 Each command supports `--help` for detailed flag documentation. Run `xrpl-up <command> --help` or `xrpl-up <command> <subcommand> --help` for usage details.
 

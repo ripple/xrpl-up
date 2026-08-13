@@ -420,6 +420,8 @@ See [Deposit Authorization (DepositPreauth)](examples/simple/deposit-auth.md) fo
 |------------|-------------|
 | `set --authorize <address>` | Pre-authorize a specific sender |
 | `set --unauthorize <address>` | Revoke a pre-authorization |
+| `set --authorize-credential <issuer> --credential-type <type>` | Pre-authorize any sender holding a matching credential |
+| `set --unauthorize-credential <issuer> --credential-type <type>` | Revoke a credential-based pre-authorization |
 | `list <address>` | List all pre-authorizations for an account |
 
 ---
@@ -844,7 +846,7 @@ export default {
 
 Requires `"type": "module"` in your project's `package.json` (the config `xrpl-up init` scaffolds already has this).
 
-Add any custom WebSocket endpoint as a named network and use it with `--network <name>`.
+Add any custom WebSocket endpoint as a named network and use it with `--network <name>` on `run`/`accounts`/`status`/`faucet`/`start`. XRPL interaction commands (`account`, `payment`, `trust`, etc.) don't read this config — their `--network` only understands `local`/`testnet`/`devnet` or a raw `wss://...` URL passed directly.
 
 ---
 
