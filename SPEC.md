@@ -214,7 +214,7 @@ const store = new WalletStore(networkKey);
 |---|---|
 | `-v, --version` | Print version and exit |
 | `--help` | Print help for any command or subcommand |
-| `-n, --network <url\|name>` | XRPL node for interaction commands: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NETWORK` env var. Ignored by sandbox lifecycle commands. |
+| `-n, --network <url\|name>` | XRPL network target: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NETWORK` env var. Applies to XRPL interaction commands and to any sandbox lifecycle command that has a network concept (`start`, `accounts`, `faucet`, `run`, `status`, `amendment list`/`info`) — those commands read the same global option (no per-command duplicate). Commands with no network concept (`stop`, `reset`, `logs`, `init`, `config`, `snapshot`) ignore it. |
 
 Each command supports `--help` for detailed flag documentation. Run `xrpl-up <command> --help` or `xrpl-up <command> <subcommand> --help` for usage details.
 

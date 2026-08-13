@@ -132,12 +132,11 @@ xrpl-up account info rMyDevnetAddress --network devnet
 # any other rippled node you already have an account on
 xrpl-up account info rMyAddress --network wss://your-own-rippled-server:6006
 
-# Or set XRPL_NETWORK once instead of passing --network on every interaction command
+# Or set XRPL_NETWORK once instead of passing --network on every command —
+# applies everywhere a network concept exists, sandbox lifecycle commands included
 export XRPL_NETWORK=testnet
-xrpl-up faucet --network testnet --json   # sandbox lifecycle commands (start/faucet/accounts/status/run)
-                                           # have their own --network option and don't read XRPL_NETWORK —
-                                           # it must be passed explicitly here even with the env var set
-xrpl-up payment --to rDest --amount 10 --seed <seed from faucet output>   # uses testnet via XRPL_NETWORK
+xrpl-up faucet --json   # funds on testnet via XRPL_NETWORK, no --network needed
+xrpl-up payment --to rDest --amount 10 --seed <seed from faucet output>   # also uses testnet
 ```
 
 Run `xrpl-up start --help` for all options.
