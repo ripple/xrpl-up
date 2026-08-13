@@ -110,6 +110,6 @@ xrpl-up <command> --help
 
 - **Save seeds and addresses** as shell variables while following a guide — most examples chain multiple commands.
 - **`xrpl-up accounts --local`** shows all wallets xrpl-up knows about and their XRP balances.
-- **`xrpl-up tx list <address> --local`** shows the full transaction history for any account.
+- **`xrpl-up account transactions <address>`** shows the full transaction history for any account.
 - **`xrpl-up reset`** wipes the sandbox ledger back to genesis — useful for a clean slate. Add `--snapshots` to also delete saved snapshots.
 - Use **`--network testnet`** instead of `--local` to test on the public Testnet (no Docker required).
