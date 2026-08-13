@@ -140,7 +140,7 @@ function assertConsensusMode(action: 'save' | 'restore'): void {
       `  Standalone mode does not persist ledger state across restarts.\n` +
       `  Snapshots require the --local-network flag. Restart with:\n` +
       `\n` +
-      `    xrpl-up start --local --local-network --detach\n`
+      `    xrpl-up start --local --local-network\n`
     );
   }
 }
@@ -169,7 +169,7 @@ export async function snapshotSave(name: string): Promise<void> {
   if (!volumeExists()) {
     throw new Error(
       `No ledger volume found (${VOLUME_NAME}).\n` +
-      `  Start the sandbox first: xrpl-up start --local --local-network --detach`
+      `  Start the sandbox first: xrpl-up start --local --local-network`
     );
   }
 
@@ -340,7 +340,7 @@ export async function snapshotRestore(name: string): Promise<void> {
   if (!volumeExists()) {
     throw new Error(
       `No ledger volume found (${VOLUME_NAME}).\n` +
-      `  Start the sandbox first: xrpl-up start --local --local-network --detach`
+      `  Start the sandbox first: xrpl-up start --local --local-network`
     );
   }
 
