@@ -427,5 +427,19 @@ describe("trust set issuer-side flags", () => {
     const autLine = lines.find((l) => l.currency === "AUT");
     expect(autLine).toBeDefined();
     expect(autLine?.peer_authorized).toBe(true);
+
+    // Regression: the human-readable (non-JSON) formatter used to print only
+    // currency/account/balance/limit, silently dropping freeze/no-ripple/
+    // authorized status even though the account_lines RPC data (verified via
+    // --json above) already had it.
+    const textResult = runCLI([
+      "--network", XRPL_WS,
+      "account", "trust-lines", trustor.address,
+    ]);
+    expect(textResult.status).toBe(0);
+    const autTextLine = textResult.stdout.split("\n").find((l) => l.startsWith("AUT/"));
+    expect(autTextLine).toBeDefined();
+    expect(autTextLine).toContain("authorized: true");
+    expect(autTextLine).toContain("freeze: false");
   }, 120_000);
 });

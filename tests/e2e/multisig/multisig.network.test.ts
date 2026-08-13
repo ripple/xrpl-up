@@ -76,6 +76,22 @@ describe("multisig set", () => {
     expect(listResult.stdout).toContain(signer2.address);
     expect(listResult.stdout).toContain(signer3.address);
     expect(listResult.stdout).toContain("weight: 1");
+
+    // Regression: `account info` never requested signer_lists from the
+    // account_info RPC, so it silently never showed a signer list even
+    // though README documented `info` as including one.
+    const infoResult = runCLI(["--network", "testnet", "account", "info", owner.address]);
+    expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
+    expect(infoResult.stdout).toContain("Signer List:  quorum 2");
+    expect(infoResult.stdout).toContain(signer1.address);
+
+    const infoJsonResult = runCLI(["--network", "testnet", "account", "info", "--json", owner.address]);
+    expect(infoJsonResult.status).toBe(0);
+    const infoJson = JSON.parse(infoJsonResult.stdout) as {
+      signer_lists?: Array<{ SignerQuorum: number; SignerEntries: Array<{ SignerEntry: { Account: string } }> }>;
+    };
+    expect(infoJson.signer_lists?.[0]?.SignerQuorum).toBe(2);
+    expect(infoJson.signer_lists?.[0]?.SignerEntries.map((e) => e.SignerEntry.Account)).toContain(signer1.address);
   }, 120_000);
 
   it.concurrent("updates the signer list (replace 2-of-3 with 2-of-2)", async () => {

@@ -15,9 +15,9 @@ import {
   fundAddress,
 } from "../helpers/fund";
 
-// 12 tests concurrent with wallets (11 funded + 1 mnemonic via fundAddress); +3 buffer = 15
-// Budget: 15 × 0.2 + 12 × 2 XRP = 3 + 24 = 27 ≤ 99 ✓
-const TICKET_COUNT = 15;
+// 13 tests concurrent with wallets (12 funded + 1 mnemonic via fundAddress); +3 buffer = 16
+// Budget: 16 × 0.2 + 13 × 2 XRP = 3.2 + 26 = 29.2 ≤ 99 ✓
+const TICKET_COUNT = 16;
 const FUND_AMOUNT = 2;
 
 let client: Client;
@@ -74,6 +74,27 @@ describe("account set fields", () => {
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     expect(data.TransferRate).toBe(1005000000);
+  }, 120_000);
+
+  it.concurrent("an on-ledger failure (temBAD_TRANSFER_RATE) exits 1 and does not apply the setting", async () => {
+    // Regression: account set used fire-and-forget client.submit() instead of
+    // submitAndWait(), so it always printed "Transaction submitted" and exited
+    // 0 regardless of the actual on-ledger result — silently hiding failures.
+    const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
+
+    const result = runCLI([
+      "--network", XRPL_WS,
+      "account", "set",
+      "--transfer-rate", "500000000", // below the valid 1e9-2e9 range
+      "--seed", wallet.seed!,
+    ]);
+    expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(1);
+    expect(result.stderr).toContain("temBAD_TRANSFER_RATE");
+
+    const infoResult = runCLI(["--network", XRPL_WS, "account", "info", "--json", wallet.address]);
+    expect(infoResult.status).toBe(0);
+    const data = JSON.parse(infoResult.stdout) as AccountRoot;
+    expect(data.TransferRate).toBeUndefined();
   }, 120_000);
 
   it.concurrent("--tick-size sets TickSize on-chain", async () => {
