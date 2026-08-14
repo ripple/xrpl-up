@@ -241,7 +241,7 @@ export async function setup(): Promise<void> {
     if (process.env.XRPL_LOCAL_NO_AUTOSTART === "1") {
       throw new Error(
         "Local rippled is not running on port 6006.\n" +
-          "Start it manually with: xrpl-up start --local\n" +
+          "Start it manually with: xrpl-up start\n" +
           "Or unset XRPL_LOCAL_NO_AUTOSTART to allow auto-start.",
       );
     }

@@ -3,7 +3,7 @@
  *
  * These tests exercise CLI-level argument validation: missing required
  * positional arguments (handled by Commander) and early-exit guards
- * inside command handlers (e.g. --local requirement checks).
+ * inside command handlers (e.g. amendment enable's local-target check).
  *
  * No running node is needed — all cases exit before any network call.
  */

@@ -11,7 +11,7 @@ import { runXrplUp } from "../../helpers/sandbox-cli";
 // (seed: snoPBrXtMeMyMHUVTgbuqAfg1SUTb, algorithm: secp256k1)
 const GENESIS_ADDRESS = "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh";
 
-describe("sandbox accounts --local (wallet store listing)", () => {
+describe("sandbox accounts (wallet store listing)", () => {
   it("exits 0 regardless of wallet store state", () => {
     // If the store is empty it prints a warning (exit 0), otherwise shows a table.
     // Either way the command must not crash.
@@ -20,7 +20,7 @@ describe("sandbox accounts --local (wallet store listing)", () => {
   });
 });
 
-describe("sandbox accounts --local --address (direct address lookup)", () => {
+describe("sandbox accounts --address (direct address lookup)", () => {
   it("genesis address lookup exits 0", () => {
     const result = runXrplUp(
       ["accounts", "--address", GENESIS_ADDRESS],

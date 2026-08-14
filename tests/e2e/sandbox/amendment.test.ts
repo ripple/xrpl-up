@@ -24,7 +24,7 @@ function getConfiguredAmendmentNames(): Set<string> {
   return names;
 }
 
-describe("sandbox amendment list --local", () => {
+describe("sandbox amendment list", () => {
   it("exits 0", () => {
     const result = runXrplUp(["amendment", "list"], {}, 30_000);
     expect(result.status).toBe(0);
@@ -70,7 +70,7 @@ describe("sandbox amendment list --local", () => {
   });
 });
 
-describe("sandbox amendment list --local --disabled", () => {
+describe("sandbox amendment list --disabled", () => {
   it("exits 0", () => {
     const result = runXrplUp(
       ["amendment", "list", "--disabled"],
@@ -81,7 +81,7 @@ describe("sandbox amendment list --local --disabled", () => {
   });
 });
 
-describe("sandbox amendment info --local (known amendment)", () => {
+describe("sandbox amendment info (known amendment)", () => {
   it("looks up a known amendment by name and exits 0", () => {
     const result = runXrplUp(
       ["amendment", "info", "fixUniversalNumber"],
@@ -102,7 +102,7 @@ describe("sandbox amendment info --local (known amendment)", () => {
   });
 });
 
-describe("sandbox amendment list --local --diff testnet", () => {
+describe("sandbox amendment list --diff testnet", () => {
   it("exits 0 and shows side-by-side columns", () => {
     const result = runXrplUp(
       ["amendment", "list", "--diff", "testnet"],

@@ -7,7 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { runXrplUp } from "../../helpers/sandbox-cli";
 
-describe("sandbox status --local", () => {
+describe("sandbox status", () => {
   it("exits 0", () => {
     const result = runXrplUp(["status"], {}, 15_000);
     expect(result.status).toBe(0);

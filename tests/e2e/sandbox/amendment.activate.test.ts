@@ -51,7 +51,7 @@ function findCandidates(count: number): string[] {
   const result = runXrplUp(["amendment", "list", "--disabled"], {}, 30_000);
   if (result.status !== 0) {
     throw new Error(
-      `amendment list --local --disabled failed (exit ${result.status}):\n` +
+      `amendment list --disabled failed (exit ${result.status}):\n` +
       (result.stderr || result.stdout),
     );
   }
