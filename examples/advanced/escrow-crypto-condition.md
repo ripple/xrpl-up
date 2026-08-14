@@ -145,28 +145,35 @@ xrpl-up accounts
 
 If the wrong preimage is presented, the ledger rejects the transaction:
 
+`xrpl-up run` invokes scripts via `tsx`, which compiles `.ts` files to CJS unless the project's `package.json` sets `"type": "module"` — and top-level `await` isn't valid CJS. Wrap the body in an `async` function instead so the script runs regardless of the project's module type:
+
 ```typescript
 // scripts/wrong-fulfillment.ts
 // Reads RECEIVER_SEED, ESCROW_OWNER, ESCROW_SEQ, CONDITION from the environment --
 // targets the *real* escrow created in Step 3, just with a deliberately wrong fulfillment.
 import { Client, Wallet } from 'xrpl';
-const client = new Client('ws://localhost:6006');
-await client.connect();
-const receiver = Wallet.fromSeed(process.env.RECEIVER_SEED!);
-const tx = {
-  TransactionType: 'EscrowFinish',
-  Account: receiver.address,
-  Owner: process.env.ESCROW_OWNER!,
-  OfferSequence: Number(process.env.ESCROW_SEQ),
-  Condition: process.env.CONDITION!,
-  Fulfillment: 'A0228020' + '00'.repeat(32) + '810100',   // well-formed but wrong preimage
-};
-const prepared = await client.autofill(tx as any);
-const signed = receiver.sign(prepared as any);
-const result = await client.submitAndWait(signed.tx_blob);
-console.log(result.result.meta?.TransactionResult);
-// tecCRYPTOCONDITION_ERROR  ← ledger rejects wrong fulfillment
-await client.disconnect();
+
+async function main() {
+  const client = new Client('ws://localhost:6006');
+  await client.connect();
+  const receiver = Wallet.fromSeed(process.env.RECEIVER_SEED!);
+  const tx = {
+    TransactionType: 'EscrowFinish',
+    Account: receiver.address,
+    Owner: process.env.ESCROW_OWNER!,
+    OfferSequence: Number(process.env.ESCROW_SEQ),
+    Condition: process.env.CONDITION!,
+    Fulfillment: 'A0228020' + '00'.repeat(32) + '810100',   // well-formed but wrong preimage
+  };
+  const prepared = await client.autofill(tx as any);
+  const signed = receiver.sign(prepared as any);
+  const result = await client.submitAndWait(signed.tx_blob);
+  console.log(result.result.meta?.TransactionResult);
+  // tecCRYPTOCONDITION_ERROR  ← ledger rejects wrong fulfillment
+  await client.disconnect();
+}
+
+main();
 ```
 
 ```bash

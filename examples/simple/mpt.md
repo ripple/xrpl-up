@@ -178,6 +178,10 @@ xrpl-up clawback --amount 500/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
 # (1000 minted - 250 transferred to Holder 2 in step 6 - 500 clawed back in step 8 = 250 remaining)
 xrpl-up clawback --amount 250/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
 
+# Holder 2 still holds the 250 tokens transferred in step 6 — claw those back too.
+# Destroy (step 10) requires OutstandingAmount to reach zero across *all* holders.
+xrpl-up clawback --amount 250/$MPT_ID --holder $HOLDER2 --seed $ISSUER_SEED
+
 # Holder opts back out
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED --unauthorize
 ```

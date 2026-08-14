@@ -100,52 +100,58 @@ xrpl-up account set --set-flag disableMaster --seed $TREASURY_SEED
 
 Each co-signer builds and signs a transaction using a different ticket. They can do this simultaneously — no ordering required.
 
-Use a script with `xrpl-up run` to sign multi-sig transactions. Below is `scripts/multisig-sign.ts`:
+Use a script with `xrpl-up run` to sign multi-sig transactions. Below is `scripts/multisig-sign.ts`. `xrpl-up run` invokes scripts via `tsx`, which compiles `.ts` files to CJS unless the project's `package.json` sets `"type": "module"` — and top-level `await` isn't valid CJS, so the body is wrapped in an `async` function instead:
 
 ```typescript
 // scripts/multisig-sign.ts
 // Reads TREASURY, DEST, ALICE_SEED, BOB_SEED, TICKET from the environment — no hardcoded secrets/IDs
 import { Client, Wallet, encode, decode, decodeAccountID } from 'xrpl';
 
-const client = new Client('ws://localhost:6006');
-await client.connect();
+async function main() {
+  const client = new Client('ws://localhost:6006');
+  await client.connect();
 
-const treasury  = process.env.TREASURY!;
-const dest      = process.env.DEST!;
-const aliceWallet = Wallet.fromSeed(process.env.ALICE_SEED!);
-const bobWallet   = Wallet.fromSeed(process.env.BOB_SEED!);
+  const treasury  = process.env.TREASURY!;
+  const dest      = process.env.DEST!;
+  const aliceWallet = Wallet.fromSeed(process.env.ALICE_SEED!);
+  const bobWallet   = Wallet.fromSeed(process.env.BOB_SEED!);
 
-// Tx 1: uses the given ticket — Alice and Bob sign independently.
-// autofill(tx, signersCount) fills the multisig-adjusted Fee and LastLedgerSequence
-// (a plain autofill(tx) without the signers count omits both).
-const tx1 = await client.autofill({
-  TransactionType: 'Payment',
-  Account: treasury,
-  Destination: dest,
-  Amount: '5000000',    // 5 XRP in drops
-  Sequence: 0,          // must be 0 when using a ticket
-  TicketSequence: Number(process.env.TICKET),
-  SigningPubKey: '',    // empty for multi-sig
-} as any, 2);
+  // Tx 1: uses the given ticket — Alice and Bob sign independently.
+  // autofill(tx, signersCount) fills the multisig-adjusted Fee and LastLedgerSequence
+  // (a plain autofill(tx) without the signers count omits both).
+  const tx1 = await client.autofill({
+    TransactionType: 'Payment',
+    Account: treasury,
+    Destination: dest,
+    Amount: '5000000',    // 5 XRP in drops
+    Sequence: 0,          // must be 0 when using a ticket
+    TicketSequence: Number(process.env.TICKET),
+    SigningPubKey: '',    // empty for multi-sig
+  } as any, 2);
 
-// wallet.sign(tx, true) returns a binary-encoded tx_blob (hex), not JSON —
-// decode() it back to an object to read the SigningPubKey/TxnSignature it produced.
-const aliceSigned = decode(aliceWallet.sign(tx1, true).tx_blob) as any;
-const bobSigned = decode(bobWallet.sign(tx1, true).tx_blob) as any;
+  // wallet.sign(tx, true) returns a binary-encoded tx_blob (hex), not JSON —
+  // decode() it back to an object to read the SigningPubKey/TxnSignature it produced.
+  const aliceSigned = decode(aliceWallet.sign(tx1, true).tx_blob) as any;
+  const bobSigned = decode(bobWallet.sign(tx1, true).tx_blob) as any;
 
-// The ledger requires Signers sorted by the *binary* AccountID, ascending —
-// base58 address string order does not match this.
-const signers = [
-  { Signer: { Account: aliceWallet.address, SigningPubKey: aliceSigned.Signers[0].Signer.SigningPubKey, TxnSignature: aliceSigned.Signers[0].Signer.TxnSignature } },
-  { Signer: { Account: bobWallet.address,   SigningPubKey: bobSigned.Signers[0].Signer.SigningPubKey,   TxnSignature: bobSigned.Signers[0].Signer.TxnSignature } },
-].sort((a, b) => Buffer.compare(decodeAccountID(a.Signer.Account), decodeAccountID(b.Signer.Account)));
+  // The ledger requires Signers sorted by the *binary* AccountID, ascending —
+  // base58 address string order does not match this.
+  const signers = [
+    { Signer: { Account: aliceWallet.address, SigningPubKey: aliceSigned.Signers[0].Signer.SigningPubKey, TxnSignature: aliceSigned.Signers[0].Signer.TxnSignature } },
+    { Signer: { Account: bobWallet.address,   SigningPubKey: bobSigned.Signers[0].Signer.SigningPubKey,   TxnSignature: bobSigned.Signers[0].Signer.TxnSignature } },
+  ].sort((a, b) => Buffer.compare(decodeAccountID(a.Signer.Account), decodeAccountID(b.Signer.Account)));
 
-// Combine and submit (2-of-3 quorum met)
-const combined = await client.submitAndWait(encode({ ...tx1, Signers: signers } as any));
-console.log('Tx1 result:', combined.result.meta?.TransactionResult);
+  // Combine and submit (2-of-3 quorum met)
+  const combined = await client.submitAndWait(encode({ ...tx1, Signers: signers } as any));
+  console.log('Tx1 result:', combined.result.meta?.TransactionResult);
 
-await client.disconnect();
+  await client.disconnect();
+}
+
+main();
 ```
+
+`xrpl-up run` executes scripts with Node's normal module resolution, which only finds packages under the local `node_modules` of the project the script lives in — install `xrpl` there first (`npm install xrpl`).
 
 ```bash
 DEST_JSON=$(xrpl-up faucet --network local --json)

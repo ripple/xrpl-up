@@ -58,34 +58,44 @@ xrpl-up ticket list $USER
 
 ## 3. Use a ticket in a transaction
 
-When using a ticket, set `Sequence = 0` and `TicketSequence = <n>` in the transaction. You can do this in a custom script via `xrpl-up run`:
+When using a ticket, set `Sequence = 0` and `TicketSequence = <n>` in the transaction. You can do this in a custom script via `xrpl-up run`. `xrpl-up run` executes scripts with Node's normal module resolution, which only finds packages under the local `node_modules` of the project the script lives in — install `xrpl` there first:
+
+```bash
+npm install xrpl
+```
+
+`xrpl-up run` invokes the script through `tsx`, which compiles each `.ts` file to CJS unless the project's `package.json` sets `"type": "module"` — and top-level `await` isn't valid CJS. Wrap the body in an `async` function instead so the script runs regardless of the project's module type:
 
 ```typescript
 // scripts/use-ticket.ts
 // Reads USER_SEED, TICKET_2, RECEIVER from the environment — no hardcoded secrets/IDs
 import { Client, Wallet } from 'xrpl';
 
-const client = new Client('ws://localhost:6006');
-await client.connect();
+async function main() {
+  const client = new Client('ws://localhost:6006');
+  await client.connect();
 
-const wallet = Wallet.fromSeed(process.env.USER_SEED!);
+  const wallet = Wallet.fromSeed(process.env.USER_SEED!);
 
-// Use ticket sequence TICKET_2 (out-of-order — TICKET_0 and TICKET_1 are still unused)
-const tx = {
-  TransactionType: 'Payment',
-  Account: wallet.address,
-  Destination: process.env.RECEIVER!,
-  Amount: '1000000',   // 1 XRP in drops
-  Sequence: 0,         // must be 0 when using a ticket
-  TicketSequence: Number(process.env.TICKET_2),  // the ticket to consume
-};
+  // Use ticket sequence TICKET_2 (out-of-order — TICKET_0 and TICKET_1 are still unused)
+  const tx = {
+    TransactionType: 'Payment',
+    Account: wallet.address,
+    Destination: process.env.RECEIVER!,
+    Amount: '1000000',   // 1 XRP in drops
+    Sequence: 0,         // must be 0 when using a ticket
+    TicketSequence: Number(process.env.TICKET_2),  // the ticket to consume
+  };
 
-const prepared = await client.autofill(tx as any);
-const signed = wallet.sign(prepared as any);
-const result = await client.submitAndWait(signed.tx_blob);
-console.log(result.result.meta?.TransactionResult);
+  const prepared = await client.autofill(tx as any);
+  const signed = wallet.sign(prepared as any);
+  const result = await client.submitAndWait(signed.tx_blob);
+  console.log(result.result.meta?.TransactionResult);
 
-await client.disconnect();
+  await client.disconnect();
+}
+
+main();
 ```
 
 ```bash
