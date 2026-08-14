@@ -47,12 +47,12 @@ const packageJsonTemplate = (name: string) =>
         accounts: 'xrpl-up accounts',
       },
       dependencies: {
-        xrpl: '^4.6.0',
+        xrpl: '^5.0.0',
       },
       devDependencies: {
         typescript: '^5.3.0',
         tsx: '^4.7.0',
-        '@types/node': '^20.0.0',
+        '@types/node': '^22.0.0',
       },
     },
     null,

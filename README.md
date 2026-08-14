@@ -19,7 +19,7 @@ CLI for XRPL local development and scripting. Spin up a local sandbox with pre-f
 # Latest stable release
 npm install -g xrpl-up
 
-# Beta release
+# Beta release (currently 0.3.0-beta.0)
 npm install -g xrpl-up@beta-experimental
 ```
 
@@ -57,37 +57,6 @@ claude plugin install xrpl-up@xrpl-up --scope user
 ```
 
 Claude translates your request into the correct `xrpl-up` commands, executes them, and explains the result in plain language.
-
-## Quick Start
-
-```bash
-# Scaffold a new project (select "local" as default network)
-xrpl-up init my-project
-cd my-project && npm install
-
-# Start a local sandbox with 10 pre-funded accounts (local is the default)
-xrpl-up start
-
-# In another terminal — list accounts with live balances
-xrpl-up accounts
-
-# Run a script against the local sandbox
-xrpl-up run scripts/example-payment.ts
-
-# Create an XRP/USD AMM pool (100 XRP + 100 USD, 0.5% fee)
-xrpl-up amm create --asset XRP --asset2 USD/rIssuer... --amount 100 --amount2 100 --trading-fee 500 --seed sEd...
-
-# Mint a transferable NFT
-xrpl-up nft mint --taxon 0 --uri https://example.com/meta.json --transferable --seed sn3nxiW7...
-
-# Create an MPT issuance (Multi-Purpose Token)
-xrpl-up mptoken issuance create --max-amount 1000000 --asset-scale 6 --seed sn3nxiW7...
-
-# Open a payment channel
-xrpl-up channel create --to rDestination... --amount 10 --settle-delay 86400 --seed sSrc...
-```
-
----
 
 ## Commands
 
@@ -377,43 +346,6 @@ Run `xrpl-up check create --help` / `check cash --help` / `check cancel --help` 
 
 ---
 
-### `xrpl-up account set`
-
-Enable or disable account flags (replaces the old `accountset` command).
-
-```bash
-xrpl-up account set --set-flag requireDestTag --seed sn3nxiW7...
-xrpl-up account set --clear-flag requireDestTag --seed sn3nxiW7...
-```
-
-| Flag name | Description |
-|-----------|-------------|
-| `requireDestTag` | Require a destination tag on all incoming payments |
-| `requireAuth` | Require the issuer to authorize all trust lines |
-| `disallowXRP` | Signal that this account does not accept direct XRP payments |
-| `disableMaster` | Disable the master key (use only after setting a signer list) |
-| `noFreeze` | Permanently give up the ability to freeze trust lines (irreversible) |
-| `globalFreeze` | Freeze all trust lines at once (issuers) |
-| `defaultRipple` | Enable rippling on all new trust lines (issuers) |
-| `depositAuth` | Only accept payments from pre-authorized senders |
-
-For IOU clawback, use `--allow-clawback --confirm` (irreversible, not a `--set-flag`).
-
-> **Note:** Set a signer list before disabling the master key (`disableMaster`). For signer list management, use `xrpl-up multisig`. To query account settings, use `xrpl-up account info`.
-
----
-
-### Transaction history
-
-The `tx` command has been removed. Use `xrpl-up account transactions`:
-
-```bash
-xrpl-up account transactions rMyAddress...
-xrpl-up account transactions rMyTestnetAddress... --network testnet   # fund one first: xrpl-up faucet --network testnet
-```
-
----
-
 ### `xrpl-up deposit-preauth`
 
 Manage DepositPreauth entries (renamed from `depositpreauth`). Required when an account has the `depositAuth` flag set (enable it with `xrpl-up account set --set-flag depositAuth`).
@@ -514,6 +446,39 @@ xrpl-up account info rMyAddress
 xrpl-up account transactions rMyAddress
 xrpl-up account trust-lines rMyAddress
 xrpl-up account balance rMyAddress --network testnet
+```
+
+#### `xrpl-up account set`
+
+Enable or disable account flags (replaces the old `accountset` command).
+
+```bash
+xrpl-up account set --set-flag requireDestTag --seed sn3nxiW7...
+xrpl-up account set --clear-flag requireDestTag --seed sn3nxiW7...
+```
+
+| Flag name | Description |
+|-----------|-------------|
+| `requireDestTag` | Require a destination tag on all incoming payments |
+| `requireAuth` | Require the issuer to authorize all trust lines |
+| `disallowXRP` | Signal that this account does not accept direct XRP payments |
+| `disableMaster` | Disable the master key (use only after setting a signer list) |
+| `noFreeze` | Permanently give up the ability to freeze trust lines (irreversible) |
+| `globalFreeze` | Freeze all trust lines at once (issuers) |
+| `defaultRipple` | Enable rippling on all new trust lines (issuers) |
+| `depositAuth` | Only accept payments from pre-authorized senders |
+
+For IOU clawback, use `--allow-clawback --confirm` (irreversible, not a `--set-flag`).
+
+> **Note:** Set a signer list before disabling the master key (`disableMaster`). For signer list management, use `xrpl-up multisig`. To query account settings, use `xrpl-up account info`.
+
+#### `xrpl-up account transactions`
+
+Recent transaction history (replaces the old `tx list` command):
+
+```bash
+xrpl-up account transactions rMyAddress...
+xrpl-up account transactions rMyTestnetAddress... --network testnet   # fund one first: xrpl-up faucet --network testnet
 ```
 
 ---
