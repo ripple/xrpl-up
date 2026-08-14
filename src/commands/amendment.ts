@@ -5,7 +5,7 @@ import { Client } from 'xrpl';
 import { loadConfig, resolveNetwork, DEFAULT_CONFIG } from '../core/config';
 import fs from 'node:fs';
 import path from 'node:path';
-import { LOCAL_WS_URL, EXTRA_AMENDMENTS_FILE, writeRippledConfig, startCommandHint } from '../core/compose';
+import { LOCAL_WS_URL, EXTRA_AMENDMENTS_FILE, writeRippledConfig, startCommandHint, isConsensusMode } from '../core/compose';
 import { logger } from '../utils/logger';
 import { resetCommand } from './reset';
 
@@ -369,6 +369,10 @@ export async function amendmentEnableCommand(namesOrHashes: string[], options: A
     // mode the user was actually running. Suggesting bare `start` to someone
     // on --local-network would silently drop them into standalone.
     const startCommand = startCommandHint();
+    // isConsensusMode() reads docker-compose.yml, which resetCommand() below
+    // regenerates — capture this before resetting or it always reads as
+    // standalone afterward.
+    const wasConsensusMode = isConsensusMode();
 
     if (yes) {
       logger.blank();
@@ -378,6 +382,15 @@ export async function amendmentEnableCommand(namesOrHashes: string[], options: A
       printQueuedAmendments();
       logger.dim('  Run the following to start with the new amendment(s) active:');
       logger.dim(`    ${startCommand}`);
+      if (wasConsensusMode) {
+        // Force-enable at genesis does work here (both nodes build/sync the same
+        // genesis ledger with [amendments] applied) but has been observed to be
+        // intermittently racy on the first boot after a reset — see SPEC.md
+        // §5.6.1. If it doesn't show enabled right away, this is why.
+        logger.dim('  If xrpl-up amendment list still shows these as disabled a');
+        logger.dim('  few seconds after the network is ready, this is a known');
+        logger.dim('  intermittent race — run xrpl-up amendment list again.');
+      }
       logger.blank();
     } else {
       logger.blank();

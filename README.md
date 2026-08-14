@@ -612,8 +612,6 @@ Amendments you enable stay in effect across restarts until you `xrpl-up reset` (
 >
 > That lineage change is why `xrpl-up snapshot save`/`restore` records which amendment set each snapshot's genesis was built with: restoring a snapshot taken before an `amendment enable` automatically reverts the sandbox's amendment config to match it (and vice versa) — the ledger and the config always agree after a restore. See `xrpl-up reset` above for undoing an `enable` without a snapshot.
 
-> **Some amendments always report `Enabled: ✗ no` — this is cosmetic, not a failure.** rippled compiles the long-standing amendments (`Checks`, `Escrow`, `PayChan`, `MultiSign`, `DepositAuth`, `Clawback`, the old `fix*` set, …) in as permanently active, so they work even though they never appear in a freshly created genesis ledger's amendment set. Live-verified: `check create`, `escrow create`, and `account set --set-flag depositAuth` all succeed while `amendment list` shows those amendments disabled. Only newer amendments (AMM, MPT, Credentials, DID, PermissionedDEX, SingleAssetVault, …) reflect their real state in that column, and those are the ones `amendment enable` affects.
-
 ---
 
 ### `xrpl-up init [directory]`
