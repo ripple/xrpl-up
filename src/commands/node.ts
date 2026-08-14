@@ -17,6 +17,9 @@ import {
   LOCAL_WS_URL,
   FAUCET_URL,
   COMPOSE_PROJECT,
+  volumeHasData,
+  VOLUME_NAME,
+  PEER_VOLUME_NAME,
 } from '../core/compose';
 import { validateConfig, printValidationResult } from './config';
 import { GENESIS_ADDRESS } from '../core/standalone';
@@ -146,6 +149,33 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   const localNetwork = isLocal && (options.localNetwork ?? false);
   const noConsensus = isLocal && !localNetwork;
   const persist = isLocal && localNetwork; // --local-network always persists
+
+  // Starting standalone always clears the wallet store (below, `if (!persist)
+  // store.clear()`), but it never touches the --local-network ledger volumes —
+  // they're a separate code path entirely. If those volumes still hold real
+  // ledger data, warn before silently discarding the account records that are
+  // the only way to reach them, since `xrpl-up accounts` won't list them
+  // afterward and the seeds aren't recoverable without a snapshot.
+  if (noConsensus && (volumeHasData(VOLUME_NAME) || volumeHasData(PEER_VOLUME_NAME))) {
+    logger.warning(
+      'Starting standalone mode will replace your current wallet records.\n' +
+      '    Run with --local-network instead to keep using this data,\n' +
+      '    or run `xrpl-up snapshot save <name>` first if you want it back later.'
+    );
+    if (process.stdin.isTTY && process.stdout.isTTY) {
+      const { proceed } = await inquirer.prompt<{ proceed: boolean }>([{
+        type: 'confirm',
+        name: 'proceed',
+        message: 'Continue starting standalone mode?',
+        default: false,
+      }]);
+      if (!proceed) {
+        logger.dim('  Aborted.');
+        return;
+      }
+    }
+    logger.blank();
+  }
 
   if (isLocal) {
     const image = options.image ?? DEFAULT_IMAGE;

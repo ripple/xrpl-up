@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { loadConfig, resolveNetwork } from '../core/config';
 import { NetworkManager } from '../core/network';
-import { LOCAL_WS_URL, FAUCET_URL } from '../core/compose';
+import { LOCAL_WS_URL, FAUCET_URL, isConsensusMode } from '../core/compose';
 import { logger } from '../utils/logger';
 
 export interface StatusOptions {
@@ -82,6 +82,10 @@ export async function statusCommand(options: StatusOptions = {}): Promise<void> 
     logger.blank();
     logger.section('Status · ' + chalk.cyan(manager.displayName));
 
+    if (isLocal) {
+      const mode = isConsensusMode() ? 'Local network (--local-network, consensus)' : 'Standalone';
+      logger.log(`${chalk.dim('Mode:')}            ${chalk.white(mode)}`);
+    }
     logger.log(`${chalk.dim('Version:')}         ${chalk.white(version)}`);
     logger.log(`${chalk.dim('State:')}           ${state === 'proposing' || state === 'full' ? chalk.green(state) : chalk.yellow(state)}`);
     logger.log(`${chalk.dim('Ledger:')}          ${chalk.white('#' + String(ledgerSeq))}`);

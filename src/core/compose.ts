@@ -602,7 +602,7 @@ export function composeDown(): void {
  * Returns true if a Docker volume exists AND contains a ledger.db file.
  * This is the same sentinel the entrypoint checks to decide --load vs --start.
  */
-function volumeHasData(volumeName: string): boolean {
+export function volumeHasData(volumeName: string): boolean {
   try {
     execSync(
       `docker run --rm -v ${volumeName}:/data alpine test -f /data/ledger.db`,

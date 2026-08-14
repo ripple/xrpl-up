@@ -113,6 +113,8 @@ Two modes are available:
 
 **Local network** (`--local-network`) runs a 2-node private consensus network. Ledgers close via real consensus (~4s), state persists across stop/start, and snapshots are supported. Use this when you're building an app over hours or days against a stable environment — set up AMM pools, trust lines, and funded accounts once, snapshot the state, and roll back when you need to.
 
+> **Switching from `--local-network` back to standalone replaces your wallet records.** Standalone clears the account store on start, and those seeds are the only way to reach accounts on the persisted local-network ledger. If the local-network volumes still hold data, `start` warns first and asks for confirmation — save a snapshot beforehand if you want that state back. In a non-interactive shell (CI) it prints the warning and continues rather than blocking on input.
+
 Once started (either mode), interaction commands default to the local sandbox — no flag needed. To target something else, pass `--network testnet`, `--network devnet`, or `--network <wss://...>`:
 
 ```bash
@@ -227,7 +229,7 @@ xrpl-up status                     # local (default)
 xrpl-up status --network testnet
 ```
 
-Displays rippled version, current ledger index, and faucet availability.
+Displays rippled version, current ledger index, and faucet availability. For the local sandbox it also shows which mode is running (standalone vs `--local-network`).
 
 ---
 
