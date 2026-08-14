@@ -237,6 +237,8 @@ Displays rippled version, current ledger index, and faucet availability. For the
 
 Runs a TypeScript or JavaScript script with the network URL injected as environment variables. TypeScript is executed directly via `tsx` (no build step needed).
 
+> **Wrap your script body in an `async function`, don't use top-level `await`** — `tsx` compiles `.ts` files to CJS unless the project's `package.json` sets `"type": "module"` (the config `xrpl-up init` scaffolds does set this, but a script dropped into an arbitrary project may not have it), and top-level `await` isn't valid CJS. The example below follows this pattern for exactly that reason.
+
 ```bash
 xrpl-up run scripts/example-payment.ts --network local
 xrpl-up run scripts/my-script.js --network testnet

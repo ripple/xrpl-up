@@ -271,6 +271,7 @@ Each command supports `--help` for detailed flag documentation. Run `xrpl-up <co
 - TypeScript scripts are executed directly — no build step required
 - TypeScript runner resolution: local `tsx` → local `ts-node` → `npx tsx`
 - JavaScript scripts are run with `node`
+- `tsx` compiles `.ts` files to CJS unless the script's project sets `"type": "module"` in `package.json` (the `init` scaffold does; an arbitrary project may not). Top-level `await` is invalid CJS — scripts should wrap their body in an `async function` instead, as the README's example does
 - Three environment variables are injected: `XRPL_NETWORK`, `XRPL_NETWORK_URL`, `XRPL_NETWORK_NAME`
 - Additional CLI arguments after the script path are passed through as `process.argv`
 - Exit code is forwarded: non-zero exits from the script cause `xrpl-up run` to exit with the same code
