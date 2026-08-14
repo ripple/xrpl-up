@@ -17,7 +17,7 @@ xrpl-up start          # start local XRPL sandbox
 xrpl-up status        # confirm healthy
 ```
 
-All examples use `--local` to target the sandbox. Replace with `--network testnet` (or `--network devnet`) to run on a public network.
+All examples target the local sandbox by default (or explicitly via `--network local`). Replace with `--network testnet` (or `--network devnet`) to run on a public network.
 
 ---
 
@@ -109,7 +109,7 @@ xrpl-up <command> --help
 ## Tips
 
 - **Save seeds and addresses** as shell variables while following a guide — most examples chain multiple commands.
-- **`xrpl-up accounts --local`** shows all wallets xrpl-up knows about and their XRP balances.
+- **`xrpl-up accounts`** shows all wallets xrpl-up knows about and their XRP balances.
 - **`xrpl-up account transactions <address>`** shows the full transaction history for any account.
 - **`xrpl-up reset`** wipes the sandbox ledger back to genesis — useful for a clean slate. Add `--snapshots` to also delete saved snapshots.
-- Use **`--network testnet`** instead of `--local` to test on the public Testnet (no Docker required).
+- Use **`--network testnet`** instead of the default local sandbox to test on the public Testnet (no Docker required).

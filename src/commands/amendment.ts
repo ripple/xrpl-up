@@ -5,7 +5,7 @@ import { Client } from 'xrpl';
 import { loadConfig, resolveNetwork, DEFAULT_CONFIG } from '../core/config';
 import fs from 'node:fs';
 import path from 'node:path';
-import { LOCAL_WS_URL, EXTRA_AMENDMENTS_FILE, writeRippledConfig } from '../core/compose';
+import { LOCAL_WS_URL, EXTRA_AMENDMENTS_FILE, writeRippledConfig, startCommandHint } from '../core/compose';
 import { logger } from '../utils/logger';
 import { resetCommand } from './reset';
 
@@ -219,7 +219,7 @@ export async function amendmentInfoCommand(nameOrHash: string, options: Amendmen
 
     if (!found) {
       spinner.fail(`Amendment not found: ${nameOrHash}`);
-      logger.dim(`  Run: xrpl-up amendment list${options.local ? ' --local' : ''} to see all known amendments.`);
+      logger.dim('  Run: xrpl-up amendment list to see all known amendments.');
       process.exit(1);
     }
 
@@ -237,13 +237,12 @@ export async function amendmentInfoCommand(nameOrHash: string, options: Amendmen
     logger.blank();
 
     if (!found.enabled && found.supported) {
-      logger.dim(`  Enable with: xrpl-up amendment enable ${found.name} --local`);
+      logger.dim(`  Enable with: xrpl-up amendment enable ${found.name}`);
       logger.blank();
     }
     if (!found.supported) {
       logger.dim('  Upgrade the local rippled image to support this amendment:');
-      logger.dim('    Edit the rippled-image field in your xrpl-up config (xrpl-up config export to view path)');
-      logger.dim('    xrpl-up reset --local && xrpl-up start');
+      logger.dim('    xrpl-up reset && xrpl-up start --image <newer-image>');
       logger.blank();
     }
   } catch (err: unknown) {
@@ -262,7 +261,7 @@ export interface AmendmentToggleOptions {
 
 export async function amendmentEnableCommand(namesOrHashes: string[], options: AmendmentToggleOptions): Promise<void> {
   if (!options.local) {
-    logger.error('amendment enable only works with --local (cannot admin-RPC a public node).');
+    logger.error('amendment enable only works on the local sandbox (cannot admin-RPC a public node) — omit --network, or pass --network local.');
     process.exit(1);
   }
 
@@ -292,7 +291,7 @@ export async function amendmentEnableCommand(namesOrHashes: string[], options: A
 
       if (!found) {
         spinner.fail(`Amendment not found: ${nameOrHash}`);
-        logger.dim('  Run: xrpl-up amendment list --local to see available amendments.');
+        logger.dim('  Run: xrpl-up amendment list to see available amendments.');
         await client.disconnect();
         process.exit(1);
       }
@@ -366,6 +365,11 @@ export async function amendmentEnableCommand(namesOrHashes: string[], options: A
 
     const yes = options.autoReset || await confirm(chalk.bold('  Reset and restart the local node now? [y/N]'));
 
+    // Capture the mode before resetting, so the restart hint below names the
+    // mode the user was actually running. Suggesting bare `start` to someone
+    // on --local-network would silently drop them into standalone.
+    const startCommand = startCommandHint();
+
     if (yes) {
       logger.blank();
       // keepAmendments: the reset here exists purely to rebuild genesis with the
@@ -373,13 +377,13 @@ export async function amendmentEnableCommand(namesOrHashes: string[], options: A
       resetCommand({ keepAmendments: true });
       printQueuedAmendments();
       logger.dim('  Run the following to start with the new amendment(s) active:');
-      logger.dim('    xrpl-up start --local');
+      logger.dim(`    ${startCommand}`);
       logger.blank();
     } else {
       logger.blank();
       logger.dim('  To activate later, run:');
       logger.dim('    xrpl-up reset');
-      logger.dim('    xrpl-up start --local');
+      logger.dim(`    ${startCommand}`);
       logger.blank();
     }
   } catch (err: unknown) {

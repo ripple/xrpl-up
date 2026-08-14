@@ -2,13 +2,13 @@
 
 A Vault is an on-ledger pooled-asset object: depositors send an asset in and receive tradeable vault shares back, proportional to their contribution. The vault owner controls the asset cap, metadata, and (for IOU/MPT assets) can claw back shares from a holder.
 
-> **Requires the `SingleAssetVault` amendment enabled.** Check with `xrpl-up amendment info SingleAssetVault --local`. If it isn't on yet:
+> **Requires the `SingleAssetVault` amendment enabled.** Check with `xrpl-up amendment info SingleAssetVault`. If it isn't on yet:
 >
 > ```bash
-> xrpl-up amendment enable SingleAssetVault --local
+> xrpl-up amendment enable SingleAssetVault
 > # Wipes and resets the sandbox, then force-enables the amendment from a fresh genesis.
 >
-> xrpl-up start --local
+> xrpl-up start
 > ```
 >
 > Works in `--local-network` mode too (`xrpl-up start --local-network` in place of the last line
@@ -22,7 +22,7 @@ A Vault is an on-ledger pooled-asset object: depositors send an asset in and rec
 ## Prerequisites
 
 ```bash
-xrpl-up start --local
+xrpl-up start
 xrpl-up status   # wait until "healthy"
 export XRPL_NETWORK=local
 ```

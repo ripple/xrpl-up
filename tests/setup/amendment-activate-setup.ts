@@ -86,7 +86,7 @@ export async function setup(): Promise<void> {
   console.log("[amendment-activate-setup] Starting fresh --local-network stack…");
   const result = spawnSync(
     TSX,
-    [CLI, "start", "--local", "--local-network"],
+    [CLI, "start", "--local-network"],
     {
       encoding: "utf-8",
       timeout: 180_000,

@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import fs from 'node:fs';
-import { composeLogs, COMPOSE_FILE } from '../core/compose';
+import { composeLogs, COMPOSE_FILE, startCommandHint } from '../core/compose';
 import { logger } from '../utils/logger';
 
 export interface LogsOptions {
@@ -10,7 +10,7 @@ export interface LogsOptions {
 export async function logsCommand(options: LogsOptions = {}): Promise<void> {
   if (!fs.existsSync(COMPOSE_FILE)) {
     logger.error(
-      'No local stack found. Run `xrpl-up start --local` first to start the stack.'
+      `No local stack found. Run \`${startCommandHint()}\` first to start the stack.`
     );
     process.exit(1);
   }

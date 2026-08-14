@@ -48,7 +48,7 @@ const ACTIVATABLE_CANDIDATES = [
 
 /** Returns up to `count` candidates that are currently supported-but-disabled. */
 function findCandidates(count: number): string[] {
-  const result = runXrplUp(["amendment", "list", "--local", "--disabled"], {}, 30_000);
+  const result = runXrplUp(["amendment", "list", "--disabled"], {}, 30_000);
   if (result.status !== 0) {
     throw new Error(
       `amendment list --local --disabled failed (exit ${result.status}):\n` +
@@ -86,7 +86,7 @@ function findCandidates(count: number): string[] {
 async function assertEnabled(name: string, retries = 5, delayMs = 3_000): Promise<void> {
   let last = "";
   for (let i = 0; i < retries; i++) {
-    const info = runXrplUp(["amendment", "info", name, "--local"], {}, 30_000);
+    const info = runXrplUp(["amendment", "info", name], {}, 30_000);
     expect(info.status).toBe(0);
     last = stripAnsi(info.stdout);
     if (last.includes("Enabled:     ✔ yes")) return;
@@ -96,7 +96,7 @@ async function assertEnabled(name: string, retries = 5, delayMs = 3_000): Promis
 }
 
 function restartLocalNetwork(): void {
-  const start = runXrplUp(["start", "--local", "--local-network"], {}, 180_000);
+  const start = runXrplUp(["start", "--local-network"], {}, 180_000);
   expect(start.status).toBe(0);
 }
 
@@ -114,7 +114,7 @@ describe("amendment enable — single amendment activates in --local-network", (
     }
 
     const enable = runXrplUp(
-      ["amendment", "enable", target, "--local", "--auto-reset"],
+      ["amendment", "enable", target, "--auto-reset"],
       {},
       60_000,
     );
@@ -141,7 +141,7 @@ describe("amendment enable — multiple amendments in one command", () => {
     }
 
     const enable = runXrplUp(
-      ["amendment", "enable", ...targets, "--local", "--auto-reset"],
+      ["amendment", "enable", ...targets, "--auto-reset"],
       {},
       60_000,
     );
@@ -180,7 +180,7 @@ describe("snapshot lineage — restore across an amendment-driven genesis change
     expect(save.status).toBe(0);
 
     const enable = runXrplUp(
-      ["amendment", "enable", target, "--local", "--auto-reset"],
+      ["amendment", "enable", target, "--auto-reset"],
       {},
       60_000,
     );
@@ -195,7 +195,7 @@ describe("snapshot lineage — restore across an amendment-driven genesis change
     // The restored ledger predates the enable, so the amendment should be
     // back to disabled — proving the config was realigned to match, not just
     // left pointing at the (no-longer-applicable) new-genesis amendment set.
-    const info = runXrplUp(["amendment", "info", target, "--local"], {}, 30_000);
+    const info = runXrplUp(["amendment", "info", target], {}, 30_000);
     expect(info.status).toBe(0);
     expect(stripAnsi(info.stdout)).toContain("Enabled:     ✗ no");
   }, 300_000);

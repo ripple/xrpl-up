@@ -489,7 +489,7 @@ main().catch((err) => {
 const EXAMPLE_PAYMENT_LOCAL = `// scripts/example-payment.ts
 // Send XRP between two wallets on the local xrpl-up sandbox and verify balances.
 // Run with: xrpl-up run scripts/example-payment.ts
-// Requires: xrpl-up start --local  (running in another terminal)
+// Requires: xrpl-up start  (running in another terminal)
 import { Client, Wallet, xrpToDrops } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -566,7 +566,7 @@ main().catch((err) => {
 const EXAMPLE_TOKEN_LOCAL = `// scripts/example-token.ts
 // Issue a custom token (IOU) on the local xrpl-up sandbox.
 // Run with: xrpl-up run scripts/example-token.ts
-// Requires: xrpl-up start --local  (running in another terminal)
+// Requires: xrpl-up start  (running in another terminal)
 import { Client, Wallet, AccountSetAsfFlags } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -648,7 +648,7 @@ const EXAMPLE_DEX_LOCAL = `// scripts/example-dex.ts
 // when the buyer submits a matching offer.
 //
 // Run with: xrpl-up run scripts/example-dex.ts
-// Requires: xrpl-up start --local  (running in another terminal)
+// Requires: xrpl-up start  (running in another terminal)
 import { Client, Wallet, AccountSetAsfFlags } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -754,7 +754,7 @@ main().catch((err) => {
 const EXAMPLE_NFT_LOCAL = `// scripts/example-nft.ts
 // Full NFT lifecycle on the local xrpl-up sandbox: mint → sell → buy → burn.
 // Run with: xrpl-up run scripts/example-nft.ts
-// Requires: xrpl-up start --local  (running in another terminal)
+// Requires: xrpl-up start  (running in another terminal)
 import { Client, Wallet } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -850,7 +850,7 @@ main().catch((err) => {
 const EXAMPLE_MPT_LOCAL = `// scripts/example-mpt.ts
 // Issue and transfer a Multi-Purpose Token (MPT) on the local xrpl-up sandbox.
 // Run with: xrpl-up run scripts/example-mpt.ts
-// Requires: xrpl-up start --local  (running in another terminal)
+// Requires: xrpl-up start  (running in another terminal)
 import { Client, Wallet, MPTokenIssuanceCreateFlags } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -936,7 +936,7 @@ main().catch((err) => {
 const EXAMPLE_AMM_LOCAL = `// scripts/example-amm.ts
 // Create an XRP/USD AMM pool and execute a trade on the local xrpl-up sandbox.
 // Run with: xrpl-up run scripts/example-amm.ts
-// Requires: xrpl-up start --local  (running in another terminal)
+// Requires: xrpl-up start  (running in another terminal)
 import { Client, Wallet, xrpToDrops, AccountSetAsfFlags } from 'xrpl';
 
 const NETWORK_URL = process.env.XRPL_NETWORK_URL ?? 'ws://localhost:6006';
@@ -1065,7 +1065,7 @@ async function main() {
   console.log(\`Trader USD balance: \${usdLine?.balance ?? '0'}\`);
 
   console.log('\\n✓ AMM example complete!');
-  console.log(\`  Query pool: xrpl-up amm info XRP USD.\${issuer.address} --local\`);
+  console.log(\`  Query pool: xrpl-up amm info --asset XRP --asset2 USD/\${issuer.address}\`);
 
   await client.disconnect();
 }
@@ -1115,7 +1115,7 @@ export async function initCommand(options: InitOptions = {}): Promise<void> {
       name: 'defaultNetwork',
       message: 'Default network:',
       choices: [
-        { name: 'local    — local rippled via Docker (xrpl-up start --local)', value: 'local'   },
+        { name: 'local    — local rippled via Docker (xrpl-up start)', value: 'local'   },
         { name: 'testnet  — XRPL Testnet',                                    value: 'testnet' },
         { name: 'devnet   — XRPL Devnet',                                     value: 'devnet'  },
       ],
@@ -1159,7 +1159,7 @@ export async function initCommand(options: InitOptions = {}): Promise<void> {
 
   const cd = options.directory ? `cd ${options.directory} && ` : '';
   const nodeCmd = isLocal
-    ? `xrpl-up start --local     ${chalk.dim('# start local Docker sandbox')}`
+    ? `xrpl-up start             ${chalk.dim('# start local Docker sandbox')}`
     : `xrpl-up start             ${chalk.dim('# start sandbox with funded accounts')}`;
 
   const steps = [

@@ -25,7 +25,7 @@ describe("sandbox amendment enable --local", () => {
 
   beforeAll(() => {
     const result = runXrplUp(
-      ["amendment", "list", "--local", "--disabled"],
+      ["amendment", "list", "--disabled"],
       {},
       30_000,
     );
@@ -78,7 +78,7 @@ describe("sandbox amendment enable --local", () => {
   it("enables the discovered amendment and exits 0", () => {
     if (!targetAmendment) return; // skip — no candidate (all amendments already enabled)
     const result = runXrplUp(
-      ["amendment", "enable", targetAmendment, "--local"],
+      ["amendment", "enable", targetAmendment],
       {},
       60_000,
       "n\n",  // answer "no" to the reset prompt — keeps the sandbox running

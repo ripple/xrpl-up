@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { loadConfig, resolveNetwork } from '../core/config';
 import { NetworkManager } from '../core/network';
-import { LOCAL_WS_URL, FAUCET_URL, isConsensusMode } from '../core/compose';
+import { LOCAL_WS_URL, FAUCET_URL, isConsensusMode, startCommandHint } from '../core/compose';
 import { logger } from '../utils/logger';
 
 export interface StatusOptions {
@@ -109,7 +109,7 @@ export async function statusCommand(options: StatusOptions = {}): Promise<void> 
     if (isLocal) {
       logger.dim('  Is the local sandbox running? Check with:');
       logger.dim('    docker ps | grep xrpl-up');
-      logger.dim('  Start it with: xrpl-up start --local');
+      logger.dim(`  Start it with: ${startCommandHint()}`);
     }
     await manager.disconnect();
     process.exit(1);

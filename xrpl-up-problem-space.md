@@ -98,7 +98,7 @@ Docker image, ~50–500 MB for ledger data. No internet after initial pull. Stan
 needs far less than a full xrpld node — no peers, no consensus, no historical sync.
 
 ```
-xrpl-up start --local
+xrpl-up start
 ```
 
 - Starts xrpld in Docker (standalone mode, no peers, no sync)
@@ -139,7 +139,7 @@ local xrpld. Named networks are URL aliases:
 | devnet  | `wss://s.devnet.rippletest.net:51233` |
 
 > Remote mode does **not** bypass rate limits on public endpoints. For rate-limit-free
-> development, use local mode (`--local`).
+> development, use local mode (the default).
 
 - Networks are configured in a project-local file (`xrpl-up.config.js`, `xrpl-up.config.json`, or `.xrpl-up.json`) read from the current working directory
 - Faucet integration for testnet/devnet
@@ -175,10 +175,10 @@ xrpl-up logs      # streams Docker Compose logs for xrpld and faucet
 
 #### CI/CD Pipeline Support
 
-`xrpl-up start --local` detaches (backgrounds) by default, which is what CI/CD pipelines want:
+`xrpl-up start` detaches (backgrounds) by default, which is what CI/CD pipelines want:
 
 ```bash
-xrpl-up start --local  # starts sandbox, prints ready, exits 0
+xrpl-up start  # starts sandbox, prints ready, exits 0
 npm test
 xrpl-up stop           # tears down Docker stack (use if: always() in CI)
 ```

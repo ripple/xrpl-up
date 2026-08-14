@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import chalk from 'chalk';
 import ora from 'ora';
-import { composeDown, VOLUME_NAME, PEER_VOLUME_NAME, clearLocalNetworkImageRecord, clearGenesisLineage, EXTRA_AMENDMENTS_FILE, writeRippledConfig } from '../core/compose';
+import { composeDown, VOLUME_NAME, PEER_VOLUME_NAME, clearLocalNetworkImageRecord, clearGenesisLineage, EXTRA_AMENDMENTS_FILE, writeRippledConfig, startCommandHint } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
 
@@ -85,6 +85,6 @@ export function resetCommand(options: ResetOptions = {}): void {
 
   logger.blank();
   logger.success('Local sandbox reset to factory state.');
-  logger.dim('  Run xrpl-up start --local to start fresh.');
+  logger.dim(`  Run ${startCommandHint()} to start fresh.`);
   logger.blank();
 }

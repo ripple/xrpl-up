@@ -129,7 +129,7 @@ async function startNode(): Promise<void> {
   if (customImage) {
     console.log(`[local-node] Using custom rippled image: ${customImage}`);
   }
-  const result = spawnSync(TSX, [CLI, "start", "--local", ...imageArgs], {
+  const result = spawnSync(TSX, [CLI, "start", ...imageArgs], {
     encoding: "utf-8",
     timeout: 120_000,   // standalone is fast but first run pulls Docker image
     env: { ...process.env },

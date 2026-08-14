@@ -26,18 +26,18 @@ function getConfiguredAmendmentNames(): Set<string> {
 
 describe("sandbox amendment list --local", () => {
   it("exits 0", () => {
-    const result = runXrplUp(["amendment", "list", "--local"], {}, 30_000);
+    const result = runXrplUp(["amendment", "list"], {}, 30_000);
     expect(result.status).toBe(0);
   });
 
   it("stdout contains the Enabled and Supported column headers", () => {
-    const result = runXrplUp(["amendment", "list", "--local"], {}, 30_000);
+    const result = runXrplUp(["amendment", "list"], {}, 30_000);
     expect(result.stdout).toContain("Enabled");
     expect(result.stdout).toContain("Supported");
   });
 
   it("stdout contains the summary count line", () => {
-    const result = runXrplUp(["amendment", "list", "--local"], {}, 30_000);
+    const result = runXrplUp(["amendment", "list"], {}, 30_000);
     expect(result.stdout).toContain("total known");
   });
 
@@ -51,7 +51,7 @@ describe("sandbox amendment list --local", () => {
     const configuredNames = getConfiguredAmendmentNames();
     expect(configuredNames.size).toBeGreaterThan(50); // sanity: we expect ~75
 
-    const result = runXrplUp(["amendment", "list", "--local"], {}, 30_000);
+    const result = runXrplUp(["amendment", "list"], {}, 30_000);
     expect(result.status).toBe(0);
 
     const unknownAmendments: string[] = [];
@@ -73,7 +73,7 @@ describe("sandbox amendment list --local", () => {
 describe("sandbox amendment list --local --disabled", () => {
   it("exits 0", () => {
     const result = runXrplUp(
-      ["amendment", "list", "--local", "--disabled"],
+      ["amendment", "list", "--disabled"],
       {},
       30_000,
     );
@@ -84,7 +84,7 @@ describe("sandbox amendment list --local --disabled", () => {
 describe("sandbox amendment info --local (known amendment)", () => {
   it("looks up a known amendment by name and exits 0", () => {
     const result = runXrplUp(
-      ["amendment", "info", "fixUniversalNumber", "--local"],
+      ["amendment", "info", "fixUniversalNumber"],
       {},
       30_000,
     );
@@ -94,7 +94,7 @@ describe("sandbox amendment info --local (known amendment)", () => {
 
   it("unknown amendment name exits 1", () => {
     const result = runXrplUp(
-      ["amendment", "info", "ThisAmendmentDoesNotExist", "--local"],
+      ["amendment", "info", "ThisAmendmentDoesNotExist"],
       {},
       30_000,
     );
@@ -105,7 +105,7 @@ describe("sandbox amendment info --local (known amendment)", () => {
 describe("sandbox amendment list --local --diff testnet", () => {
   it("exits 0 and shows side-by-side columns", () => {
     const result = runXrplUp(
-      ["amendment", "list", "--local", "--diff", "testnet"],
+      ["amendment", "list", "--diff", "testnet"],
       {},
       60_000,
     );
@@ -117,7 +117,7 @@ describe("sandbox amendment list --local --diff testnet", () => {
 
   it("accepts a raw WebSocket URL for --diff", () => {
     const result = runXrplUp(
-      ["amendment", "list", "--local", "--diff", "wss://s.altnet.rippletest.net:51233"],
+      ["amendment", "list", "--diff", "wss://s.altnet.rippletest.net:51233"],
       {},
       60_000,
     );
@@ -139,7 +139,7 @@ describe("sandbox amendments match mainnet", () => {
 
     const configuredNames = getConfiguredAmendmentNames();
 
-    const result = runXrplUp(["amendment", "list", "--local"], {}, 30_000);
+    const result = runXrplUp(["amendment", "list"], {}, 30_000);
     expect(result.status).toBe(0);
 
     // Amendments that are built into rippled (always active, show enabled:false

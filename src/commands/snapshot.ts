@@ -497,7 +497,7 @@ export async function snapshotRestore(name: string): Promise<void> {
         `Account ${probe} from the snapshot sidecar was not found on the restored ledger.\n` +
         `  The restore may not have applied correctly. Check:\n` +
         `  - docker compose -p ${COMPOSE_PROJECT} logs rippled\n` +
-        `  - xrpl-up accounts --local\n` +
+        `  - xrpl-up accounts\n` +
         `  - Re-save the snapshot from a running sandbox and try again.`
       );
     }
@@ -505,7 +505,7 @@ export async function snapshotRestore(name: string): Promise<void> {
 
   logger.blank();
   logger.success(`Ledger state restored to snapshot "${name}"`);
-  logger.dim('  Run xrpl-up accounts --local to verify balances.');
+  logger.dim('  Run xrpl-up accounts to verify balances.');
   logger.blank();
 }
 

@@ -135,7 +135,7 @@ Verify the escrow is gone and the receiver has the XRP:
 xrpl-up escrow list $SENDER
 # (empty)
 
-xrpl-up accounts --local
+xrpl-up accounts
 # rReceiverXXX...  1025 XRP   ← original 1000 + 25 from escrow
 ```
 

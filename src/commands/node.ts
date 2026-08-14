@@ -137,7 +137,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     networkDisplayName = resolved.config.name ?? resolved.name;
 
     if (isMainnet(resolved.name, resolved.config)) {
-      logger.error('Cannot start sandbox on Mainnet — use testnet, devnet, or --local.');
+      logger.error('Cannot start sandbox on Mainnet — use --network testnet, --network devnet, or omit --network for the local sandbox.');
       process.exit(1);
     }
   }

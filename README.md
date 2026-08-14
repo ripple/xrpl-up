@@ -9,7 +9,7 @@ CLI for XRPL local development and scripting. Spin up a local sandbox with pre-f
 ## Prerequisites
 
 - **Node.js** v22 or later
-- **Docker** (required for `--local` mode only)
+- **Docker** (required for the local sandbox — not needed when targeting `--network testnet`/`devnet`)
 
 ## Installation
 
@@ -590,7 +590,7 @@ Run `xrpl-up vault create --help` / `vault set --help` / `vault deposit --help` 
 
 Inspect and manage XRPL amendments in the local sandbox. The local sandbox starts with a set of amendments baked into its genesis config; use `enable` to queue additional amendments (takes effect after `xrpl-up reset && xrpl-up start`).
 
-> **Devnet compatibility:** XRPL Devnet may enable pre-release amendments that are not yet supported by the rippled version bundled with this tool. If you encounter unsupported transaction types or behaviors on devnet, check whether the amendment is available in the local sandbox with `xrpl-up amendment list --local --diff devnet`.
+> **Devnet compatibility:** XRPL Devnet may enable pre-release amendments that are not yet supported by the rippled version bundled with this tool. If you encounter unsupported transaction types or behaviors on devnet, check whether the amendment is available in the local sandbox with `xrpl-up amendment list --diff devnet`.
 
 > **Local only for mutations:** `enable` writes to the genesis config and only applies to the local sandbox. `list` and `info` work on any network.
 
@@ -600,13 +600,13 @@ Lists all amendments known to the target node with their enabled/supported statu
 
 ```bash
 # List amendments on the local sandbox
-xrpl-up amendment list --local
+xrpl-up amendment list
 
 # List disabled amendments only
-xrpl-up amendment list --local --disabled
+xrpl-up amendment list --disabled
 
 # Side-by-side diff: local vs testnet
-xrpl-up amendment list --local --diff testnet
+xrpl-up amendment list --diff testnet
 
 # List amendments on testnet
 xrpl-up amendment list --network testnet
@@ -617,9 +617,9 @@ xrpl-up amendment list --network testnet
 Shows full details for a single amendment. Accepts the amendment name or a hash prefix.
 
 ```bash
-xrpl-up amendment info PermissionedDomains --local
+xrpl-up amendment info PermissionedDomains
 xrpl-up amendment info AMM --network testnet
-xrpl-up amendment info A730EB18 --local   # hash prefix lookup
+xrpl-up amendment info A730EB18   # hash prefix lookup
 ```
 
 #### `xrpl-up amendment enable <nameOrHash...>`
@@ -627,21 +627,21 @@ xrpl-up amendment info A730EB18 --local   # hash prefix lookup
 Queues one or more amendments for genesis activation on the local sandbox. Requires a reset to take effect — you'll be prompted automatically (once, for the whole batch), or pass `--auto-reset` to skip the prompt.
 
 ```bash
-xrpl-up amendment enable PermissionedDomains --local
+xrpl-up amendment enable PermissionedDomains
 # ⚠  Activating this amendment requires a full node reset.
 #    Ledger data and funded accounts will be wiped. Saved snapshots are kept.
 #  Reset and restart the local node now? [y/N]
 
 # Enable multiple amendments together — one queue, one reset:
-xrpl-up amendment enable SingleAssetVault DynamicMPT LendingProtocol --local
+xrpl-up amendment enable SingleAssetVault DynamicMPT LendingProtocol
 
 # Skip the prompt and reset automatically:
-xrpl-up amendment enable PermissionedDomains --local --auto-reset
+xrpl-up amendment enable PermissionedDomains --auto-reset
 ```
 
 Amendments you enable stay in effect across restarts until you `xrpl-up reset` (which clears them — use `reset --keep-amendments` to keep them).
 
-> **Works in both modes, but takes longer under `--local-network`.** `enable` changes the genesis config, which only takes effect when a genesis ledger is created. In standalone mode, `xrpl-up reset && xrpl-up start --local` picks it up in seconds. In `--local-network` mode, queuing an amendment makes the next start build a real 2-node consensus genesis from scratch instead of resuming the pre-built ledger — this takes roughly a minute (real peer discovery + consensus bootstrap) instead of ~5s, and it starts a **new ledger lineage**.
+> **Works in both modes, but takes longer under `--local-network`.** `enable` changes the genesis config, which only takes effect when a genesis ledger is created. In standalone mode, `xrpl-up reset && xrpl-up start` picks it up in seconds. In `--local-network` mode, queuing an amendment makes the next start build a real 2-node consensus genesis from scratch instead of resuming the pre-built ledger — this takes roughly a minute (real peer discovery + consensus bootstrap) instead of ~5s, and it starts a **new ledger lineage**.
 >
 > That lineage change is why `xrpl-up snapshot save`/`restore` records which amendment set each snapshot's genesis was built with: restoring a snapshot taken before an `amendment enable` automatically reverts the sandbox's amendment config to match it (and vice versa) — the ledger and the config always agree after a restore. See `xrpl-up reset` above for undoing an `enable` without a snapshot.
 
@@ -716,7 +716,7 @@ xrpl-up snapshot save after-setup
 
 # Roll back to known-good state and run again
 xrpl-up snapshot restore after-setup
-xrpl-up accounts --local    # shows accounts as of snapshot time
+xrpl-up accounts    # shows accounts as of snapshot time
 ```
 
 **Fresh start from a snapshot after reset:**
@@ -725,7 +725,7 @@ xrpl-up accounts --local    # shows accounts as of snapshot time
 xrpl-up reset                                    # wipe everything
 xrpl-up start --local-network          # start sandbox (creates new volume)
 xrpl-up snapshot restore after-setup             # restore saved state
-xrpl-up accounts --local                         # snapshot accounts restored
+xrpl-up accounts                         # snapshot accounts restored
 ```
 
 Snapshots are stored at `~/.xrpl-up/snapshots/` and are portable — copy them to any machine and restore. Each snapshot produces three files:
@@ -790,10 +790,10 @@ $EDITOR my-rippled.cfg
 xrpl-up config validate my-rippled.cfg
 
 # 4. Start with the custom config
-xrpl-up start --local --config my-rippled.cfg
+xrpl-up start --config my-rippled.cfg
 ```
 
-Validation also runs automatically when `--config` is passed to `xrpl-up start --local` — the sandbox will not start if there are blocking errors.
+Validation also runs automatically when `--config` is passed to `xrpl-up start` — the sandbox will not start if there are blocking errors.
 
 > **`--config` always runs standalone.** A custom `rippled.cfg` replaces the generated config entirely, including the 2-node consensus setup — `--config` and `--local-network` cannot be combined, and `xrpl-up start` rejects that combination with an error.
 
@@ -808,7 +808,7 @@ Standalone mode (the default) is recommended for CI — it starts in seconds, ha
 ```yaml
 # .github/workflows/test.yml
 steps:
-  - run: xrpl-up start --local
+  - run: xrpl-up start
   - run: npm test
   - run: xrpl-up stop
     if: always()

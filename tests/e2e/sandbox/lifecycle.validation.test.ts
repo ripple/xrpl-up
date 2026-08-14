@@ -49,12 +49,12 @@ describe("sandbox amendment validation", () => {
     expect(result.status).toBe(1);
   });
 
-  it("amendment enable without --local exits 1 immediately", () => {
-    // amendmentEnableCommand checks --local before any network call
-    const result = runXrplUp(["amendment", "enable", "SomeAmendment"]);
+  it("amendment enable against a remote network exits 1 immediately", () => {
+    // amendmentEnableCommand checks the resolved target is local before any network call
+    const result = runXrplUp(["amendment", "enable", "SomeAmendment", "--network", "testnet"]);
     expect(result.status).toBe(1);
     const combined = result.stdout + result.stderr;
-    expect(combined).toContain("--local");
+    expect(combined).toContain("local sandbox");
   });
 
 

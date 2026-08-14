@@ -83,7 +83,7 @@ xrpl-up CLI (src/cli.ts)
             Dockerfile   — Bundled and shipped with the npm package
 ```
 
-### 2.2 Standalone Mode (`xrpl-up start --local`)
+### 2.2 Standalone Mode (`xrpl-up start`)
 
 Default mode. A single rippled in standalone mode — no peers, no consensus, no persistence. Ledger state resets on every start.
 
@@ -228,7 +228,7 @@ Each command supports `--help` for detailed flag documentation. Run `xrpl-up <co
 
 ### 5.1 Local Node Lifecycle
 
-**`xrpl-up start --local`** startup sequence:
+**`xrpl-up start`** startup sequence:
 1. Check Docker daemon is running (`docker info`)
 2. Generate `~/.xrpl-up/rippled.cfg` (unless `--config` is provided)
 3. Write `~/.xrpl-up/validators.txt` (if missing)
@@ -483,7 +483,7 @@ Minimum required: **Node.js 22** (`engines.node` in `package.json`: `>=22.0.0`; 
 
 ### 9.2 Docker
 
-Required for all `--local` commands. Any Docker Engine version that supports Compose V2 (`docker compose` plugin) is sufficient. The tool calls `docker info` to verify availability before proceeding.
+Required for the local sandbox. Any Docker Engine version that supports Compose V2 (`docker compose` plugin) is sufficient. The tool calls `docker info` to verify availability before proceeding.
 
 ### 9.3 rippled Version Pinning Strategy
 
@@ -491,8 +491,8 @@ Required for all `--local` commands. Any Docker Engine version that supports Com
 - The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.3.0**.
 - Pinning to a specific tag (`--image rippleci/xrpld:3.3.0`) is supported via `--image`.
 - rippled 3.3.0 runs its process as a non-root user (uid 999) inside the container; 3.2.0 and earlier ran as root. This affects the pre-seeded genesis DB volumes for `--local-network` mode (see §2.3), which are now chowned to the target image's runtime uid/gid on extraction.
-- If a new rippled release adds amendments not in the `[amendments]` stanza, use `xrpl-up amendment enable <name> --local` to queue them for the next genesis start.
-- **Devnet compatibility:** XRPL Devnet may enable pre-release amendments ahead of the rippled version bundled with this tool. Transactions relying on such amendments may fail on the local sandbox. Use `xrpl-up amendment list --local --diff devnet` to identify gaps.
+- If a new rippled release adds amendments not in the `[amendments]` stanza, use `xrpl-up amendment enable <name>` to queue them for the next genesis start.
+- **Devnet compatibility:** XRPL Devnet may enable pre-release amendments ahead of the rippled version bundled with this tool. Transactions relying on such amendments may fail on the local sandbox. Use `xrpl-up amendment list --diff devnet` to identify gaps.
 
 ---
 

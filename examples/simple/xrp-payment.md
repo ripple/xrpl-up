@@ -77,7 +77,7 @@ Each row shows: ledger index, transaction type, result (`tesSUCCESS` / error), a
 ## 5. Check balances
 
 ```bash
-xrpl-up accounts --local
+xrpl-up accounts
 ```
 
 This lists all wallets xrpl-up knows about on the active network, including their XRP balance.

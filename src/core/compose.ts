@@ -73,7 +73,7 @@ const RIPPLED_CFG_FILE       = path.join(XRPL_UP_DIR, 'rippled.cfg');
 const RIPPLED_CFG_FILE_NODE1 = path.join(XRPL_UP_DIR, 'rippled-node1.cfg');
 const RIPPLED_CFG_FILE_NODE2 = path.join(XRPL_UP_DIR, 'rippled-node2.cfg');
 const VALIDATORS_CFG_FILE    = path.join(XRPL_UP_DIR, 'validators.txt');
-/** Extra amendments written by `amendment enable --local`; merged at genesis. */
+/** Extra amendments written by `amendment enable`; merged at genesis. */
 export const EXTRA_AMENDMENTS_FILE = path.join(XRPL_UP_DIR, 'genesis-amendments.txt');
 /** Records which image last started the persistent --local-network volumes. */
 const LOCAL_NETWORK_IMAGE_FILE = path.join(XRPL_UP_DIR, 'local-network-image.txt');
@@ -167,7 +167,7 @@ validators.txt
 # and won't activate via [amendments] in consensus mode.
 #
 # To enable additional amendments, run:
-#   xrpl-up amendment enable <name> --local
+#   xrpl-up amendment enable <name>
 # then reset and restart the node.
 # Hashes verified against s1.ripple.com on 2026-08-11 (rippled 3.3.0).
 [amendments]
@@ -872,6 +872,20 @@ export function isConsensusMode(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * The `start` invocation that resumes whichever mode the sandbox is
+ * currently configured for — `--local-network` if the existing compose file
+ * describes a consensus network, otherwise bare `start` (standalone).
+ * No compose file yet (fresh install) falls through to standalone, the
+ * right default for a first-time user. Use this instead of hardcoding
+ * `xrpl-up start` in restart hints — suggesting standalone to a
+ * --local-network user silently discards their wallet records (see
+ * nodeCommand's pre-standalone-start warning).
+ */
+export function startCommandHint(): string {
+  return isConsensusMode() ? 'xrpl-up start --local-network' : 'xrpl-up start';
 }
 
 /**

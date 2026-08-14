@@ -3,7 +3,7 @@ import ora from 'ora';
 import { Wallet } from 'xrpl';
 import { loadConfig, resolveNetwork, isMainnet } from '../core/config';
 import { NetworkManager } from '../core/network';
-import { FAUCET_URL } from '../core/compose';
+import { FAUCET_URL, startCommandHint } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
 
@@ -66,7 +66,7 @@ export async function faucetCommand(options: FaucetOptions = {}): Promise<void> 
         (err instanceof Error && err.message.includes('fetch failed'));
       if (isConnRefused) {
         logger.error(`Cannot reach local faucet at ${FAUCET_URL}`);
-        logger.error('Is the sandbox running?  Try: xrpl-up start --local');
+        logger.error(`Is the sandbox running?  Try: ${startCommandHint()}`);
       } else {
         logger.error(err instanceof Error ? err.message : String(err));
       }
