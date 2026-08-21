@@ -49,7 +49,10 @@ describe("sandbox amendment list", () => {
     // Note: in consensus mode, amendments activate through voting (~17 min),
     // NOT at genesis. So we check "known" (appears in feature list), not "enabled".
     const configuredNames = getConfiguredAmendmentNames();
-    expect(configuredNames.size).toBeGreaterThan(50); // sanity: we expect ~75
+    // Re-curated for rippled 3.3.0 (see SPEC.md §5.6.1): the list dropped from
+    // ~77 to 37 after live-verifying which entries actually force-enable on a
+    // fresh genesis. Sanity bound tightened to match, not loosened blindly.
+    expect(configuredNames.size).toBeGreaterThan(30);
 
     const result = runXrplUp(["amendment", "list"], {}, 30_000);
     expect(result.status).toBe(0);
@@ -144,11 +147,39 @@ describe("sandbox amendments match mainnet", () => {
 
     // Amendments that are built into rippled (always active, show enabled:false
     // in consensus mode). These are on mainnet but don't need [amendments] config.
+    // Original 16, found and removed in 845d4e0 (rippled 3.1/3.2 curation).
     const LEGACY_BUILTIN = new Set([
       "Escrow", "PayChan", "CryptoConditions", "FlowCross", "MultiSign",
       "TickSize", "TrustSetAuth", "SortedDirectories", "EnforceInvariants",
       "FeeEscalation", "fix1373", "fix1201", "fix1512", "fix1528", "fix1523",
       "fix1368",
+    ]);
+
+    // Same phenomenon as LEGACY_BUILTIN above, found again during the rippled
+    // 3.3.0 re-curation (see SPEC.md §5.6.1): these are on mainnet and fully
+    // functional, but no longer force-enable at genesis on this rippled build,
+    // so they were deliberately dropped from [amendments] rather than left in
+    // as false advertising. Live-verified functional despite enabled:false:
+    // `check create`, `escrow create`, `account set --set-flag depositAuth`
+    // all succeeded on a fresh genesis where the corresponding amendment
+    // showed disabled. Re-verify against LEGACY_BUILTIN's method (fresh
+    // genesis + feature RPC diff) before adding to either set after a future
+    // rippled upgrade — don't assume growth here is more of the same without
+    // checking.
+    const NO_LONGER_FORCE_ENABLES = new Set([
+      "CheckCashMakesTrustLine", "Checks", "Clawback", "DeletableAccounts",
+      "DepositAuth", "DepositPreauth", "DisallowIncoming", "ExpandedSignerList",
+      "fix1513", "fix1515", "fix1543", "fix1571", "fix1578", "fix1623",
+      "fix1781", "fixAmendmentMajorityCalc", "fixCheckThreading",
+      "fixDisallowIncomingV1", "fixInnerObjTemplate", "fixMasterKeyAsRegularKey",
+      "fixNFTokenRemint", "fixNFTokenReserve", "fixNonFungibleTokensV1_2",
+      "fixPayChanRecipientOwnerDir", "fixQualityUpperBound",
+      "fixReducedOffersV1", "fixRmSmallIncreasedQOffers",
+      "fixSTAmountCanonicalize", "fixTakerDryOfferRemoval",
+      "fixTrustLinesToSelf", "fixUniversalNumber", "Flow", "FlowSortStrands",
+      "HardenedValidations", "ImmediateOfferKilled", "MultiSignReserve",
+      "NegativeUNL", "NonFungibleTokensV1_1", "RequireFullyCanonicalSig",
+      "TicketBatch",
     ]);
 
     // Amendments known to rippled but NOT on mainnet — ok to be disabled.
@@ -182,6 +213,7 @@ describe("sandbox amendments match mainnet", () => {
         if (
           !configuredNames.has(name) &&
           !LEGACY_BUILTIN.has(name) &&
+          !NO_LONGER_FORCE_ENABLES.has(name) &&
           !NOT_ON_MAINNET.has(name)
         ) {
           supportedButNotEnabled.push(name);
@@ -192,9 +224,12 @@ describe("sandbox amendments match mainnet", () => {
     expect(
       supportedButNotEnabled,
       `These amendments are supported by rippled but not in our config ` +
-      `and not in the known exceptions list. If they are enabled on mainnet, ` +
-      `add them to [amendments] in src/core/compose.ts. If not, add them ` +
-      `to NOT_ON_MAINNET in this test.\n` +
+      `and not in the known exceptions list. If they are enabled on mainnet ` +
+      `AND actually force-enable on a fresh genesis, add them to [amendments] ` +
+      `in src/core/compose.ts. If they're on mainnet but no longer force-enable ` +
+      `(verify per SPEC.md §5.6.1's method before assuming this), add them to ` +
+      `NO_LONGER_FORCE_ENABLES. If not on mainnet at all, add them to ` +
+      `NOT_ON_MAINNET.\n` +
       `Missing: ${supportedButNotEnabled.join(", ")}`,
     ).toEqual([]);
   });
