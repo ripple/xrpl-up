@@ -19,7 +19,7 @@ CLI for XRPL local development and scripting. Spin up a local sandbox with pre-f
 # Latest stable release
 npm install -g xrpl-up
 
-# Beta release (currently 0.3.0-beta.0)
+# Beta release
 npm install -g xrpl-up@beta-experimental
 ```
 
