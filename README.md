@@ -2,7 +2,7 @@
 
 CLI for XRPL local development and scripting. Spin up a local sandbox with pre-funded accounts, run scripts, manage snapshots, and interact with remote testnet/devnet endpoints from one tool.
 
-> **This tool is intended for developer use when doing XRPL development or for users who want to try out XRPL functionality on local/Devnet/Testnet. It is NOT intended for use on the XRPL mainnet with real XRP and other tokens.** Using XRPL Mainnet requires following security best practices to protect your private key, which this tool doesn't provide. The developer of this project doesn't take any responsibility for loss of funds if this tool is used with the XRPL mainnet.
+> **Development and testing only.** xrpl-up is built for use with a local sandbox, Devnet, or Testnet. It is not designed or supported for XRPL Mainnet or real XRP or any other tokens. It does not implement production key management — e.g., seeds are stored unencrypted and can be passed on the command line — and several commands are irreversible. The optional Claude Code plugin builds and submits transactions from natural-language input using an AI model; its output may be wrong, so review commands before running them. Use only keys and accounts you're prepared to lose. Provided under the MIT License, "AS IS" and without warranty; to the maximum extent permitted by law, Ripple accepts no liability of any kind, including for any loss of funds, keys, or data, arising from use of this tool on any network.
 
 ![demo](demo.gif)
 
