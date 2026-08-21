@@ -34,6 +34,34 @@ const RETRY_MAX = 5;
 const LOCAL_RETRY_MAX = 3;
 const LOCAL_RETRY_SLEEP_MS = 1_000;
 
+export class MainnetBlockedError extends Error {
+  constructor(nodeUrl: string) {
+    super(
+      `Refusing to connect to XRPL Mainnet (${nodeUrl}). xrpl-up is not designed or ` +
+      'supported for Mainnet — it has no production key management (seeds are stored ' +
+      'unencrypted and can be passed on the command line) and several commands are ' +
+      'irreversible. There is no override for this.'
+    );
+    this.name = 'MainnetBlockedError';
+  }
+}
+
+/**
+ * 0 is mainnet by xrpl.js's own convention (see Wallet/defaultFaucets.ts).
+ * networkID is populated by xrpl.js from the connected server's own
+ * server_info, so this works for any mainnet-connected node regardless of
+ * hostname — unlike the URL-string heuristic in core/config.ts's
+ * isMainnet(), which only catches three known Ripple-operated hostnames.
+ * Blocks unconditionally, with no override — matches `start`/`faucet`'s
+ * existing mainnet block, since this tool is not designed or supported for
+ * Mainnet use at all. Exported as a pure function so the decision can be
+ * unit tested without a live connection.
+ */
+export function shouldBlockMainnet(networkID: number | undefined, isLocal: boolean): boolean {
+  if (isLocal) return false;
+  return networkID === 0;
+}
+
 async function withClientOnce<T>(nodeUrl: string, isLocal: boolean, fn: (client: Client) => Promise<T>): Promise<T> {
   const client = new Client(nodeUrl, { timeout: 60_000 });
   await client.connect();
@@ -46,6 +74,11 @@ async function withClientOnce<T>(nodeUrl: string, isLocal: boolean, fn: (client:
       client.on('connected', () => { clearTimeout(timeout); resolve(); });
       client.on('disconnected', () => { clearTimeout(timeout); reject(new Error('WebSocket disconnected during connect')); });
     });
+  }
+
+  if (shouldBlockMainnet(client.networkID, isLocal)) {
+    await client.disconnect();
+    throw new MainnetBlockedError(nodeUrl);
   }
 
   // Tag transactions from this CLI for Ripple's testnet/devnet attribution dashboard.
