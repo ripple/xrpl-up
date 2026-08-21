@@ -17,6 +17,14 @@ import { logger } from '../utils/logger';
 const SNAPSHOTS_DIR = path.join(os.homedir(), '.xrpl-up', 'snapshots');
 const WALLET_STORE_PATH = path.join(os.homedir(), '.xrpl-up', 'local-accounts.json');
 const SNAPSHOT_RESTORE_START_TIMEOUT_MS = 90_000;
+// The rippled/faucet ports opening (waited on above) doesn't mean the restored
+// ledger is queryable yet — consensus needs a moment to catch up and produce a
+// validated ledger after resume. 30s was observed to be too tight after heavy
+// back-to-back Docker churn (e.g. an amendment-enable genesis rebuild
+// immediately followed by a restore): the account existed and was queryable
+// only a few seconds after this window closed, so the failure was a false
+// negative, not an actual restore problem.
+const SNAPSHOT_RESTORE_VERIFY_TIMEOUT_MS = 60_000;
 
 /** Returns true if the named Docker volume exists. */
 function volumeExists(name: string = VOLUME_NAME): boolean {
@@ -469,7 +477,7 @@ export async function snapshotRestore(name: string): Promise<void> {
       const client = new Client(LOCAL_WS_URL, { timeout: 60_000 });
       await client.connect();
       // Wait a moment for consensus to produce a validated ledger after restart
-      const deadline = Date.now() + 30_000;
+      const deadline = Date.now() + SNAPSHOT_RESTORE_VERIFY_TIMEOUT_MS;
       let found = false;
       while (Date.now() < deadline) {
         try {
