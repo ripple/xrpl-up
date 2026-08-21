@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { resolveNodeUrl, TESTNET_URL, DEVNET_URL, shouldBlockMainnet, ALLOW_MAINNET_ENV_VAR } from "./client";
+import { describe, it, expect } from "vitest";
+import { resolveNodeUrl, TESTNET_URL, DEVNET_URL, shouldBlockMainnet } from "./client";
 
 describe("resolveNodeUrl", () => {
   it("resolves 'testnet' to testnet URL", () => {
@@ -25,11 +25,7 @@ describe("resolveNodeUrl", () => {
 });
 
 describe("shouldBlockMainnet", () => {
-  afterEach(() => {
-    delete process.env[ALLOW_MAINNET_ENV_VAR];
-  });
-
-  it("blocks networkID 0 (mainnet) on a non-local connection", () => {
+  it("blocks networkID 0 (mainnet) on a non-local connection, unconditionally", () => {
     expect(shouldBlockMainnet(0, false)).toBe(true);
   });
 
@@ -44,15 +40,5 @@ describe("shouldBlockMainnet", () => {
 
   it("does not block when networkID is undefined (unknown — can't tell, don't guess)", () => {
     expect(shouldBlockMainnet(undefined, false)).toBe(false);
-  });
-
-  it("respects the XRPL_UP_ALLOW_MAINNET=1 override", () => {
-    process.env[ALLOW_MAINNET_ENV_VAR] = "1";
-    expect(shouldBlockMainnet(0, false)).toBe(false);
-  });
-
-  it("does not treat other truthy-looking values as an override", () => {
-    process.env[ALLOW_MAINNET_ENV_VAR] = "true";
-    expect(shouldBlockMainnet(0, false)).toBe(true);
   });
 });

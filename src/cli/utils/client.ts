@@ -34,16 +34,13 @@ const RETRY_MAX = 5;
 const LOCAL_RETRY_MAX = 3;
 const LOCAL_RETRY_SLEEP_MS = 1_000;
 
-/** Set XRPL_UP_ALLOW_MAINNET=1 to override the mainnet block below. */
-export const ALLOW_MAINNET_ENV_VAR = 'XRPL_UP_ALLOW_MAINNET';
-
 export class MainnetBlockedError extends Error {
   constructor(nodeUrl: string) {
     super(
       `Refusing to connect to XRPL Mainnet (${nodeUrl}). xrpl-up is not designed or ` +
       'supported for Mainnet — it has no production key management (seeds are stored ' +
       'unencrypted and can be passed on the command line) and several commands are ' +
-      `irreversible. Set ${ALLOW_MAINNET_ENV_VAR}=1 to override at your own risk.`
+      'irreversible. There is no override for this.'
     );
     this.name = 'MainnetBlockedError';
   }
@@ -55,15 +52,14 @@ export class MainnetBlockedError extends Error {
  * server_info, so this works for any mainnet-connected node regardless of
  * hostname — unlike the URL-string heuristic in core/config.ts's
  * isMainnet(), which only catches three known Ripple-operated hostnames.
- * Blocks unconditionally (matches `start`/`faucet`'s existing mainnet
- * block) rather than just warning, since this tool is not designed or
- * supported for Mainnet use at all. Exported as a pure function so the
- * decision can be unit tested without a live connection.
+ * Blocks unconditionally, with no override — matches `start`/`faucet`'s
+ * existing mainnet block, since this tool is not designed or supported for
+ * Mainnet use at all. Exported as a pure function so the decision can be
+ * unit tested without a live connection.
  */
 export function shouldBlockMainnet(networkID: number | undefined, isLocal: boolean): boolean {
   if (isLocal) return false;
-  if (networkID !== 0) return false;
-  return process.env[ALLOW_MAINNET_ENV_VAR] !== '1';
+  return networkID === 0;
 }
 
 async function withClientOnce<T>(nodeUrl: string, isLocal: boolean, fn: (client: Client) => Promise<T>): Promise<T> {
