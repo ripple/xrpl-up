@@ -123,13 +123,13 @@ async function startNode(): Promise<void> {
     timeout: 30_000,
     env: { ...process.env },
   });
-  // Allow CI to test a specific rippled image (e.g. rippleci/rippled:3.1.2)
+  // Allow CI to test a specific rippled image (e.g. rippleci/rippled:3.2.0)
   const customImage = process.env.XRPL_RIPPLED_IMAGE;
   const imageArgs = customImage ? ["--image", customImage] : [];
   if (customImage) {
     console.log(`[local-node] Using custom rippled image: ${customImage}`);
   }
-  const result = spawnSync(TSX, [CLI, "start", "--local", "--detach", ...imageArgs], {
+  const result = spawnSync(TSX, [CLI, "start", ...imageArgs], {
     encoding: "utf-8",
     timeout: 120_000,   // standalone is fast but first run pulls Docker image
     env: { ...process.env },
@@ -176,6 +176,10 @@ async function prefundWorkerMasters(): Promise<void> {
     });
     let seq: number = infoResp.result.account_data.Sequence;
     const ledgerIndex = await client.getLedgerIndex();
+    // Bypassing autofill (see comment above) means autofill's own NetworkID
+    // injection is skipped too — set it manually or rippled rejects with
+    // telREQUIRES_NETWORK_ID for any network_id > 1024.
+    const networkID = client.networkID;
 
     const wallets: Wallet[] = [];
     for (let i = 0; i < MAX_PREFUND_WORKERS; i++) {
@@ -190,6 +194,7 @@ async function prefundWorkerMasters(): Promise<void> {
         LastLedgerSequence: ledgerIndex + 50,
         Amount: xrpToDrops(String(WORKER_PREFUND_XRP)),
         Destination: w.address,
+        ...(networkID !== undefined && networkID > 1024 ? { NetworkID: networkID } : {}),
       };
       const { tx_blob } = genesis.sign(tx);
       await client.submit(tx_blob);
@@ -236,7 +241,7 @@ export async function setup(): Promise<void> {
     if (process.env.XRPL_LOCAL_NO_AUTOSTART === "1") {
       throw new Error(
         "Local rippled is not running on port 6006.\n" +
-          "Start it manually with: xrpl-up start --local --detach\n" +
+          "Start it manually with: xrpl-up start\n" +
           "Or unset XRPL_LOCAL_NO_AUTOSTART to allow auto-start.",
       );
     }

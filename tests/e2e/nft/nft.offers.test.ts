@@ -46,7 +46,7 @@ async function freshConnection(): Promise<void> {
 /** Mint a transferable NFT and return its NFTokenID */
 function mintNFT(wallet: Wallet): string {
   const result = runCLIWithRetry([
-    "--node", XRPL_WS,
+    "--network", XRPL_WS,
     "nft", "mint",
     "--taxon", "0",
     "--transferable",
@@ -62,7 +62,7 @@ function mintNFT(wallet: Wallet): string {
 /** Create a sell offer and return the offer ID */
 function createSellOffer(wallet: Wallet, nftokenId: string, amountXrp: string): string {
   const result = runCLIWithRetry([
-    "--node", XRPL_WS,
+    "--network", XRPL_WS,
     "nft", "offer", "create",
     "--nft", nftokenId,
     "--amount", amountXrp,
@@ -79,7 +79,7 @@ function createSellOffer(wallet: Wallet, nftokenId: string, amountXrp: string): 
 /** Create a buy offer and return the offer ID */
 function createBuyOffer(wallet: Wallet, nftokenId: string, amountXrp: string, ownerAddress: string): string {
   const result = runCLIWithRetry([
-    "--node", XRPL_WS,
+    "--network", XRPL_WS,
     "nft", "offer", "create",
     "--nft", nftokenId,
     "--amount", amountXrp,
@@ -103,7 +103,7 @@ describe("nft offer create", () => {
     const nftokenId = mintNFT(seller);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "create",
       "--nft", nftokenId,
       "--amount", "10",
@@ -120,7 +120,7 @@ describe("nft offer create", () => {
     const nftokenId = mintNFT(seller);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "create",
       "--nft", nftokenId,
       "--amount", "0.1",
@@ -139,7 +139,7 @@ describe("nft offer create", () => {
     const expiration = new Date(Date.now() + 3600 * 1000).toISOString();
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "create",
       "--nft", nftokenId,
       "--amount", "1",
@@ -159,7 +159,7 @@ describe("nft offer create", () => {
     const nftokenId = mintNFT(seller);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "create",
       "--nft", nftokenId,
       "--amount", "10",
@@ -180,7 +180,7 @@ describe("nft offer create", () => {
     const [seller] = await createFunded(client, master, 1, FUND_AMOUNT);
     const nftokenId = "0".repeat(64);
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "create",
       "--nft", nftokenId,
       "--amount", "10",
@@ -205,7 +205,7 @@ describe("nft offer create", () => {
     const nftokenId = mintNFT(seller);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "create",
       "--nft", nftokenId,
       "--amount", "10",
@@ -222,7 +222,7 @@ describe("nft offer create", () => {
     const nftokenId = mintNFT(seller);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "create",
       "--nft", nftokenId,
       "--amount", "5",
@@ -249,7 +249,7 @@ describe("nft offer cancel", () => {
     const offerId = createSellOffer(account, nftokenId, "5");
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "cancel",
       "--offer", offerId,
       "--seed", account.seed!,
@@ -266,7 +266,7 @@ describe("nft offer cancel", () => {
     const offerId2 = createSellOffer(account, nftokenId2, "2");
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "cancel",
       "--offer", offerId1,
       "--offer", offerId2,
@@ -282,7 +282,7 @@ describe("nft offer cancel", () => {
     const offerId = createSellOffer(account, nftokenId, "3");
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "cancel",
       "--offer", offerId,
       "--seed", account.seed!,
@@ -300,7 +300,7 @@ describe("nft offer cancel", () => {
     const [account] = await createFunded(client, master, 1, FUND_AMOUNT);
     const dummyOfferId = "B".repeat(64);
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "cancel",
       "--offer", dummyOfferId,
       "--seed", account.seed!,
@@ -322,7 +322,7 @@ describe("nft offer cancel", () => {
     const offerId = createSellOffer(account, nftokenId, "1");
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "cancel",
       "--offer", offerId,
       "--seed", account.seed!,
@@ -344,7 +344,7 @@ describe("nft offer accept", () => {
     const sellOfferId = createSellOffer(seller, nftokenId, "0.01");
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "accept",
       "--sell-offer", sellOfferId,
       "--seed", buyer.seed!,
@@ -359,7 +359,7 @@ describe("nft offer accept", () => {
     const buyOfferId = createBuyOffer(buyer, nftokenId, "0.01", seller.address);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "accept",
       "--buy-offer", buyOfferId,
       "--seed", seller.seed!,
@@ -376,7 +376,7 @@ describe("nft offer accept", () => {
     const buyOfferId = createBuyOffer(buyer, nftokenId, "0.02", minter.address);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "accept",
       "--sell-offer", sellOfferId,
       "--buy-offer", buyOfferId,
@@ -391,7 +391,7 @@ describe("nft offer accept", () => {
     const dummySellOfferId = "A".repeat(64);
     const dummyBuyOfferId = "B".repeat(64);
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "accept",
       "--sell-offer", dummySellOfferId,
       "--buy-offer", dummyBuyOfferId,
@@ -414,7 +414,7 @@ describe("nft offer accept", () => {
     const sellOfferId = createSellOffer(seller, nftokenId, "0.01");
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "accept",
       "--sell-offer", sellOfferId,
       "--seed", buyer.seed!,
@@ -432,7 +432,7 @@ describe("nft offer accept", () => {
     const [seller] = await createFunded(client, master, 1, FUND_AMOUNT);
     const dummyOfferId = "A".repeat(64);
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "accept",
       "--sell-offer", dummyOfferId,
       "--seed", seller.seed!,
@@ -454,7 +454,7 @@ describe("nft offer accept", () => {
     const sellOfferId = createSellOffer(seller, nftokenId, "0.01");
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "accept",
       "--sell-offer", sellOfferId,
       "--seed", buyer.seed!,
@@ -477,7 +477,7 @@ describe("nft offer list", () => {
     const buyOfferId = createBuyOffer(buyer, nftokenId, "0.1", seller.address);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "list",
       nftokenId,
     ]);
@@ -499,7 +499,7 @@ describe("nft offer list", () => {
     const buyOfferId = createBuyOffer(buyer, nftokenId, "0.1", seller.address);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "list",
       nftokenId,
       "--json",
@@ -521,7 +521,7 @@ describe("nft offer list", () => {
 
   it.concurrent("exits with error for invalid NFTokenID", () => {
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "nft", "offer", "list",
       "notvalid",
     ]);

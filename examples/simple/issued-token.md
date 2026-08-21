@@ -7,9 +7,9 @@ XRPL's native support for custom currencies. An issuer account mints tokens; hol
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---
@@ -18,19 +18,14 @@ export XRPL_NODE=local
 
 ```bash
 # Create the token issuer
-xrpl-up faucet --local
-# → address: rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-# → seed:    sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER_ADDR=$(echo "$ISSUER_JSON" | jq -r .address)
 
 # Create a token holder
-xrpl-up faucet --local
-# → address: rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
-# → seed:    sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
-
-ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-ISSUER_ADDR=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_SEED=sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
-HOLDER_ADDR=rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER_JSON=$(xrpl-up faucet --network local --json)
+HOLDER_SEED=$(echo "$HOLDER_JSON" | jq -r .seed)
+HOLDER_ADDR=$(echo "$HOLDER_JSON" | jq -r .address)
 ```
 
 ---
@@ -62,12 +57,8 @@ xrpl-up trust set --currency USD --issuer $ISSUER_ADDR --limit 10000 --seed $HOL
 On XRPL, issuers create tokens simply by sending them to a trust-line holder. The issuer's "balance" is always the negative mirror of what it has issued.
 
 ```bash
-# Send 1000 USD to the holder (uses an offer or direct payment path)
-xrpl-up offer create --taker-pays 1000/USD/$ISSUER_ADDR --taker-gets 999 --seed $ISSUER_SEED
+xrpl-up payment --to $HOLDER_ADDR --amount 1000/USD/$ISSUER_ADDR --seed $ISSUER_SEED
 ```
-
-> **Simpler approach for testing:** Use `xrpl-up run` with a script that calls `client.autofill` on a Payment transaction directly.
-> See the generated `scripts/example-token.ts` from `xrpl-up init`.
 
 ---
 
@@ -123,7 +114,7 @@ xrpl-up account set --clear-flag globalFreeze --seed $ISSUER_SEED
 
 ```bash
 # On a fresh issuer account, before any holders exist:
-xrpl-up account set --allow-clawback --seed $FRESH_ISSUER_SEED
+xrpl-up account set --allow-clawback --confirm --seed $FRESH_ISSUER_SEED
 
 # Later, reclaim 10 USD from a holder:
 xrpl-up clawback --amount 10/USD/$HOLDER_ADDR --seed $ISSUER_SEED

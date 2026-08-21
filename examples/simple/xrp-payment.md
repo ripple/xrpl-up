@@ -9,36 +9,25 @@ Send XRP between accounts on XRPL. This is the most basic operation and a good s
 Start a local sandbox (or skip this and use `--network testnet` instead):
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---
 
 ## 1. Fund two accounts
 
-```bash
-# Fund a sender wallet via the local genesis faucet
-xrpl-up faucet --local
-# Output:
-#   address : rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   seed    : sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-#   balance : 1000 XRP
-
-# Fund a receiver wallet
-xrpl-up faucet --local
-# Output:
-#   address : rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   seed    : sEdReceiverSeedXXXXXXXXXXXXXXXXXXXX
-#   balance : 1000 XRP
-```
-
-Save the values:
+`faucet --json` prints a single JSON line — capture it once per account and pull out the fields you need with `jq`:
 
 ```bash
-SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXX
+SENDER_JSON=$(xrpl-up faucet --network local --json)
+SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
+SENDER=$(echo "$SENDER_JSON" | jq -r .address)
+
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER_SEED=$(echo "$RECEIVER_JSON" | jq -r .seed)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 ```
 
 ---
@@ -46,15 +35,10 @@ RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## 2. Send XRP
 
 ```bash
-# Send 10 XRP from the sender to the receiver
-xrpl-up offer create --taker-pays 10 --taker-gets 10   # not the right command — see below
+xrpl-up payment --to $RECEIVER --amount 10 --seed $SENDER_SEED --network local
 ```
 
-Actually, XRP payments are sent with the `faucet` command for funded wallets, or directly via a script. For a direct send between two existing accounts, use:
-
-> **Note:** xrpl-up does not have a standalone `pay` subcommand for XRP — for XRP transfers between two existing accounts, use `check create` + `check cash` (deferred), or use `escrow create` + `escrow finish` for time-locked transfers, or use a script via `xrpl-up run`. For instant XRP delivery, the `faucet` command handles funding new wallets, and the DEX can swap XRP for IOUs.
-
-See [`checks.md`](checks.md) for a deferred XRP payment, [`escrow.md`](escrow.md) for time-locked XRP, or the quick-start script below.
+`payment` (alias `send`) sends one signed `Payment` transaction directly between two existing accounts. `--amount` also accepts IOU (`10/USD/rIssuer...`) and MPT amounts for non-XRP sends.
 
 ---
 
@@ -66,8 +50,8 @@ Generate a project and run the built-in payment example:
 xrpl-up init my-xrp-demo
 cd my-xrp-demo
 npm install
-npm run node          # starts local sandbox
-npm run example       # runs scripts/example-payment.ts
+npm run start                              # starts local sandbox
+xrpl-up run scripts/example-payment.ts     # runs the generated example
 ```
 
 The generated `scripts/example-payment.ts` sends 10 XRP between two auto-funded wallets and prints before/after balances.
@@ -80,20 +64,20 @@ After any on-chain activity, inspect an account's history:
 
 ```bash
 # Show the last 20 transactions for an account
-xrpl-up account transactions rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+xrpl-up account transactions $SENDER
 
 # Limit to the last 5
-xrpl-up account transactions rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXXX --limit 5
+xrpl-up account transactions $SENDER --limit 5
 ```
 
-Each row shows: date, transaction type, result (`tesSUCCESS` / error), hash, and a short summary.
+Each row shows: ledger index, transaction type, result (`tesSUCCESS` / error), and hash.
 
 ---
 
 ## 5. Check balances
 
 ```bash
-xrpl-up accounts --local
+xrpl-up accounts
 ```
 
 This lists all wallets xrpl-up knows about on the active network, including their XRP balance.

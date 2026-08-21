@@ -39,7 +39,7 @@ function createCheck(
   sendMax = "1",
 ): string {
   const result = runCLI([
-    "--node",
+    "--network",
     "testnet",
     "check",
     "create",
@@ -75,7 +75,7 @@ describe("check create", () => {
   it.concurrent("creates an XRP check and prints tesSUCCESS + Check ID", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "create",
@@ -95,7 +95,7 @@ describe("check create", () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
     const receiver = Wallet.generate();
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "create",
@@ -121,7 +121,7 @@ describe("check create", () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
     const receiver = Wallet.generate();
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "create",
@@ -144,7 +144,7 @@ describe("check create", () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
     const receiver = Wallet.generate();
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "create",
@@ -168,7 +168,7 @@ describe("check create", () => {
   it.concurrent("--json output includes hash, result, checkId fields", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "create",
@@ -197,7 +197,7 @@ describe("check create", () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
     const receiver = Wallet.generate();
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "create",
@@ -221,7 +221,7 @@ describe("check create", () => {
   it.concurrent("--no-wait exits 0 and output contains 64-char hex hash", async () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "create",
@@ -256,7 +256,7 @@ describe("check create", () => {
       ).toBe(0);
 
       const result = runCLI([
-        "--node",
+        "--network",
         "testnet",
         "check",
         "create",
@@ -287,7 +287,7 @@ describe("check cash", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cash",
@@ -306,7 +306,7 @@ describe("check cash", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cash",
@@ -325,7 +325,7 @@ describe("check cash", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cash",
@@ -347,7 +347,7 @@ describe("check cash", () => {
   it.concurrent("--dry-run outputs signed tx with TransactionType CheckCash without submitting", async () => {
     const [receiver] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cash",
@@ -372,7 +372,7 @@ describe("check cash", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cash",
@@ -397,7 +397,7 @@ describe("check cancel", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cancel",
@@ -414,7 +414,7 @@ describe("check cancel", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cancel",
@@ -434,7 +434,7 @@ describe("check cancel", () => {
   it.concurrent("--dry-run outputs signed tx with TransactionType CheckCancel without submitting", async () => {
     const [sender] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cancel",
@@ -457,7 +457,7 @@ describe("check cancel", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cancel",
@@ -475,7 +475,7 @@ describe("check cancel", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "cancel",
@@ -497,7 +497,7 @@ describe("check list", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "list",
@@ -514,7 +514,7 @@ describe("check list", () => {
     const [sender, receiver] = await createFunded(client, master, 2, FUND_AMOUNT);
     const checkId = createCheck(sender.seed!, receiver.address, "1");
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "check",
       "list",

@@ -17,6 +17,9 @@ import {
   LOCAL_WS_URL,
   FAUCET_URL,
   COMPOSE_PROJECT,
+  volumeHasData,
+  VOLUME_NAME,
+  PEER_VOLUME_NAME,
 } from '../core/compose';
 import { validateConfig, printValidationResult } from './config';
 import { GENESIS_ADDRESS } from '../core/standalone';
@@ -30,12 +33,28 @@ export interface NodeOptions {
   image?: string;
   ledgerInterval?: number;
   noAutoAdvance?: boolean;
-  noSecrets?: boolean;  // suppress private key output (auto-enabled with --detach)
+  noSecrets?: boolean;  // suppress private key output (auto-enabled unless --foreground is used)
   debug?: boolean;
-  detach?: boolean;
+  detach?: boolean;  // computed by cli.ts: true by default for local sandboxes, false with --foreground
   noRestart?: boolean;  // bypass wrapper entrypoint so container exits with rippled's code
   config?: string;  // path to a custom rippled.cfg (local mode only)
   bindAddress?: string;  // IP address for Docker port bindings (default: 127.0.0.1)
+}
+
+/**
+ * `--config` (writeComposeFile in compose.ts) always forces standalone mode —
+ * a custom rippled.cfg replaces the generated 2-node consensus setup entirely.
+ * Reject the combination up front instead of silently downgrading a mode the
+ * user explicitly asked for.
+ */
+export function assertConfigCompatibleWithMode(options: NodeOptions): void {
+  if (options.config && options.localNetwork) {
+    throw new Error(
+      '--config and --local-network cannot be used together — a custom rippled.cfg always ' +
+        'runs standalone (see --config in `xrpl-up start --help`). Drop --local-network, or ' +
+        'drop --config and use `xrpl-up config export` / `amendment enable` instead.'
+    );
+  }
 }
 
 /** Call the local faucet HTTP server to fund a fresh wallet. */
@@ -118,7 +137,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     networkDisplayName = resolved.config.name ?? resolved.name;
 
     if (isMainnet(resolved.name, resolved.config)) {
-      logger.error('Cannot start sandbox on Mainnet — use testnet, devnet, or --local.');
+      logger.error('Cannot start sandbox on Mainnet — use --network testnet, --network devnet, or omit --network for the local sandbox.');
       process.exit(1);
     }
   }
@@ -126,9 +145,37 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   const store = new WalletStore(networkName);
 
   // ── Start Docker Compose stack (local mode only) ───────────────────────────
+  assertConfigCompatibleWithMode(options);
   const localNetwork = isLocal && (options.localNetwork ?? false);
   const noConsensus = isLocal && !localNetwork;
   const persist = isLocal && localNetwork; // --local-network always persists
+
+  // Starting standalone always clears the wallet store (below, `if (!persist)
+  // store.clear()`), but it never touches the --local-network ledger volumes —
+  // they're a separate code path entirely. If those volumes still hold real
+  // ledger data, warn before silently discarding the account records that are
+  // the only way to reach them, since `xrpl-up accounts` won't list them
+  // afterward and the seeds aren't recoverable without a snapshot.
+  if (noConsensus && (volumeHasData(VOLUME_NAME) || volumeHasData(PEER_VOLUME_NAME))) {
+    logger.warning(
+      'Starting standalone mode will replace your current wallet records.\n' +
+      '    Run with --local-network instead to keep using this data,\n' +
+      '    or run `xrpl-up snapshot save <name>` first if you want it back later.'
+    );
+    if (process.stdin.isTTY && process.stdout.isTTY) {
+      const { proceed } = await inquirer.prompt<{ proceed: boolean }>([{
+        type: 'confirm',
+        name: 'proceed',
+        message: 'Continue starting standalone mode?',
+        default: false,
+      }]);
+      if (!proceed) {
+        logger.dim('  Aborted.');
+        return;
+      }
+    }
+    logger.blank();
+  }
 
   if (isLocal) {
     const image = options.image ?? DEFAULT_IMAGE;
@@ -405,7 +452,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   printTable(table.toString());
   logger.blank();
 
-  // ── Private keys (suppressed in --detach / --no-secrets) ──────────────────
+  // ── Private keys (suppressed when detached / --no-secrets) ────────────────
   if (printSecrets) {
     logger.section('Private Keys');
     for (const [i, { wallet }] of funded.entries()) {

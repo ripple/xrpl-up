@@ -24,9 +24,11 @@ export async function runCommand(options: RunOptions): Promise<void> {
     process.exit(1);
   }
 
-  logger.info(`Running: ${options.script}`);
-  logger.info(`Network: ${networkConfig.name ?? networkName} (${networkConfig.url})`);
-  logger.blank();
+  // Written directly to stderr (not the shared `logger`, which uses stdout) so
+  // `$(xrpl-up run script.ts)` can cleanly capture only the script's own stdout
+  // output (e.g. a JSON line), without these status banners mixed in.
+  process.stderr.write(`  ℹ  Running: ${options.script}\n`);
+  process.stderr.write(`  ℹ  Network: ${networkConfig.name ?? networkName} (${networkConfig.url})\n\n`);
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -64,12 +66,10 @@ export async function runCommand(options: RunOptions): Promise<void> {
     proc.on('error', reject);
     proc.on('exit', (code) => {
       if (code === 0) {
-        logger.blank();
-        logger.success('Script completed successfully.');
+        process.stderr.write(`\n  ✓  Script completed successfully.\n`);
         resolve();
       } else {
-        logger.blank();
-        logger.error(`Script exited with code ${code}`);
+        process.stderr.write(`\n  ✗  Script exited with code ${code}\n`);
         process.exit(code ?? 1);
       }
     });

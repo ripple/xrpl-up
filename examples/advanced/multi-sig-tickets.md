@@ -9,9 +9,9 @@ Combine a **SignerList** (2-of-3 multi-signature) with **Tickets** (reserved seq
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---
@@ -23,31 +23,28 @@ export XRPL_NODE=local
 The treasury account + three signers (Alice, Bob, Carol):
 
 ```bash
-xrpl-up faucet --local; xrpl-up faucet --local
-xrpl-up faucet --local; xrpl-up faucet --local
-# Run xrpl-up accounts --local to see all four:
-xrpl-up accounts --local
-```
+TREASURY_JSON=$(xrpl-up faucet --network local --json)
+TREASURY_SEED=$(echo "$TREASURY_JSON" | jq -r .seed)
+TREASURY=$(echo "$TREASURY_JSON" | jq -r .address)
 
-Assign to shell variables from the output:
+ALICE_JSON=$(xrpl-up faucet --network local --json)
+ALICE_SEED=$(echo "$ALICE_JSON" | jq -r .seed)
+ALICE=$(echo "$ALICE_JSON" | jq -r .address)
 
-```bash
-TREASURY_SEED=sEdTreasurySeedXXXXXXXXXXXXXXXXXXX
-TREASURY=rTreasuryXXXXXXXXXXXXXXXXXXXXXXXXXXX
+BOB_JSON=$(xrpl-up faucet --network local --json)
+BOB_SEED=$(echo "$BOB_JSON" | jq -r .seed)
+BOB=$(echo "$BOB_JSON" | jq -r .address)
 
-ALICE=rAliceXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-ALICE_SEED=sEdAliceSeedXXXXXXXXXXXXXXXXXXXXX
-
-BOB=rBobXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-BOB_SEED=sEdBobSeedXXXXXXXXXXXXXXXXXXXXXXX
-
-CAROL=rCarolXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CAROL_JSON=$(xrpl-up faucet --network local --json)
+CAROL_SEED=$(echo "$CAROL_JSON" | jq -r .seed)
+CAROL=$(echo "$CAROL_JSON" | jq -r .address)
 ```
 
 ### 1b. Install a 2-of-3 signer list on the treasury
 
 ```bash
-xrpl-up accountset signer-list 2 "$ALICE:1,$BOB:1,$CAROL:1" \
+xrpl-up multisig set --quorum 2 \
+  --signer $ALICE:1 --signer $BOB:1 --signer $CAROL:1 \
   --seed $TREASURY_SEED
 # ✔ Signer list set  quorum 2  signers: rAliceXXX(1) rBobXXX(1) rCarolXXX(1)
 ```
@@ -62,35 +59,20 @@ xrpl-up account info $TREASURY
 #   rCarolXXX  weight 1
 ```
 
-### 1c. Disable the master key (optional — enforces multi-sig only)
-
-> ⚠️ Only do this after confirming the signer list is correct. If you disable the master key with no valid signer list you permanently lose access.
-
-```bash
-xrpl-up account set --set-flag disableMaster --seed $TREASURY_SEED
-# ✔ Flag set: disableMaster
-# ⚠  Master key is now disabled. All future transactions require multi-sig.
-```
-
 ---
 
 ## Part 2 — Reserve Tickets
 
-Tickets let co-signers prepare transactions independently — no sequence dependency between them.
+Tickets let co-signers prepare transactions independently — no sequence dependency between them. Reserve them **before** disabling the master key below — `xrpl-up ticket create` only supports single-key signing, so it can't run once the master key is gone (live-verified: doing this in the other order fails with `transaction expired`/`tefNO_TICKET`).
 
 ### 2a. Reserve 3 tickets
 
 ```bash
-# The treasury account reserves 3 tickets
-# (requires multi-sig now that master key is disabled — use a script for this
-#  or reserve tickets BEFORE disabling the master key)
-xrpl-up ticket create 3 --seed $TREASURY_SEED
-# ✔ 3 tickets created
-#   sequences: 10, 11, 12
-
-T1=10
-T2=11
-T3=12
+# The treasury account reserves 3 tickets (still signing with the master key, which is still active)
+TICKETS_JSON=$(xrpl-up ticket create --count 3 --seed $TREASURY_SEED --json)
+T1=$(echo "$TICKETS_JSON" | jq -r '.sequences[0]')
+T2=$(echo "$TICKETS_JSON" | jq -r '.sequences[1]')
+T3=$(echo "$TICKETS_JSON" | jq -r '.sequences[2]')
 ```
 
 ### 2b. List the reserved tickets
@@ -102,78 +84,100 @@ xrpl-up ticket list $TREASURY
 # TicketSequence  12
 ```
 
+### 2c. Disable the master key (optional — enforces multi-sig only)
+
+> ⚠️ Only do this after confirming the signer list is correct **and** after reserving all the tickets you need. If you disable the master key with no valid signer list you permanently lose access — and once it's disabled, `xrpl-up ticket create`/most other single-key commands stop working for this account entirely (they'd need their own multisig script, same as `scripts/multisig-sign.ts` below).
+
+```bash
+xrpl-up account set --set-flag disableMaster --seed $TREASURY_SEED
+# ✔ Flag set: disableMaster
+# ⚠  Master key is now disabled. All future transactions require multi-sig.
+```
+
 ---
 
 ## Part 3 — Pre-Sign Transactions with Tickets
 
 Each co-signer builds and signs a transaction using a different ticket. They can do this simultaneously — no ordering required.
 
-Use a script with `xrpl-up run` to sign multi-sig transactions. Below is `scripts/multisig-sign.ts`:
+Use a script with `xrpl-up run` to sign multi-sig transactions. Below is `scripts/multisig-sign.ts`. `xrpl-up run` invokes scripts via `tsx`, which compiles `.ts` files to CJS unless the project's `package.json` sets `"type": "module"` — and top-level `await` isn't valid CJS, so the body is wrapped in an `async` function instead:
 
 ```typescript
 // scripts/multisig-sign.ts
-import { Client, Wallet, encode } from 'xrpl';
+// Reads TREASURY, DEST, ALICE_SEED, BOB_SEED, TICKET from the environment — no hardcoded secrets/IDs
+import { Client, Wallet, encode, decode, decodeAccountID } from 'xrpl';
 
-const client = new Client('ws://localhost:6006');
-await client.connect();
+async function main() {
+  const client = new Client('ws://localhost:6006');
+  await client.connect();
 
-const treasury  = 'rTreasuryXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-const dest      = 'rDestXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-const aliceWallet = Wallet.fromSeed('sEdAliceSeedXXXXXXXXXXXXXXXXXXXXX');
-const bobWallet   = Wallet.fromSeed('sEdBobSeedXXXXXXXXXXXXXXXXXXXXXXX');
+  const treasury  = process.env.TREASURY!;
+  const dest      = process.env.DEST!;
+  const aliceWallet = Wallet.fromSeed(process.env.ALICE_SEED!);
+  const bobWallet   = Wallet.fromSeed(process.env.BOB_SEED!);
 
-// Tx 1: uses ticket 10 — Alice and Bob sign independently
-const tx1 = {
-  TransactionType: 'Payment',
-  Account: treasury,
-  Destination: dest,
-  Amount: '5000000',    // 5 XRP in drops
-  Sequence: 0,          // must be 0 when using a ticket
-  TicketSequence: 10,
-  Fee: '12',
-  SigningPubKey: '',    // empty for multi-sig
-};
+  // Tx 1: uses the given ticket — Alice and Bob sign independently.
+  // autofill(tx, signersCount) fills the multisig-adjusted Fee and LastLedgerSequence
+  // (a plain autofill(tx) without the signers count omits both).
+  const tx1 = await client.autofill({
+    TransactionType: 'Payment',
+    Account: treasury,
+    Destination: dest,
+    Amount: '5000000',    // 5 XRP in drops
+    Sequence: 0,          // must be 0 when using a ticket
+    TicketSequence: Number(process.env.TICKET),
+    SigningPubKey: '',    // empty for multi-sig
+  } as any, 2);
 
-// Alice signs
-const aliceSig = aliceWallet.sign(tx1 as any, true);  // true = multi-sign
-console.log('Alice sig:', aliceSig.tx_blob);
+  // wallet.sign(tx, true) returns a binary-encoded tx_blob (hex), not JSON —
+  // decode() it back to an object to read the SigningPubKey/TxnSignature it produced.
+  const aliceSigned = decode(aliceWallet.sign(tx1, true).tx_blob) as any;
+  const bobSigned = decode(bobWallet.sign(tx1, true).tx_blob) as any;
 
-// Bob signs
-const bobSig = bobWallet.sign(tx1 as any, true);
-console.log('Bob sig:', bobSig.tx_blob);
+  // The ledger requires Signers sorted by the *binary* AccountID, ascending —
+  // base58 address string order does not match this.
+  const signers = [
+    { Signer: { Account: aliceWallet.address, SigningPubKey: aliceSigned.Signers[0].Signer.SigningPubKey, TxnSignature: aliceSigned.Signers[0].Signer.TxnSignature } },
+    { Signer: { Account: bobWallet.address,   SigningPubKey: bobSigned.Signers[0].Signer.SigningPubKey,   TxnSignature: bobSigned.Signers[0].Signer.TxnSignature } },
+  ].sort((a, b) => Buffer.compare(decodeAccountID(a.Signer.Account), decodeAccountID(b.Signer.Account)));
 
-// Combine and submit (2-of-3 quorum met)
-const combined = await client.submitAndWait(encode({
-  ...tx1,
-  Signers: [
-    { Signer: { Account: aliceWallet.address, SigningPubKey: aliceWallet.publicKey, TxnSignature: JSON.parse(Buffer.from(aliceSig.tx_blob, 'hex').toString()).TxnSignature } },
-    { Signer: { Account: bobWallet.address,   SigningPubKey: bobWallet.publicKey,   TxnSignature: JSON.parse(Buffer.from(bobSig.tx_blob, 'hex').toString()).TxnSignature } },
-  ],
-} as any));
-console.log('Tx1 result:', combined.result.meta?.TransactionResult);
+  // Combine and submit (2-of-3 quorum met)
+  const combined = await client.submitAndWait(encode({ ...tx1, Signers: signers } as any));
+  console.log('Tx1 result:', combined.result.meta?.TransactionResult);
 
-await client.disconnect();
+  await client.disconnect();
+}
+
+main();
 ```
 
+`xrpl-up run` executes scripts with Node's normal module resolution, which only finds packages under the local `node_modules` of the project the script lives in — install `xrpl` there first (`npm install xrpl`).
+
 ```bash
-xrpl-up run scripts/multisig-sign.ts
-# tesSUCCESS   (ticket 10 consumed)
+DEST_JSON=$(xrpl-up faucet --network local --json)
+DEST=$(echo "$DEST_JSON" | jq -r .address)
+
+TREASURY=$TREASURY DEST=$DEST ALICE_SEED=$ALICE_SEED BOB_SEED=$BOB_SEED TICKET=$T1 \
+  xrpl-up run scripts/multisig-sign.ts
+# tesSUCCESS   ($T1 consumed)
 ```
 
 ---
 
 ## Part 4 — Submit Out-of-Order
 
-With tickets, there is **no ordering requirement**. Submit Tx using ticket 12 before ticket 11:
+With tickets, there is **no ordering requirement**. Reuse the same `scripts/multisig-sign.ts` from Part 3, submitting `$T3` before `$T2`:
 
 ```bash
-# Tx using ticket 12 submitted first
-xrpl-up run scripts/multisig-sign-t12.ts
-# tesSUCCESS   (ticket 12 consumed)
+# Tx using $T3 submitted first
+TREASURY=$TREASURY DEST=$DEST ALICE_SEED=$ALICE_SEED BOB_SEED=$BOB_SEED TICKET=$T3 \
+  xrpl-up run scripts/multisig-sign.ts
+# tesSUCCESS   ($T3 consumed)
 
-# Tx using ticket 11 submitted second — still valid
-xrpl-up run scripts/multisig-sign-t11.ts
-# tesSUCCESS   (ticket 11 consumed)
+# Tx using $T2 submitted second — still valid
+TREASURY=$TREASURY DEST=$DEST ALICE_SEED=$ALICE_SEED BOB_SEED=$BOB_SEED TICKET=$T2 \
+  xrpl-up run scripts/multisig-sign.ts
+# tesSUCCESS   ($T2 consumed)
 ```
 
 After all tickets are used:

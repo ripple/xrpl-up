@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { Wallet } from "xrpl";
 import type { ECDSA } from "xrpl";
 import { generateMnemonic } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english";
+import { wordlist } from "@scure/bip39/wordlists/english.js";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { encryptKeystore, getKeystoreDir, type KeystoreFile } from "../../utils/keystore";

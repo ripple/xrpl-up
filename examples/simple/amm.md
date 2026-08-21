@@ -9,109 +9,83 @@ XRPL's built-in AMM (XLS-30) lets you provide liquidity to a constant-product po
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---
 
-## 1. Create an XRP / USD pool
+## 1. Set up an issuer and fund the liquidity provider with USD
 
-`amm create` handles everything automatically: issuer creation, trust lines, token minting, and pool seeding.
-
-```bash
-# XRP / USD pool — 100 XRP and 100 USD, 0.5% trading fee
-xrpl-up amm create XRP USD
-# ✔ AMM pool created
-#   asset1   100 XRP
-#   asset2   100 USD  (issuer: rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX)
-#   fee      0.5%
-#   LP token rAMMXXXXX / LPToken
-#
-#   Hint: xrpl-up amm info XRP USD.rIssuerXXXXX
-```
-
-Save the issuer address printed in the output:
+`amm create` submits a single `AMMCreate` transaction — it does **not** create issuers, trust lines, or mint tokens for you. For an XRP/USD pool, the LP account needs a real USD balance first:
 
 ```bash
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-```
+# Fund an issuer and a liquidity-provider account
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 
----
+LP_JSON=$(xrpl-up faucet --network local --json)
+LP_SEED=$(echo "$LP_JSON" | jq -r .seed)
+LP=$(echo "$LP_JSON" | jq -r .address)
 
-## 2. Inspect the pool
+# Let the issuer's USD ripple through trust lines (needed for it to settle payments)
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED --network local
 
-```bash
-xrpl-up amm info XRP USD.$ISSUER
-# pool account   rAMMXXXXX...
-# XRP reserve    100 XRP
-# USD reserve    100 USD
-# LP supply      10.000000 LPToken
-# fee            0.5%
+# LP trusts the issuer for USD, then the issuer sends USD to the LP
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $LP_SEED --network local
+xrpl-up payment --to $LP --amount 1000/USD/$ISSUER --seed $ISSUER_SEED --network local
 ```
 
 ---
 
-## 3. Custom amounts and fee
+## 2. Create an XRP / USD pool
 
 ```bash
-# 500 XRP / 1000 USD pool with a 0.3% fee
-xrpl-up amm create XRP USD --amount1 500 --amount2 1000 --fee 0.3
+# 100 XRP / 100 USD pool, 0.5% trading fee (amounts: decimal for both XRP and IOU)
+xrpl-up amm create --asset XRP --asset2 USD/$ISSUER \
+  --amount 100 --amount2 100 --trading-fee 500 \
+  --seed $LP_SEED --network local
 ```
 
 ---
 
-## 4. Create a token/token pool
+## 3. Inspect the pool
 
 ```bash
-# USD / EUR pool (xrpl-up creates two separate issuers automatically)
-xrpl-up amm create USD EUR --amount1 100 --amount2 120
-# → USD issuer: rUsdIssuerXXXX
-# → EUR issuer: rEurIssuerXXXX
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --network local
 ```
 
 ---
 
-## 5. Trade against the pool
+## 4. Trade against the pool
 
 Once the pool is live, any account can trade against it using the DEX `offer create` command — the AMM is automatically matched as a counterparty.
 
 ```bash
-# Fund a trader
-xrpl-up faucet --local
-# → seed: sEdTraderSeedXXX  address: rTraderXXX
+# Fund a trader and give it a USD trust line
+TRADER_JSON=$(xrpl-up faucet --network local --json)
+TRADER_SEED=$(echo "$TRADER_JSON" | jq -r .seed)
+TRADER=$(echo "$TRADER_JSON" | jq -r .address)
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $TRADER_SEED --network local
 
-TRADER_SEED=sEdTraderSeedXXX
-TRADER=rTraderXXX
-
-# Trader sets a trust line for USD
-xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $TRADER_SEED
-
-# Trader sells 5 XRP into the pool (gets USD back)
-xrpl-up offer create --taker-pays 5 --taker-gets 4/USD/$ISSUER --seed $TRADER_SEED \
+# Trader sells 5 XRP into the pool (gets USD back) — price includes the 0.5% fee + slippage
+xrpl-up offer create --taker-pays 4.5/USD/$ISSUER --taker-gets 5 --seed $TRADER_SEED --network local \
   --immediate-or-cancel
 # The AMM fills the offer at the current pool price
 ```
 
 ---
 
-## 6. Query the pool after a trade
+## 5. Query the pool after a trade
 
 After swaps the pool ratio shifts (and the price moves):
 
 ```bash
-xrpl-up amm info XRP USD.$ISSUER
-# XRP reserve    105 XRP   ← increased
-# USD reserve    95.238...  ← decreased
-```
-
----
-
-## 7. Look up a pool by AMM account address
-
-```bash
-xrpl-up amm info --account rAMMXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+xrpl-up amm info --asset XRP --asset2 USD/$ISSUER --network local
+# Asset 1: 104.735721 XRP   ← increased
+# Asset 2: 95.5 USD         ← decreased
 ```
 
 ---

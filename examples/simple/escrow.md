@@ -11,9 +11,26 @@ Two escrow types:
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
+```
+
+A standalone sandbox's ledger clock isn't the wall clock — it advances at least 1 second per accepted ledger regardless of real elapsed time, so it can drift well ahead of `Date.now()` after a lot of activity. Compute `--finish-after`/`--cancel-after` relative to the sandbox's actual current ledger time instead:
+
+```bash
+ledger_plus() {
+  SECS=$1 node -e "
+    const { Client } = require('xrpl');
+    (async () => {
+      const client = new Client('ws://localhost:6006');
+      await client.connect();
+      const r = await client.request({ command: 'ledger', ledger_index: 'validated' });
+      console.log(new Date((r.result.ledger.close_time + 946684800 + Number(process.env.SECS)) * 1000).toISOString());
+      await client.disconnect();
+    })();
+  "
+}
 ```
 
 ---
@@ -26,44 +43,29 @@ Fund a sender and create an escrow to a destination:
 
 ```bash
 # Fund sender
-xrpl-up faucet --local
-# → seed: sEdSenderSeedXXX  address: rSenderXXX
+SENDER_JSON=$(xrpl-up faucet --network local --json)
+SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
+SENDER=$(echo "$SENDER_JSON" | jq -r .address)
 
 # Fund destination
-xrpl-up faucet --local
-# → address: rDestXXX
-
-SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-SENDER=rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXX
-DEST=rDestXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-DEST_SEED=sEdDestSeedXXXXXXXXXXXXXXXXXXXXX
+DEST_JSON=$(xrpl-up faucet --network local --json)
+DEST_SEED=$(echo "$DEST_JSON" | jq -r .seed)
+DEST=$(echo "$DEST_JSON" | jq -r .address)
 ```
 
-Create a 10 XRP escrow that can finish in 30 seconds and auto-cancels after 1 day:
+Create a 10 XRP escrow that can finish in 2 minutes and auto-cancels after 1 day:
 
 ```bash
-xrpl-up escrow create --to $DEST --amount 10 --seed $SENDER_SEED \
-  --finish-after 2024-01-01T00:00:30Z \
-  --cancel-after 2024-01-02T00:00:00Z
-# ✔ Escrow created
-#   sequence    42
-#   amount      10 XRP → rDestXXX...
-#   finishAfter 2024-01-01T00:00:30Z
-#   cancelAfter 2024-01-02T00:00:00Z
+FINISH_AFTER=$(ledger_plus 120)
+CANCEL_AFTER=$(ledger_plus $((1*86400)))
 
-ESCROW_SEQ=42
+ESCROW_SEQ=$(xrpl-up escrow create --to $DEST --amount 10 --seed $SENDER_SEED \
+  --finish-after $FINISH_AFTER \
+  --cancel-after $CANCEL_AFTER \
+  --json | jq -r .sequence)
 ```
 
-Time expressions:
-
-| Format | Meaning |
-|--------|---------|
-| `2024-01-01T00:00:30Z` | 30 seconds from epoch |
-| `2024-01-01T00:30:00Z` | 30 minutes from epoch |
-| `2024-01-01T01:00:00Z` | 1 hour from epoch |
-| `2024-01-02T00:00:00Z` | 1 day from epoch |
-| `2024-01-08T00:00:00Z` | 7 days from epoch |
-| `1700000000` | Absolute Unix timestamp |
+`--finish-after`/`--cancel-after` accept an ISO-8601 timestamp or a raw Unix timestamp — always compute them relative to the current time rather than hardcoding a specific date, since a fixed past date fails immediately with `tecEXPIRED`/`tecNO_PERMISSION`.
 
 ---
 
@@ -71,7 +73,7 @@ Time expressions:
 
 ```bash
 xrpl-up escrow list $SENDER
-# sequence  42  amount 10 XRP → rDestXXX...  finishAfter: 2024-01-01T00:00:30Z  cancelAfter: 2024-01-02T00:00:00Z
+# sequence  42  amount 10 XRP → rDestXXX...  finishAfter/cancelAfter: whatever you computed above
 ```
 
 ---
@@ -81,6 +83,7 @@ xrpl-up escrow list $SENDER
 After the `--finish-after` time passes, the destination (or any account) can release the funds:
 
 ```bash
+sleep 130   # wait for the ledger clock to pass FINISH_AFTER (2 min + margin)
 xrpl-up escrow finish --owner $SENDER --sequence $ESCROW_SEQ --seed $DEST_SEED
 # ✔ Escrow finished  10 XRP released to rDestXXX...
 ```
@@ -91,11 +94,19 @@ The destination receives the XRP minus a small transaction fee.
 
 ### 4. Cancel an expired escrow
 
-If the escrow's `CancelAfter` time has passed and it hasn't been finished, anyone can cancel it to return the XRP to the sender:
+If the escrow's `CancelAfter` time has passed and it hasn't been finished, anyone can cancel it to return the XRP to the sender. `$ESCROW_SEQ` from step 1 was already consumed by step 3's `finish` — a cancellable demo needs its own fresh escrow with a short `--cancel-after` (an `EscrowCreate` also requires `--finish-after` or `--condition`, so a short `--finish-after` is included too, just not used):
 
 ```bash
-xrpl-up escrow cancel --owner $SENDER --sequence $ESCROW_SEQ --seed $SENDER_SEED
-# ✔ Escrow cancelled  10 XRP returned to rSenderXXX...
+SHORT_FINISH_AFTER=$(ledger_plus 20)
+SHORT_CANCEL_AFTER=$(ledger_plus 30)
+
+CANCEL_ESCROW_SEQ=$(xrpl-up escrow create --to $DEST --amount 5 --seed $SENDER_SEED \
+  --finish-after $SHORT_FINISH_AFTER --cancel-after $SHORT_CANCEL_AFTER \
+  --json | jq -r .sequence)
+
+sleep 35   # wait for the ledger clock to pass CancelAfter (30s + margin)
+xrpl-up escrow cancel --owner $SENDER --sequence $CANCEL_ESCROW_SEQ --seed $SENDER_SEED
+# ✔ Escrow cancelled  5 XRP returned to rSenderXXX...
 ```
 
 ---
@@ -106,23 +117,26 @@ A crypto-condition escrow requires a secret preimage — only the party who know
 
 ### 1. Generate a condition and fulfillment
 
-Use the `five-bells-condition` library (or any PREIMAGE-SHA-256 tool):
+Use the `five-bells-condition` library (or any PREIMAGE-SHA-256 tool). Install it first — it's not a dependency of xrpl-up itself. A plain `node -e "require(...)"` only resolves packages installed local to the current directory (a global `npm install -g` won't be found unless `NODE_PATH` is set up for it), so install it locally in whatever directory you're running these commands from:
 
 ```bash
-# Example using Node.js
-node -e "
+npm install five-bells-condition
+```
+
+```bash
+# Example using Node.js — print as JSON so it can be captured directly, no manual copying
+CC_JSON=$(node -e "
 const cc = require('five-bells-condition');
 const preimage = Buffer.from('super-secret-preimage');
 const f = new cc.PreimageSha256();
 f.setPreimage(preimage);
-console.log('FULFILLMENT:', f.serializeBinary().toString('hex').toUpperCase());
-console.log('CONDITION:  ', f.getConditionBinary().toString('hex').toUpperCase());
-"
-# FULFILLMENT: A0228020...
-# CONDITION:   A0258020...
-
-FULFILLMENT=A0228020XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-CONDITION=A0258020XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+console.log(JSON.stringify({
+  fulfillment: f.serializeBinary().toString('hex').toUpperCase(),
+  condition: f.getConditionBinary().toString('hex').toUpperCase(),
+}));
+")
+FULFILLMENT=$(echo "$CC_JSON" | jq -r .fulfillment)
+CONDITION=$(echo "$CC_JSON" | jq -r .condition)
 ```
 
 ---
@@ -132,10 +146,12 @@ CONDITION=A0258020XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The sender publishes the **condition** (not the fulfillment) on-chain:
 
 ```bash
-xrpl-up escrow create --to $DEST --amount 25 --seed $SENDER_SEED \
+CC_CANCEL_AFTER=$(ledger_plus $((7*86400)))
+
+CC_ESCROW_SEQ=$(xrpl-up escrow create --to $DEST --amount 25 --seed $SENDER_SEED \
   --condition $CONDITION \
-  --cancel-after 2024-01-08T00:00:00Z
-# ✔ Escrow created  sequence 43
+  --cancel-after $CC_CANCEL_AFTER \
+  --json | jq -r .sequence)
 ```
 
 ---
@@ -145,7 +161,7 @@ xrpl-up escrow create --to $DEST --amount 25 --seed $SENDER_SEED \
 When ready, the destination submits both the condition and the fulfillment:
 
 ```bash
-xrpl-up escrow finish --owner $SENDER --sequence 43 --seed $DEST_SEED \
+xrpl-up escrow finish --owner $SENDER --sequence $CC_ESCROW_SEQ --seed $DEST_SEED \
   --condition $CONDITION \
   --fulfillment $FULFILLMENT
 # ✔ Escrow finished  25 XRP released
@@ -160,13 +176,23 @@ xrpl-up escrow finish --owner $SENDER --sequence 43 --seed $DEST_SEED \
 Model a 1-year vesting cliff with quarterly unlocks:
 
 ```bash
+COMPANY_JSON=$(xrpl-up faucet --network local --json)
+COMPANY_SEED=$(echo "$COMPANY_JSON" | jq -r .seed)
+
+EMPLOYEE_JSON=$(xrpl-up faucet --network local --json)
+EMPLOYEE=$(echo "$EMPLOYEE_JSON" | jq -r .address)
+
+VEST_CANCEL_AFTER=$(ledger_plus $((365*86400)))
+
 # Q1: 25 XRP unlocks after 90 days
+Q1_FINISH_AFTER=$(ledger_plus $((90*86400)))
 xrpl-up escrow create --to $EMPLOYEE --amount 25 --seed $COMPANY_SEED \
-  --finish-after 2024-04-01T00:00:00Z --cancel-after 2025-01-01T00:00:00Z
+  --finish-after $Q1_FINISH_AFTER --cancel-after $VEST_CANCEL_AFTER
 
 # Q2: 25 XRP unlocks after 180 days
+Q2_FINISH_AFTER=$(ledger_plus $((180*86400)))
 xrpl-up escrow create --to $EMPLOYEE --amount 25 --seed $COMPANY_SEED \
-  --finish-after 2024-07-01T00:00:00Z --cancel-after 2025-01-01T00:00:00Z
+  --finish-after $Q2_FINISH_AFTER --cancel-after $VEST_CANCEL_AFTER
 
 # Q3, Q4: similar...
 ```

@@ -26,38 +26,38 @@ xrpl-up clawback --amount 100/0000000000000000000000000000000000000001 --holder 
 
 ```bash
 # 1. Alice enables AllowTrustLineClawback on her account (irreversible)
-xrpl-up --node testnet account set \
+xrpl-up --network testnet account set \
   --allow-clawback --confirm --seed sEdAliceXXXX...
 
 # 2. Bob creates a USD trust line to Alice
-xrpl-up --node testnet trust set \
+xrpl-up --network testnet trust set \
   --currency USD --issuer rAliceXXXX... --limit 1000 \
   --seed sEdBobXXXX...
 
 # 3. Alice issues 100 USD to Bob
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rBobXXXX... --amount 100/USD/rAliceXXXX... \
   --seed sEdAliceXXXX...
 
 # 4. Alice claws back 50 USD from Bob (IOU clawback)
-xrpl-up --node testnet clawback \
+xrpl-up --network testnet clawback \
   --amount 50/USD/rBobXXXX... \
   --seed sEdAliceXXXX...
 
 # --- MPT clawback variant ---
 # 5. Alice creates an MPT issuance with can-clawback flag
-xrpl-up --node testnet mptoken issuance create \
+xrpl-up --network testnet mptoken issuance create \
   --flags can-transfer,can-clawback \
   --seed sEdAliceXXXX... --json
 # → {"issuanceId":"0000002CCDDEE..."}
 
 # 6. Bob opts in and Alice sends 500 MPT units
-xrpl-up --node testnet mptoken authorize 0000002CCDDEE... --seed sEdBobXXXX...
-xrpl-up --node testnet payment \
+xrpl-up --network testnet mptoken authorize 0000002CCDDEE... --seed sEdBobXXXX...
+xrpl-up --network testnet payment \
   --to rBobXXXX... --amount 500/0000002CCDDEE... --seed sEdAliceXXXX...
 
 # 7. Alice claws back 200 MPT units from Bob
-xrpl-up --node testnet clawback \
+xrpl-up --network testnet clawback \
   --amount 200/0000002CCDDEE... --holder rBobXXXX... \
   --seed sEdAliceXXXX...
 ```

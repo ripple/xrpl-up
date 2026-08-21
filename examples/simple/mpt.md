@@ -9,31 +9,26 @@ MPT is XRPL's next-generation fungible token standard. Unlike IOU trust lines, M
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---
 
 ## 1. Create an MPT issuance
 
-Auto-fund a wallet and mint a new token:
+Fund an issuer account, then mint a new token:
 
 ```bash
-# Minimal — just a transferable token
-xrpl-up mptoken issuance create --flags can-transfer
-# ✔ MPT issuance created
-#   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   issuer       rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   seed         sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-#
-#   Hint: xrpl-up mptoken authorize 00070C44... --seed <holder-seed>
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 
-MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
+MPT_ID=$(xrpl-up mptoken issuance create --flags can-transfer,can-lock,can-clawback --seed $ISSUER_SEED --json | jq -r .issuanceId)
 ```
+
+This issuance is used throughout the rest of this walkthrough, including the lock (step 7) and clawback (step 8) sections below — that's why `can-lock`/`can-clawback` are included here, not just `can-transfer`. All policy flags are set at creation and can't be added later.
 
 ### Full issuance with all controls
 
@@ -80,11 +75,9 @@ Before a holder can receive MPTs they must opt in by running `mptoken authorize`
 
 ```bash
 # Fund a holder wallet
-xrpl-up faucet --local
-# → seed: sEdHolderSeedXXX  address: rHolderXXX
-
-HOLDER_SEED=sEdHolderSeedXXXXXXXXXXXXXXXXXXXXX
-HOLDER=rHolderXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER_JSON=$(xrpl-up faucet --network local --json)
+HOLDER_SEED=$(echo "$HOLDER_JSON" | jq -r .seed)
+HOLDER=$(echo "$HOLDER_JSON" | jq -r .address)
 
 # Holder opts in (no --holder flag means "this account is opting in for itself")
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED
@@ -137,11 +130,9 @@ xrpl-up account mptokens $HOLDER
 
 ```bash
 # Fund a second holder
-xrpl-up faucet --local
-# → seed: sEdHolder2SeedXXX  address: rHolder2XXX
-
-HOLDER2_SEED=sEdHolder2SeedXXXXXXXXXXXXXXXXXXXXX
-HOLDER2=rHolder2XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER2_JSON=$(xrpl-up faucet --network local --json)
+HOLDER2_SEED=$(echo "$HOLDER2_JSON" | jq -r .seed)
+HOLDER2=$(echo "$HOLDER2_JSON" | jq -r .address)
 
 # Holder 2 opts in
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER2_SEED
@@ -183,7 +174,15 @@ xrpl-up clawback --amount 500/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
 ## 9. Unauthorize a holder
 
 ```bash
-# Holder opts back out (balance must be zero first)
+# Balance must be zero first — claw back what step 8 left behind
+# (1000 minted - 250 transferred to Holder 2 in step 6 - 500 clawed back in step 8 = 250 remaining)
+xrpl-up clawback --amount 250/$MPT_ID --holder $HOLDER --seed $ISSUER_SEED
+
+# Holder 2 still holds the 250 tokens transferred in step 6 — claw those back too.
+# Destroy (step 10) requires OutstandingAmount to reach zero across *all* holders.
+xrpl-up clawback --amount 250/$MPT_ID --holder $HOLDER2 --seed $ISSUER_SEED
+
+# Holder opts back out
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED --unauthorize
 ```
 
@@ -203,12 +202,13 @@ xrpl-up mptoken issuance destroy $MPT_ID --seed $ISSUER_SEED
 ## Full lifecycle at a glance
 
 ```bash
-# 1. Create
-xrpl-up mptoken issuance create --flags can-transfer,can-clawback
-# → MPT_ID, ISSUER_SEED, ISSUER
+# 1. Create (issuer already funded via `xrpl-up faucet --network local`)
+MPT_ID=$(xrpl-up mptoken issuance create --flags can-transfer,can-clawback --seed $ISSUER_SEED --json | jq -r .issuanceId)
 
 # 2. Holder opts in
-xrpl-up faucet --local    # → HOLDER, HOLDER_SEED
+HOLDER_JSON=$(xrpl-up faucet --network local --json)
+HOLDER_SEED=$(echo "$HOLDER_JSON" | jq -r .seed)
+HOLDER=$(echo "$HOLDER_JSON" | jq -r .address)
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_SEED
 
 # 3. Send tokens

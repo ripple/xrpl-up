@@ -4,13 +4,13 @@
 
 ```bash
 # 1. Generate and save a new wallet
-xrpl-up --node testnet wallet new --save --alias sender
+xrpl-up --network testnet wallet new --save --alias sender
 
 # 2. Fund from testnet faucet
-xrpl-up --node testnet wallet fund rSenderXXXXXXXXXXXXXXXXXXXXXXXXX
+xrpl-up --network testnet wallet fund rSenderXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # 3. Send XRP to another address
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rReceiverXXXXXXXXXXXXXXXXXXXXXXX \
   --amount 1.5 \
   --account rSenderXXXXXXXXXXXXXXXXXXXXXXXXX \
@@ -21,7 +21,7 @@ xrpl-up --node testnet payment \
 
 ```bash
 # 1. Set up a trust line for the token
-xrpl-up --node testnet trust set \
+xrpl-up --network testnet trust set \
   --currency USD \
   --issuer rIssuerXXXXXXXXXXXXXXXXXXXXXXXXX \
   --limit 1000 \
@@ -29,7 +29,7 @@ xrpl-up --node testnet trust set \
   --password mypassword
 
 # 2. Receive tokens via payment from the issuer
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rHolderXXXXXXXXXXXXXXXXXXXXXXXXX \
   --amount 100/USD/rIssuerXXXXXXXXXXXXXXXXXXXXXXXXX \
   --account rIssuerXXXXXXXXXXXXXXXXXXXXXXXXX \
@@ -43,21 +43,21 @@ The issuer account must have DefaultRipple enabled or AMM creation will fail.
 
 ```bash
 # 1. Enable DefaultRipple on the issuer account (REQUIRED — skipping causes AMM create to fail)
-xrpl-up account set --set-flag defaultRipple --node local --seed sEdIssuer...
+xrpl-up account set --set-flag defaultRipple --network local --seed sEdIssuer...
 
 # 2. LP account sets a USD trust line to the issuer
 xrpl-up trust set \
   --currency USD \
   --issuer rIssuer... \
   --limit 10000 \
-  --node local \
+  --network local \
   --seed sEdLP...
 
 # 3. Issuer sends USD to the LP account
 xrpl-up payment \
   --to rLP... \
   --amount 500/USD/rIssuer... \
-  --node local \
+  --network local \
   --seed sEdIssuer...
 
 # 4. LP creates the AMM pool (100 XRP = 100000000 drops, 100 USD, 0.5% fee)
@@ -67,7 +67,7 @@ xrpl-up amm create \
   --amount 100000000 \
   --amount2 100 \
   --trading-fee 500 \
-  --node local \
+  --network local \
   --seed sEdLP...
 # → AMM Account: rAMM...
 # → LP Token: 03930D...
@@ -83,7 +83,7 @@ xrpl-up trust set \
   --currency USD \
   --issuer rIssuer... \
   --limit 10000 \
-  --node local \
+  --network local \
   --seed sEdTrader...
 
 # 2. Cross-currency payment: spend up to 10 XRP, receive 9 USD via AMM
@@ -91,12 +91,12 @@ xrpl-up payment \
   --to rTrader... \
   --amount 9/USD/rIssuer... \
   --send-max 10 \
-  --node local \
+  --network local \
   --seed sEdTrader...
 
 # 3. Verify balances
-xrpl-up account balance rTrader... --node local
-xrpl-up account trust-lines rTrader... --node local
+xrpl-up account balance rTrader... --network local
+xrpl-up account trust-lines rTrader... --network local
 ```
 
 > **Note:** XRP amounts for `amm create/deposit` are in **drops** (1 XRP = 1,000,000 drops).
@@ -110,7 +110,7 @@ xrpl-up amm withdraw \
   --asset XRP \
   --asset2 USD/rIssuer... \
   --all \
-  --node local \
+  --network local \
   --seed sEdLP...
 ```
 

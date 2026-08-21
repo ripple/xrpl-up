@@ -4,8 +4,8 @@ import { join } from "path";
 import { deriveAddress, deriveKeypair } from "ripple-keypairs";
 import { Wallet } from "xrpl";
 import type { ECDSA } from "xrpl";
-import { ed25519 } from "@noble/curves/ed25519";
-import { secp256k1 } from "@noble/curves/secp256k1";
+import { ed25519 } from "@noble/curves/ed25519.js";
+import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { encryptKeystore, getKeystoreDir, type KeystoreFile } from "../../utils/keystore";
 import { promptPassword, resolveSecret } from "../../utils/prompt";
 

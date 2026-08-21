@@ -13,13 +13,33 @@ This guide covers:
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 
-# Install five-bells-condition for condition generation
-npm install -g five-bells-condition
-# or in a project: npm install five-bells-condition
+# Install five-bells-condition for condition generation.
+# `xrpl-up run` executes scripts with Node's normal module resolution, which
+# only finds packages under the local node_modules of the project the script
+# lives in — a global `npm install -g` is NOT picked up (unless you've set up
+# NODE_PATH yourself). Install it locally in the project you're running from:
+npm install five-bells-condition
+```
+
+A standalone sandbox's ledger clock isn't the wall clock — it advances at least 1 second per accepted ledger regardless of real elapsed time, so it can drift well ahead of `Date.now()` after a lot of activity. Compute `--cancel-after` relative to the sandbox's actual current ledger time instead:
+
+```bash
+ledger_plus() {
+  SECS=$1 node -e "
+    const { Client } = require('xrpl');
+    (async () => {
+      const client = new Client('ws://localhost:6006');
+      await client.connect();
+      const r = await client.request({ command: 'ledger', ledger_index: 'validated' });
+      console.log(new Date((r.result.ledger.close_time + 946684800 + Number(process.env.SECS)) * 1000).toISOString());
+      await client.disconnect();
+    })();
+  "
+}
 ```
 
 ---
@@ -40,17 +60,14 @@ fulfillment.setPreimage(preimage);
 const fulfillmentHex  = fulfillment.serializeBinary().toString('hex').toUpperCase();
 const conditionHex    = fulfillment.getConditionBinary().toString('hex').toUpperCase();
 
-console.log('FULFILLMENT:', fulfillmentHex);
-console.log('CONDITION:  ', conditionHex);
+// Print as a single JSON line so it can be captured directly — no manual copying
+console.log(JSON.stringify({ fulfillment: fulfillmentHex, condition: conditionHex }));
 ```
 
 ```bash
-xrpl-up run scripts/gen-condition.ts
-# FULFILLMENT: A0228020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-# CONDITION:   A0258020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-FULFILLMENT=A0228020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-CONDITION=A0258020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CC_JSON=$(xrpl-up run scripts/gen-condition.ts)
+FULFILLMENT=$(echo "$CC_JSON" | jq -r .fulfillment)
+CONDITION=$(echo "$CC_JSON" | jq -r .condition)
 ```
 
 > The **condition** is published on-chain. The **fulfillment** is shared only with the intended recipient — keep it secret until you want the escrow released.
@@ -60,16 +77,13 @@ CONDITION=A0258020...XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Step 2: Create accounts
 
 ```bash
-xrpl-up faucet --local
-# → seed: sEdSenderSeedXXX  address: rSenderXXX
+SENDER_JSON=$(xrpl-up faucet --network local --json)
+SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
+SENDER=$(echo "$SENDER_JSON" | jq -r .address)
 
-xrpl-up faucet --local
-# → seed: sEdReceiverSeedXXX  address: rReceiverXXX
-
-SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-SENDER=rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXX
-RECEIVER_SEED=sEdReceiverSeedXXXXXXXXXXXXXXXXX
-RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER_SEED=$(echo "$RECEIVER_JSON" | jq -r .seed)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 ```
 
 ---
@@ -79,17 +93,13 @@ RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The sender locks 25 XRP behind the condition. The escrow auto-cancels after 7 days if not finished:
 
 ```bash
-xrpl-up escrow create --to $RECEIVER --amount 25 --seed $SENDER_SEED \
-  --condition $CONDITION \
-  --cancel-after 2024-01-08T00:00:00Z
-# ✔ Escrow created
-#   sequence    42
-#   amount      25 XRP  →  rReceiverXXX...
-#   condition   A0258020...
-#   cancelAfter 2024-01-08T00:00:00Z
-
 ESCROW_OWNER=$SENDER
-ESCROW_SEQ=42
+CANCEL_AFTER=$(ledger_plus $((7*86400)))
+
+ESCROW_SEQ=$(xrpl-up escrow create --to $RECEIVER --amount 25 --seed $SENDER_SEED \
+  --condition $CONDITION \
+  --cancel-after $CANCEL_AFTER \
+  --json | jq -r .sequence)
 ```
 
 Note: `--finish-after` is intentionally omitted — the condition alone gates release. No time restriction on when it can be finished (within the cancel window).
@@ -101,7 +111,7 @@ Note: `--finish-after` is intentionally omitted — the condition alone gates re
 ```bash
 xrpl-up escrow list $SENDER
 # sequence  42  amount 25 XRP → rReceiverXXX...
-# condition A0258020...  cancelAfter 2024-01-08T00:00:00Z
+# condition A0258020...  cancelAfter: whatever you computed above
 ```
 
 ---
@@ -125,7 +135,7 @@ Verify the escrow is gone and the receiver has the XRP:
 xrpl-up escrow list $SENDER
 # (empty)
 
-xrpl-up accounts --local
+xrpl-up accounts
 # rReceiverXXX...  1025 XRP   ← original 1000 + 25 from escrow
 ```
 
@@ -135,30 +145,40 @@ xrpl-up accounts --local
 
 If the wrong preimage is presented, the ledger rejects the transaction:
 
+`xrpl-up run` invokes scripts via `tsx`, which compiles `.ts` files to CJS unless the project's `package.json` sets `"type": "module"` — and top-level `await` isn't valid CJS. Wrap the body in an `async` function instead so the script runs regardless of the project's module type:
+
 ```typescript
 // scripts/wrong-fulfillment.ts
+// Reads RECEIVER_SEED, ESCROW_OWNER, ESCROW_SEQ, CONDITION from the environment --
+// targets the *real* escrow created in Step 3, just with a deliberately wrong fulfillment.
 import { Client, Wallet } from 'xrpl';
-const client = new Client('ws://localhost:6006');
-await client.connect();
-const receiver = Wallet.fromSeed('sEdReceiverSeedXXXXXXXXXXXXXXXXXXX');
-const tx = {
-  TransactionType: 'EscrowFinish',
-  Account: receiver.address,
-  Owner: 'rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-  OfferSequence: 42,
-  Condition:   'A0258020...CORRECT',
-  Fulfillment: 'A0228020...WRONG',   // wrong preimage
-};
-const prepared = await client.autofill(tx as any);
-const signed = receiver.sign(prepared as any);
-const result = await client.submitAndWait(signed.tx_blob);
-console.log(result.result.meta?.TransactionResult);
-// tecCRYPTOCONDITION_ERROR  ← ledger rejects wrong fulfillment
-await client.disconnect();
+
+async function main() {
+  const client = new Client('ws://localhost:6006');
+  await client.connect();
+  const receiver = Wallet.fromSeed(process.env.RECEIVER_SEED!);
+  const tx = {
+    TransactionType: 'EscrowFinish',
+    Account: receiver.address,
+    Owner: process.env.ESCROW_OWNER!,
+    OfferSequence: Number(process.env.ESCROW_SEQ),
+    Condition: process.env.CONDITION!,
+    Fulfillment: 'A0228020' + '00'.repeat(32) + '810100',   // well-formed but wrong preimage
+  };
+  const prepared = await client.autofill(tx as any);
+  const signed = receiver.sign(prepared as any);
+  const result = await client.submitAndWait(signed.tx_blob);
+  console.log(result.result.meta?.TransactionResult);
+  // tecCRYPTOCONDITION_ERROR  ← ledger rejects wrong fulfillment
+  await client.disconnect();
+}
+
+main();
 ```
 
 ```bash
-xrpl-up run scripts/wrong-fulfillment.ts
+RECEIVER_SEED=$RECEIVER_SEED ESCROW_OWNER=$ESCROW_OWNER ESCROW_SEQ=$ESCROW_SEQ CONDITION=$CONDITION \
+  xrpl-up run scripts/wrong-fulfillment.ts
 # tecCRYPTOCONDITION_ERROR
 ```
 
@@ -174,15 +194,17 @@ If the receiver never presents the fulfillment and `CancelAfter` passes, anyone 
 # (after CancelAfter time has passed — in the sandbox you can advance time
 #  by waiting, or create a short --cancel-after for testing)
 
-xrpl-up escrow create --to $RECEIVER --amount 10 --seed $SENDER_SEED \
+SHORT_CANCEL_AFTER=$(ledger_plus 30)
+
+ESCROW_SEQ_SHORT=$(xrpl-up escrow create --to $RECEIVER --amount 10 --seed $SENDER_SEED \
   --condition $CONDITION \
-  --cancel-after 2024-01-01T00:00:30Z
-# → ESCROW_SEQ_SHORT=43
+  --cancel-after $SHORT_CANCEL_AFTER \
+  --json | jq -r .sequence)
 
 sleep 35
 
 # Cancel the expired escrow (sender or anyone else can do this)
-xrpl-up escrow cancel --owner $SENDER --sequence 43 --seed $SENDER_SEED
+xrpl-up escrow cancel --owner $SENDER --sequence $ESCROW_SEQ_SHORT --seed $SENDER_SEED
 # ✔ Escrow cancelled  10 XRP returned to rSenderXXX...
 ```
 

@@ -1,5 +1,6 @@
 import { Client } from 'xrpl';
 import { NetworkConfig } from './config';
+import { shouldBlockMainnet, MainnetBlockedError } from '../cli/utils/client';
 
 export interface ServerInfo {
   ledgerIndex: number;
@@ -37,6 +38,16 @@ export class NetworkManager {
 
   async connect(): Promise<void> {
     await this._client.connect();
+    // Same gate as cli/utils/client.ts's withClient — status/accounts go
+    // through this separate connection path, not withClient, and previously
+    // had no mainnet check of any kind (faucet/node.ts already have their
+    // own independent isMainnet() hostname check before ever constructing a
+    // NetworkManager, so this is redundant-but-harmless for those two).
+    const isLocal = /localhost|127\.0\.0\.1/i.test(this._networkConfig.url);
+    if (shouldBlockMainnet(this._client.networkID, isLocal)) {
+      await this._client.disconnect();
+      throw new MainnetBlockedError(this._networkConfig.url);
+    }
   }
 
   async disconnect(): Promise<void> {

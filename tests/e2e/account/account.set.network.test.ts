@@ -6,7 +6,7 @@ import { tmpdir } from "os";
 import { Client, Wallet } from "xrpl";
 import type { AccountRoot } from "xrpl";
 import { generateMnemonic } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english";
+import { wordlist } from "@scure/bip39/wordlists/english.js";
 import {
   XRPL_WS,
   fundMaster,
@@ -15,9 +15,9 @@ import {
   fundAddress,
 } from "../helpers/fund";
 
-// 12 tests concurrent with wallets (11 funded + 1 mnemonic via fundAddress); +3 buffer = 15
-// Budget: 15 × 0.2 + 12 × 2 XRP = 3 + 24 = 27 ≤ 99 ✓
-const TICKET_COUNT = 15;
+// 13 tests concurrent with wallets (12 funded + 1 mnemonic via fundAddress); +3 buffer = 16
+// Budget: 16 × 0.2 + 13 × 2 XRP = 3.2 + 26 = 29.2 ≤ 99 ✓
+const TICKET_COUNT = 16;
 const FUND_AMOUNT = 2;
 
 let client: Client;
@@ -42,7 +42,7 @@ describe("account set fields", () => {
     const emailHash = "AABBCCDDEEFF00112233445566778899";
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--email-hash", emailHash,
       "--seed", wallet.seed!,
@@ -51,7 +51,7 @@ describe("account set fields", () => {
 
     await new Promise((res) => setTimeout(res, 10_000));
 
-    const infoResult = runCLI(["--node", XRPL_WS, "account", "info", "--json", wallet.address]);
+    const infoResult = runCLI(["--network", XRPL_WS, "account", "info", "--json", wallet.address]);
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     expect(data.EmailHash?.toUpperCase()).toBe(emailHash.toUpperCase());
@@ -61,7 +61,7 @@ describe("account set fields", () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--transfer-rate", "1005000000",
       "--seed", wallet.seed!,
@@ -70,17 +70,38 @@ describe("account set fields", () => {
 
     await new Promise((res) => setTimeout(res, 10_000));
 
-    const infoResult = runCLI(["--node", XRPL_WS, "account", "info", "--json", wallet.address]);
+    const infoResult = runCLI(["--network", XRPL_WS, "account", "info", "--json", wallet.address]);
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     expect(data.TransferRate).toBe(1005000000);
+  }, 120_000);
+
+  it.concurrent("an on-ledger failure (temBAD_TRANSFER_RATE) exits 1 and does not apply the setting", async () => {
+    // Regression: account set used fire-and-forget client.submit() instead of
+    // submitAndWait(), so it always printed "Transaction submitted" and exited
+    // 0 regardless of the actual on-ledger result — silently hiding failures.
+    const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
+
+    const result = runCLI([
+      "--network", XRPL_WS,
+      "account", "set",
+      "--transfer-rate", "500000000", // below the valid 1e9-2e9 range
+      "--seed", wallet.seed!,
+    ]);
+    expect(result.status, `stdout: ${result.stdout} stderr: ${result.stderr}`).toBe(1);
+    expect(result.stderr).toContain("temBAD_TRANSFER_RATE");
+
+    const infoResult = runCLI(["--network", XRPL_WS, "account", "info", "--json", wallet.address]);
+    expect(infoResult.status).toBe(0);
+    const data = JSON.parse(infoResult.stdout) as AccountRoot;
+    expect(data.TransferRate).toBeUndefined();
   }, 120_000);
 
   it.concurrent("--tick-size sets TickSize on-chain", async () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--tick-size", "5",
       "--seed", wallet.seed!,
@@ -89,7 +110,7 @@ describe("account set fields", () => {
 
     await new Promise((res) => setTimeout(res, 10_000));
 
-    const infoResult = runCLI(["--node", XRPL_WS, "account", "info", "--json", wallet.address]);
+    const infoResult = runCLI(["--network", XRPL_WS, "account", "info", "--json", wallet.address]);
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     expect(data.TickSize).toBe(5);
@@ -103,7 +124,7 @@ describe("account set flags", () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--set-flag", "defaultRipple",
       "--seed", wallet.seed!,
@@ -112,7 +133,7 @@ describe("account set flags", () => {
 
     await new Promise((res) => setTimeout(res, 10_000));
 
-    const infoResult = runCLI(["--node", XRPL_WS, "account", "info", "--json", wallet.address]);
+    const infoResult = runCLI(["--network", XRPL_WS, "account", "info", "--json", wallet.address]);
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     // lsfDefaultRipple = 0x00800000
@@ -123,7 +144,7 @@ describe("account set flags", () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--clear-flag", "defaultRipple",
       "--seed", wallet.seed!,
@@ -132,7 +153,7 @@ describe("account set flags", () => {
 
     await new Promise((res) => setTimeout(res, 10_000));
 
-    const infoResult = runCLI(["--node", XRPL_WS, "account", "info", "--json", wallet.address]);
+    const infoResult = runCLI(["--network", XRPL_WS, "account", "info", "--json", wallet.address]);
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     // lsfDefaultRipple = 0x00800000 — should be cleared on a fresh wallet
@@ -148,7 +169,7 @@ describe("account set flags", () => {
     await fundAddress(client, master, mnemonicWallet.address, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--domain", "mnemonic.example.com",
       "--mnemonic", mnemonic,
@@ -170,7 +191,7 @@ describe("account set flags", () => {
       expect(importResult.status, `stdout: ${importResult.stdout} stderr: ${importResult.stderr}`).toBe(0);
 
       const result = runCLI([
-        "--node", XRPL_WS,
+        "--network", XRPL_WS,
         "account", "set",
         "--domain", "keystore.example.com",
         "--account", wallet.address,
@@ -193,7 +214,7 @@ const LSF_ALLOW_TRUST_LINE_CLAWBACK = 0x80000000;
 describe("account set --allow-clawback", () => {
   it.concurrent("exits 1 with correct error message when --allow-clawback is used without --confirm", () => {
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--allow-clawback",
       "--seed", "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
@@ -208,7 +229,7 @@ describe("account set --allow-clawback", () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--allow-clawback",
       "--confirm",
@@ -218,7 +239,7 @@ describe("account set --allow-clawback", () => {
 
     await new Promise((res) => setTimeout(res, 10_000));
 
-    const infoResult = runCLI(["--node", XRPL_WS, "account", "info", "--json", wallet.address]);
+    const infoResult = runCLI(["--network", XRPL_WS, "account", "info", "--json", wallet.address]);
     expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
     const data = JSON.parse(infoResult.stdout) as AccountRoot;
     expect(data.Flags! & LSF_ALLOW_TRUST_LINE_CLAWBACK).not.toBe(0);
@@ -232,7 +253,7 @@ describe("account set", () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--seed", wallet.seed!,
       "--domain", "second.example.com",
@@ -246,7 +267,7 @@ describe("account set", () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--seed", wallet.seed!,
       "--domain", "dryrun.example.com",
@@ -265,7 +286,7 @@ describe("account set", () => {
     const [wallet] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--seed", wallet.seed!,
       "--set-flag", "requireDestTag",
@@ -280,7 +301,7 @@ describe("account set", () => {
 
   it.concurrent("exits 1 when no key material provided", () => {
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--domain", "example.com",
     ]);
@@ -290,7 +311,7 @@ describe("account set", () => {
 
   it.concurrent("exits 1 when no setting fields provided", () => {
     const result = runCLI([
-      "--node", XRPL_WS,
+      "--network", XRPL_WS,
       "account", "set",
       "--seed", "snoPBrXtMeMyMHUVTgbuqAfg1SUTb",
     ]);

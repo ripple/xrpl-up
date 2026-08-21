@@ -185,7 +185,7 @@ xrpl-up amm info --asset XRP --asset2 USD/rIssuerXXX... --json
 # Prerequisite: Alice holds USD issued by rIssuerXXX... and has set up a trust line
 
 # 1. Alice creates an XRP/USD AMM pool with 1,000,000 drops (1 XRP) and 100 USD, fee = 0.3%
-xrpl-up --node testnet amm create \
+xrpl-up --network testnet amm create \
   --asset XRP \
   --asset2 USD/rIssuerXXX... \
   --amount 1000000 \
@@ -195,22 +195,22 @@ xrpl-up --node testnet amm create \
 # → {"ammAccount":"rAMMXXXX...","lpTokenCurrency":"03...","result":"tesSUCCESS"}
 
 # 2. Query the pool state (balances, LP token supply, current fee)
-xrpl-up --node testnet amm info --asset XRP --asset2 USD/rIssuerXXX...
+xrpl-up --network testnet amm info --asset XRP --asset2 USD/rIssuerXXX...
 
 # 3. Alice deposits an additional 500,000 drops of XRP (single-asset deposit)
-xrpl-up --node testnet amm deposit \
+xrpl-up --network testnet amm deposit \
   --asset XRP --asset2 USD/rIssuerXXX... \
   --amount 500000 \
   --seed sEdAliceXXXX...
 
 # 4. Alice votes to lower the trading fee to 0.1%
-xrpl-up --node testnet amm vote \
+xrpl-up --network testnet amm vote \
   --asset XRP --asset2 USD/rIssuerXXX... \
   --trading-fee 100 \
   --seed sEdAliceXXXX...
 
 # 5. Alice withdraws all liquidity (auto-deletes the pool when she is the sole LP)
-xrpl-up --node testnet amm withdraw \
+xrpl-up --network testnet amm withdraw \
   --asset XRP --asset2 USD/rIssuerXXX... \
   --all \
   --seed sEdAliceXXXX...

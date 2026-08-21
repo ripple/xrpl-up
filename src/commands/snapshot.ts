@@ -8,7 +8,8 @@ import { Client } from 'xrpl';
 import {
   waitForPort, isConsensusMode,
   LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT, COMPOSE_FILE, COMPOSE_PROJECT,
-  VOLUME_NAME, PEER_VOLUME_NAME,
+  VOLUME_NAME, PEER_VOLUME_NAME, readGenesisLineage, adoptGenesisLineage,
+  EXTRA_AMENDMENTS_FILE,
 } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
@@ -16,6 +17,14 @@ import { logger } from '../utils/logger';
 const SNAPSHOTS_DIR = path.join(os.homedir(), '.xrpl-up', 'snapshots');
 const WALLET_STORE_PATH = path.join(os.homedir(), '.xrpl-up', 'local-accounts.json');
 const SNAPSHOT_RESTORE_START_TIMEOUT_MS = 90_000;
+// The rippled/faucet ports opening (waited on above) doesn't mean the restored
+// ledger is queryable yet — consensus needs a moment to catch up and produce a
+// validated ledger after resume. 30s was observed to be too tight after heavy
+// back-to-back Docker churn (e.g. an amendment-enable genesis rebuild
+// immediately followed by a restore): the account existed and was queryable
+// only a few seconds after this window closed, so the failure was a false
+// negative, not an actual restore problem.
+const SNAPSHOT_RESTORE_VERIFY_TIMEOUT_MS = 60_000;
 
 /** Returns true if the named Docker volume exists. */
 function volumeExists(name: string = VOLUME_NAME): boolean {
@@ -42,6 +51,25 @@ function metaSidecarPath(name: string): string {
   return path.join(SNAPSHOTS_DIR, `${name}-meta.json`);
 }
 
+/**
+ * Genesis lineage + amendment set recorded in a snapshot's meta sidecar.
+ * Both are absent for snapshots saved before this was recorded, in which case
+ * the restore proceeds unchanged (nothing to reconcile).
+ */
+function readSnapshotMeta(name: string): { lineage: string | null; amendments: string } {
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaSidecarPath(name), 'utf-8')) as {
+      lineage?: string; amendments?: string;
+    };
+    return {
+      lineage: meta.lineage && meta.lineage !== 'unknown' ? meta.lineage : null,
+      amendments: meta.amendments ?? '',
+    };
+  } catch {
+    return { lineage: null, amendments: '' };
+  }
+}
+
 function backupPath(filePath: string): string {
   return `${filePath}.bak`;
 }
@@ -53,6 +81,52 @@ function safeCommandOutput(command: string): string {
     const stdout = (err as { stdout?: string | Buffer }).stdout?.toString() ?? '';
     const stderr = (err as { stderr?: string | Buffer }).stderr?.toString() ?? '';
     return [stdout, stderr].filter(Boolean).join('\n').trim() || '(no output)';
+  }
+}
+
+/**
+ * Wait until every account in the wallet store exists on the validated ledger.
+ *
+ * Keeps `snapshot save` from capturing a ledger that predates its own accounts
+ * sidecar (see call site). Best-effort: on timeout it warns rather than failing,
+ * so a snapshot is still produced.
+ */
+async function waitForWalletStoreValidated(timeoutMs = 30_000): Promise<void> {
+  let addresses: string[] = [];
+  try {
+    const store = JSON.parse(fs.readFileSync(WALLET_STORE_PATH, 'utf-8')) as { address?: string }[];
+    addresses = store.map((a) => a.address).filter((a): a is string => Boolean(a));
+  } catch {
+    return;   // no wallet store — nothing to wait for
+  }
+  if (addresses.length === 0) return;
+
+  const spinner = ora({ text: chalk.dim('Waiting for accounts to be validated…'), prefixText: ' ' }).start();
+  const deadline = Date.now() + timeoutMs;
+  const client = new Client(LOCAL_WS_URL, { timeout: 10_000 });
+  try {
+    await client.connect();
+    while (Date.now() < deadline) {
+      const results = await Promise.all(addresses.map(async (address) => {
+        try {
+          await client.request({ command: 'account_info', account: address, ledger_index: 'validated' });
+          return null;
+        } catch {
+          return address;
+        }
+      }));
+      const missing = results.filter((a): a is string => a !== null);
+      if (missing.length === 0) {
+        spinner.succeed(chalk.dim(`All ${addresses.length} accounts validated`));
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 2_000));
+    }
+    spinner.warn(chalk.yellow('Some accounts are not yet validated — snapshot may not include them'));
+  } catch {
+    spinner.stop();   // node unreachable; the save itself will surface the problem
+  } finally {
+    await client.disconnect().catch(() => {});
   }
 }
 
@@ -74,7 +148,7 @@ function assertConsensusMode(action: 'save' | 'restore'): void {
       `  Standalone mode does not persist ledger state across restarts.\n` +
       `  Snapshots require the --local-network flag. Restart with:\n` +
       `\n` +
-      `    xrpl-up start --local --local-network --detach\n`
+      `    xrpl-up start --local --local-network\n`
     );
   }
 }
@@ -103,7 +177,7 @@ export async function snapshotSave(name: string): Promise<void> {
   if (!volumeExists()) {
     throw new Error(
       `No ledger volume found (${VOLUME_NAME}).\n` +
-      `  Start the sandbox first: xrpl-up start --local --local-network --detach`
+      `  Start the sandbox first: xrpl-up start --local --local-network`
     );
   }
 
@@ -115,6 +189,16 @@ export async function snapshotSave(name: string): Promise<void> {
   }
 
   logger.blank();
+
+  // ── Wait for the accounts we're about to record to be on a validated ledger ─
+  // The accounts sidecar comes from the wallet store, which is written as soon
+  // as a funding transaction is submitted. In consensus mode validation takes
+  // ~4s, so saving immediately after `start`/`faucet` can capture a ledger that
+  // predates those accounts — the snapshot then restores a ledger the sidecar
+  // does not match, and post-restore verification fails with "account ... not
+  // found". Block until they are actually validated so the tarball and the
+  // sidecar always agree.
+  await waitForWalletStoreValidated();
 
   // ── Stop services first ────────────────────────────────────────────────────
   // Graceful shutdown ensures rippled flushes all buffers, checkpoints SQLite
@@ -170,7 +254,17 @@ export async function snapshotSave(name: string): Promise<void> {
   } else {
     fs.writeFileSync(tmpSidecar, '[]');
   }
-  fs.writeFileSync(tmpMeta, JSON.stringify({ format: 'consensus-v1' }));
+  // Record which genesis lineage this ledger descends from. A snapshot only
+  // restores correctly onto the same lineage — see readGenesisLineage().
+  fs.writeFileSync(tmpMeta, JSON.stringify({
+    format: 'consensus-v1',
+    lineage: readGenesisLineage() ?? 'unknown',
+    // The manually enabled amendments this genesis was built with, so restore
+    // can rebuild a matching config instead of asking the user to remember.
+    amendments: fs.existsSync(EXTRA_AMENDMENTS_FILE)
+      ? fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8')
+      : '',
+  }));
 
   const finalSidecar = walletSidecarPath(name);
   const finalMeta = metaSidecarPath(name);
@@ -254,9 +348,20 @@ export async function snapshotRestore(name: string): Promise<void> {
   if (!volumeExists()) {
     throw new Error(
       `No ledger volume found (${VOLUME_NAME}).\n` +
-      `  Start the sandbox first: xrpl-up start --local --local-network --detach`
+      `  Start the sandbox first: xrpl-up start --local --local-network`
     );
   }
+
+  // A snapshot is a copy of one ledger chain's database, so it only restores
+  // onto a sandbox descending from the same genesis. Enabling or clearing
+  // amendments rebuilds genesis (that is how the stanza takes effect) and so
+  // starts a new lineage. Rather than refusing, adopt the snapshot's amendment
+  // set below so the regenerated config matches the ledger being restored.
+  const snapshotMeta = readSnapshotMeta(name);
+  const currentLineage = readGenesisLineage();
+  const adopting = Boolean(
+    snapshotMeta.lineage && currentLineage && snapshotMeta.lineage !== currentLineage,
+  );
 
   logger.blank();
 
@@ -317,6 +422,19 @@ export async function snapshotRestore(name: string): Promise<void> {
     fs.unlinkSync(WALLET_STORE_PATH);
   }
 
+  // ── Align the amendment config with the restored ledger ────────────────────
+  // Must happen before the containers come back up so rippled reads a config
+  // that matches the ledger it is about to load.
+  if (adopting && snapshotMeta.lineage) {
+    adoptGenesisLineage(snapshotMeta.lineage, snapshotMeta.amendments);
+    const count = snapshotMeta.amendments.split('\n').filter((l) => l.trim()).length;
+    logger.dim(
+      count > 0
+        ? `  Restored the ${count} manually enabled amendment${count === 1 ? '' : 's'} this snapshot was saved with`
+        : '  Cleared manually enabled amendments to match this snapshot',
+    );
+  }
+
   // ── Restart all services ───────────────────────────────────────────────────
   // The entrypoint detects ledger.db → uses --load to resume from SQLite.
   // Use `up -d` instead of `start` — containers may have been removed by
@@ -359,7 +477,7 @@ export async function snapshotRestore(name: string): Promise<void> {
       const client = new Client(LOCAL_WS_URL, { timeout: 60_000 });
       await client.connect();
       // Wait a moment for consensus to produce a validated ledger after restart
-      const deadline = Date.now() + 30_000;
+      const deadline = Date.now() + SNAPSHOT_RESTORE_VERIFY_TIMEOUT_MS;
       let found = false;
       while (Date.now() < deadline) {
         try {
@@ -387,7 +505,7 @@ export async function snapshotRestore(name: string): Promise<void> {
         `Account ${probe} from the snapshot sidecar was not found on the restored ledger.\n` +
         `  The restore may not have applied correctly. Check:\n` +
         `  - docker compose -p ${COMPOSE_PROJECT} logs rippled\n` +
-        `  - xrpl-up accounts --local\n` +
+        `  - xrpl-up accounts\n` +
         `  - Re-save the snapshot from a running sandbox and try again.`
       );
     }
@@ -395,7 +513,7 @@ export async function snapshotRestore(name: string): Promise<void> {
 
   logger.blank();
   logger.success(`Ledger state restored to snapshot "${name}"`);
-  logger.dim('  Run xrpl-up accounts --local to verify balances.');
+  logger.dim('  Run xrpl-up accounts to verify balances.');
   logger.blank();
 }
 

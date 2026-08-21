@@ -1,7 +1,7 @@
 ## xrpl-up Local Node Management
 
 These commands manage the local rippled Docker sandbox. They use their own
-`--network` / `--local-network` flags — **not** the global `--node` flag used by
+`--network` / `--local-network` flags — **not** the global `--network` flag used by
 transaction commands (payment, trust, amm, etc.).
 
 ### `start` — Start local sandbox
@@ -14,7 +14,7 @@ connect to testnet/devnet instead.
 xrpl-up start
 
 # Run in background (detached)
-xrpl-up start --detach
+xrpl-up start
 
 # 2-node consensus network with persistent state and snapshot support
 xrpl-up start --local-network
@@ -23,7 +23,7 @@ xrpl-up start --local-network
 xrpl-up start --ledger-interval 500
 
 # Use a specific Docker image
-xrpl-up start --image xrpllabsofficial/xrpld:2.3.0
+xrpl-up start --image rippleci/xrpld:3.2.0
 ```
 
 ### `status` — Show node health

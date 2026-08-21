@@ -43,6 +43,9 @@ export default defineConfig({
       // Snapshot tests restart the node (stop+start rippled & faucet) — must run
       // in isolation via: npm run test:e2e:snapshot
       "tests/e2e/sandbox/snapshot.test.ts",
+      // Amendment activation resets the whole stack — must run in isolation
+      // via: npm run test:e2e:amendment
+      "tests/e2e/sandbox/amendment.activate.test.ts",
     ],
     globalSetup: ["tests/setup/local-node.ts"],
   },

@@ -9,9 +9,26 @@ Checks work with both **XRP** and **IOUs**.
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
+```
+
+A standalone sandbox's ledger clock isn't the wall clock — it advances at least 1 second per accepted ledger regardless of real elapsed time, so it can drift well ahead of `Date.now()` after a lot of activity. Compute expirations relative to the sandbox's actual current ledger time instead:
+
+```bash
+ledger_plus() {
+  SECS=$1 node -e "
+    const { Client } = require('xrpl');
+    (async () => {
+      const client = new Client('ws://localhost:6006');
+      await client.connect();
+      const r = await client.request({ command: 'ledger', ledger_index: 'validated' });
+      console.log(new Date((r.result.ledger.close_time + 946684800 + Number(process.env.SECS)) * 1000).toISOString());
+      await client.disconnect();
+    })();
+  "
+}
 ```
 
 ---
@@ -19,16 +36,13 @@ export XRPL_NODE=local
 ## 1. Set up sender and receiver
 
 ```bash
-xrpl-up faucet --local
-# → seed: sEdSenderSeedXXX  address: rSenderXXX
+SENDER_JSON=$(xrpl-up faucet --network local --json)
+SENDER_SEED=$(echo "$SENDER_JSON" | jq -r .seed)
+SENDER=$(echo "$SENDER_JSON" | jq -r .address)
 
-xrpl-up faucet --local
-# → seed: sEdReceiverSeedXXX  address: rReceiverXXX
-
-SENDER_SEED=sEdSenderSeedXXXXXXXXXXXXXXXXXXXXX
-SENDER=rSenderXXXXXXXXXXXXXXXXXXXXXXXXXXX
-RECEIVER_SEED=sEdReceiverSeedXXXXXXXXXXXXXXXXX
-RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
+RECEIVER_JSON=$(xrpl-up faucet --network local --json)
+RECEIVER_SEED=$(echo "$RECEIVER_JSON" | jq -r .seed)
+RECEIVER=$(echo "$RECEIVER_JSON" | jq -r .address)
 ```
 
 ---
@@ -38,27 +52,35 @@ RECEIVER=rReceiverXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The sender creates a check for up to 10 XRP, valid for 7 days:
 
 ```bash
-xrpl-up check create --to $RECEIVER --send-max 10 --seed $SENDER_SEED \
-  --expiration 2024-01-15T00:00:00Z
-# ✔ Check created
-#   checkID  A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   sendMax  10 XRP → rReceiverXXX...
-#   expiry   2024-01-08T00:00:00Z
+EXPIRY_7D=$(ledger_plus $((7*86400)))
 
-CHECK_ID=A1B2C3D4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+CHECK_ID=$(xrpl-up check create --to $RECEIVER --send-max 10 --seed $SENDER_SEED \
+  --expiration $EXPIRY_7D --json | jq -r .checkId)
 ```
 
 ---
 
 ## 3. Create an IOU check
 
+An IOU check needs a real issuer, and the sender needs actual USD to back it once the receiver cashes it:
+
 ```bash
-# Requires the receiver to have a trust line for USD first
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
+xrpl-up account set --set-flag defaultRipple --seed $ISSUER_SEED
+
+# Sender needs a trust line + real USD balance to back the check
+xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $SENDER_SEED
+xrpl-up payment --to $SENDER --amount 100/USD/$ISSUER --seed $ISSUER_SEED
+
+# Receiver needs a trust line for USD to cash the check into
 xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $RECEIVER_SEED
 
+EXPIRY_14D=$(ledger_plus $((14*86400)))
+
 xrpl-up check create --to $RECEIVER --send-max 50/USD/$ISSUER --seed $SENDER_SEED \
-  --expiration 2024-02-01T00:00:00Z
-# ✔ Check created  sendMax 50 USD  checkID EFGH5678...
+  --expiration $EXPIRY_14D
 ```
 
 ---
@@ -75,10 +97,10 @@ xrpl-up check list $RECEIVER
 
 ## 5. Cash a check — exact amount
 
-The receiver cashes for exactly 5 XRP (less than the 10 XRP maximum):
+Cashing a check always fully consumes the Check object, even for a partial amount (unlike an escrow, a check can't be drawn down incrementally) — so this uses `$CHECK_ID` from step 2 for this one demo only:
 
 ```bash
-xrpl-up check cash $CHECK_ID --amount 5 --seed $RECEIVER_SEED
+xrpl-up check cash --check $CHECK_ID --amount 5 --seed $RECEIVER_SEED
 # ✔ Check cashed  received 5 XRP
 ```
 
@@ -86,10 +108,14 @@ xrpl-up check cash $CHECK_ID --amount 5 --seed $RECEIVER_SEED
 
 ## 6. Cash a check — flexible amount (deliver-min)
 
-Instead of an exact amount, the receiver asks for "as much as possible, but at least 3 XRP":
+Instead of an exact amount, the receiver asks for "as much as possible, but at least 3 XRP". Since step 5 already consumed `$CHECK_ID`, this needs a fresh check:
 
 ```bash
-xrpl-up check cash $CHECK_ID --deliver-min 3 --seed $RECEIVER_SEED
+EXPIRY_7D_2=$(ledger_plus $((7*86400)))
+CHECK_ID_2=$(xrpl-up check create --to $RECEIVER --send-max 10 --seed $SENDER_SEED \
+  --expiration $EXPIRY_7D_2 --json | jq -r .checkId)
+
+xrpl-up check cash --check $CHECK_ID_2 --deliver-min 3 --seed $RECEIVER_SEED
 # ✔ Check cashed  received 10 XRP  (full sendMax)
 ```
 
@@ -99,15 +125,21 @@ xrpl-up check cash $CHECK_ID --deliver-min 3 --seed $RECEIVER_SEED
 
 ## 7. Cancel a check
 
-Either the sender or the receiver can cancel at any time. After the expiry, anyone can cancel:
+Either the sender or the receiver can cancel — but only one cancel actually happens, since the first one deletes the Check object. Two fresh checks demonstrate both cases:
 
 ```bash
-# Sender cancels their own check
-xrpl-up check cancel $CHECK_ID --seed $SENDER_SEED
-# ✔ Check cancelled  A1B2C3D4...
+EXPIRY_7D_3=$(ledger_plus $((7*86400)))
 
-# Receiver cancels (also valid)
-xrpl-up check cancel $CHECK_ID --seed $RECEIVER_SEED
+# Sender cancels their own check
+CHECK_ID_3=$(xrpl-up check create --to $RECEIVER --send-max 10 --seed $SENDER_SEED \
+  --expiration $EXPIRY_7D_3 --json | jq -r .checkId)
+xrpl-up check cancel --check $CHECK_ID_3 --seed $SENDER_SEED
+# ✔ Check cancelled
+
+# Receiver cancels a different check (also valid)
+CHECK_ID_4=$(xrpl-up check create --to $RECEIVER --send-max 10 --seed $SENDER_SEED \
+  --expiration $EXPIRY_7D_3 --json | jq -r .checkId)
+xrpl-up check cancel --check $CHECK_ID_4 --seed $RECEIVER_SEED
 ```
 
 ---
@@ -117,12 +149,13 @@ xrpl-up check cancel $CHECK_ID --seed $RECEIVER_SEED
 Checks with a past `--expiration` can be cancelled by anyone (including the sender), freeing up the 2 XRP object reserve:
 
 ```bash
-# Create a check that expires in 10 seconds (for testing)
-xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_SEED --expiration 2024-01-01T00:00:10Z
+# Create a check that expires 2 minutes from now (for testing)
+EXPIRY_2M=$(ledger_plus 120)
+EXPIRED_CHECK_ID=$(xrpl-up check create --to $RECEIVER --send-max 5 --seed $SENDER_SEED --expiration $EXPIRY_2M --json | jq -r .checkId)
 
-# Wait 10 seconds, then cancel (anyone can do this after expiry)
-sleep 10
-xrpl-up check cancel $EXPIRED_CHECK_ID --seed $SENDER_SEED
+# Wait for the ledger clock to pass the expiration, then cancel (anyone can do this after expiry)
+sleep 130
+xrpl-up check cancel --check $EXPIRED_CHECK_ID --seed $SENDER_SEED
 ```
 
 ---

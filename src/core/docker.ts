@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import net from 'net';
 
 export const CONTAINER_NAME = 'xrpl-up-local';
-export const DEFAULT_IMAGE = 'xrpllabsofficial/xrpld:latest';
+export const DEFAULT_IMAGE = 'xrpllabsofficial/xrpld:3.3.0';
 export const LOCAL_WS_PORT = 6006;
 export const LOCAL_WS_URL = `ws://localhost:${LOCAL_WS_PORT}`;
 

@@ -79,21 +79,21 @@ xrpl-up check list rAccount...
 
 ```bash
 # 1. Alice creates a Check — authorizing Bob to pull up to 20 XRP from her account
-xrpl-up --node testnet check create \
+xrpl-up --network testnet check create \
   --to rBobXXXX... --send-max 20 \
   --seed sEdAliceXXXX... --json
 # → {"checkId":"CCDDEE...64chars","result":"tesSUCCESS"}
 
 # 2. List Bob's incoming checks
-xrpl-up --node testnet check list rBobXXXX...
+xrpl-up --network testnet check list rBobXXXX...
 
 # 3. Bob cashes the check for exactly 15 XRP
-xrpl-up --node testnet check cash \
+xrpl-up --network testnet check cash \
   --check CCDDEE...64chars --amount 15 \
   --seed sEdBobXXXX...
 
 # 4. Alternatively, if Bob doesn't cash it, Alice cancels the check to reclaim the reserve
-xrpl-up --node testnet check cancel \
+xrpl-up --network testnet check cancel \
   --check CCDDEE...64chars --seed sEdAliceXXXX...
 ```
 

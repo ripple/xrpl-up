@@ -57,7 +57,7 @@ function walletFromPrivateKey(privateKey: string, keyType: KeyType): Wallet {
   if (keyType === "ed25519") {
     // Use @noble/curves/ed25519 to derive public key
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ed25519: noble } = require("@noble/curves/ed25519") as {
+    const { ed25519: noble } = require("@noble/curves/ed25519.js") as {
       ed25519: { getPublicKey: (privKey: Uint8Array) => Uint8Array };
     };
     const rawPriv = Buffer.from(
@@ -68,7 +68,7 @@ function walletFromPrivateKey(privateKey: string, keyType: KeyType): Wallet {
     publicKey = "ED" + Buffer.from(pubBytes).toString("hex").toUpperCase();
   } else {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { secp256k1: noble } = require("@noble/curves/secp256k1") as {
+    const { secp256k1: noble } = require("@noble/curves/secp256k1.js") as {
       secp256k1: { getPublicKey: (privKey: Uint8Array, compressed: boolean) => Uint8Array };
     };
     const rawPriv = Buffer.from(

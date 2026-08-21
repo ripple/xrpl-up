@@ -83,7 +83,7 @@ async function startNode(): Promise<void> {
     timeout: 30_000,
     env: { ...process.env },
   });
-  const result = spawnSync(TSX, [CLI, "start", "--local-network", "--detach"], {
+  const result = spawnSync(TSX, [CLI, "start", "--local-network"], {
     encoding: "utf-8",
     timeout: 180_000,   // consensus bootstrap: ~60s for consensus + faucet
     env: { ...process.env },
@@ -130,6 +130,10 @@ async function prefundWorkerMasters(): Promise<void> {
     });
     let seq: number = infoResp.result.account_data.Sequence;
     const ledgerIndex = await client.getLedgerIndex();
+    // Bypassing autofill (see comment above) means autofill's own NetworkID
+    // injection is skipped too — set it manually or rippled rejects with
+    // telREQUIRES_NETWORK_ID for any network_id > 1024.
+    const networkID = client.networkID;
 
     const wallets: Wallet[] = [];
     for (let i = 0; i < MAX_PREFUND_WORKERS; i++) {
@@ -144,6 +148,7 @@ async function prefundWorkerMasters(): Promise<void> {
         LastLedgerSequence: ledgerIndex + 50,
         Amount: xrpToDrops(String(WORKER_PREFUND_XRP)),
         Destination: w.address,
+        ...(networkID !== undefined && networkID > 1024 ? { NetworkID: networkID } : {}),
       };
       const { tx_blob } = genesis.sign(tx);
       await client.submit(tx_blob);
@@ -199,7 +204,7 @@ export async function setup(): Promise<void> {
     if (process.env.XRPL_LOCAL_NO_AUTOSTART === "1") {
       throw new Error(
         "Local rippled is not running on port 6006.\n" +
-          "Start it manually with: xrpl-up start --local-network --detach\n" +
+          "Start it manually with: xrpl-up start --local-network\n" +
           "Or unset XRPL_LOCAL_NO_AUTOSTART to allow auto-start.",
       );
     }

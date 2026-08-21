@@ -38,23 +38,23 @@ Target feature set (roadmap):
 
 ### Experiments Completed (Decided to Drop as Product Directions)
 
-- **Fork and Replay experiments were completed and then dropped as product directions:** `xrpl-up node --local --fork` can mirror XRP balances into local state, but XRPL does not expose private keys, so mirrored accounts cannot sign and are only passive recipients. Replay was also tested by re-submitting historical mainnet blobs, but those blobs carry original sequence/signature context and fail locally (`terPRE_SEQ`) when state differs. Native `xrpld --replay` additionally requires full historical state on disk, which is impractical for ephemeral developer containers.
+- **Fork and Replay experiments were completed and then dropped as product directions:** an experimental `--fork` flag (never shipped) could mirror XRP balances into local state, but XRPL does not expose private keys, so mirrored accounts cannot sign and are only passive recipients. Replay was also tested by re-submitting historical mainnet blobs, but those blobs carry original sequence/signature context and fail locally (`terPRE_SEQ`) when state differs. Native `xrpld --replay` additionally requires full historical state on disk, which is impractical for ephemeral developer containers.
 
 ## Immediate Feature Set
 
-`xrpl-up` runs in two modes. **Local mode (`--local`)** starts a standalone xrpld node in
-Docker with deterministic ledger control and local faucet funding. **Remote mode**
-(`--network testnet | devnet`) connects to public XRPL endpoints over WebSocket
-without starting local infrastructure.
+`xrpl-up` runs in two modes. **Local mode (`start`, default)** runs a standalone xrpld node in
+Docker with deterministic ledger control and local faucet funding; `start --local-network` runs
+a persistent 2-node consensus network instead. **Remote mode** (`--network testnet | devnet`)
+connects to public XRPL endpoints over WebSocket without starting local infrastructure.
 
 ### Two Command Sets
 
 `xrpl-up` has two intentional command sets:
 
 - **Sandbox operation commands:** lifecycle, state, and environment control for local and remote developer workflows.
-- **xrpld API wrapper commands:** convenience wrappers for common transactions and demos (`amm`, `nft`, `channel`, `mpt`).
+- **XRPL interaction commands:** convenience wrappers for common transactions and demos (`amm`, `nft`, `channel`, `mptoken`, and many more).
 
-Wrapper commands are intentionally non-exhaustive. They are optimized for demonstration,
+Interaction commands are intentionally non-exhaustive. They are optimized for demonstration,
 onboarding, and quick experimentation. For complex or production-grade flows, developers
 should use `xrpl.js` directly or call `xrpld` RPC endpoints.
 
@@ -62,7 +62,7 @@ should use `xrpl.js` directly or call `xrpld` RPC endpoints.
 
 | Command Set | Command | Purpose | local | remote (testnet/devnet) |
 |-------------|---------|---------|:-----:|:-----------------------:|
-| Sandbox operation | `node` | Start/connect to a sandbox session and provision baseline accounts | ✅ | ✅ |
+| Sandbox operation | `start` | Start a sandbox session (standalone or `--local-network`) and provision baseline accounts | ✅ | ✅ |
 | Sandbox operation | `run` | Execute scripts against the selected network with injected connection env vars | ✅ | ✅ |
 | Sandbox operation | `accounts` | Show funded accounts and live balances from the account store | ✅ | ✅ |
 | Sandbox operation | `status` | Show network health (ledger index, xrpld version, faucet availability) | ✅ | ✅ |
@@ -70,19 +70,19 @@ should use `xrpl.js` directly or call `xrpld` RPC endpoints.
 | Sandbox operation | `logs` | Stream local Docker service logs (`xrpld`/`faucet`) | ✅ | ❌ |
 | Sandbox operation | `stop` | Stop the local Docker sandbox stack | ✅ | ❌ |
 | Sandbox operation | `reset` | Wipe local containers, ledger volume, and account store | ✅ | ❌ |
-| Sandbox operation | `snapshot` | Save/restore/list local ledger + account checkpoints | ✅ | ❌ |
+| Sandbox operation | `snapshot` | Save/restore/list local ledger + account checkpoints (requires `--local-network`) | ✅ | ❌ |
 | Sandbox operation | `config` | Validate/manage local xrpld configuration | ✅ | ❌ |
+| Sandbox operation | `amendment` | Inspect/enable XRPL amendments in the local genesis config | ✅ | ✅ (list/info only) |
 | Sandbox operation | `init` | Scaffold a starter project with scripts/tests/templates | n/a | n/a |
-| xrpld API wrapper | `amm create` | Create an AMM pool with issuer/trust-line setup automation | ✅ | ✅ |
-| xrpld API wrapper | `amm info` | Inspect AMM pool state and key trading parameters | ✅ | ✅ |
-| xrpld API wrapper | `nft` | Convenience NFT lifecycle flows (mint/list/offers/sell/accept/burn) | ✅ | ✅ |
-| xrpld API wrapper | `channel` | Convenience payment-channel flows (create/fund/sign/verify/claim/list) | ✅ | ✅ |
-| xrpld API wrapper | `mpt` | Convenience MPT issuance flows (create/info/authorize/set/destroy) | ✅ | ✅ |
+| XRPL interaction | `amm create`/`info` | Create/inspect an AMM pool | ✅ | ✅ |
+| XRPL interaction | `nft` | NFT lifecycle flows (mint/burn/modify/offer create/accept/cancel) | ✅ | ✅ |
+| XRPL interaction | `channel` | Payment-channel flows (create/fund/sign/verify/claim/list) | ✅ | ✅ |
+| XRPL interaction | `mptoken` | MPT issuance flows (`issuance create/destroy/set/get/list`, `authorize`) | ✅ | ✅ |
 
 ### Example Workflow
 
-1. Start local sandbox: `xrpl-up node --local --persist --detach`
-2. Do expensive setup once (AMM pool, issuers, trust lines): `xrpl-up amm create ... --local`
+1. Start local sandbox: `xrpl-up start --local-network` (persistent, detaches by default)
+2. Do expensive setup once (AMM pool, issuers, trust lines): `xrpl-up amm create --asset XRP --asset2 USD/rIssuer --amount 100 --amount2 100 --trading-fee 500 --seed <seed>`
 3. Save a checkpoint: `xrpl-up snapshot save after-setup`
 4. Run scripts/tests against stable state: `xrpl-up run scripts/...`
 5. Roll back quickly between runs: `xrpl-up snapshot restore after-setup`
@@ -98,13 +98,13 @@ Docker image, ~50–500 MB for ledger data. No internet after initial pull. Stan
 needs far less than a full xrpld node — no peers, no consensus, no historical sync.
 
 ```
-xrpl-up node --local
+xrpl-up start
 ```
 
 - Starts xrpld in Docker (standalone mode, no peers, no sync)
 - Generates a valid `xrpld.cfg` automatically
 - Waits for the node to be healthy before returning
-- `--persist` to keep ledger state across restarts
+- `--local-network` starts a persistent 2-node consensus network instead of ephemeral standalone
 - `--debug` for xrpld debug logging
 
 #### Pre-funded Test Accounts
@@ -139,7 +139,7 @@ local xrpld. Named networks are URL aliases:
 | devnet  | `wss://s.devnet.rippletest.net:51233` |
 
 > Remote mode does **not** bypass rate limits on public endpoints. For rate-limit-free
-> development, use local mode (`--local`).
+> development, use local mode (the default).
 
 - Networks are configured in a project-local file (`xrpl-up.config.js`, `xrpl-up.config.json`, or `.xrpl-up.json`) read from the current working directory
 - Faucet integration for testnet/devnet
@@ -175,13 +175,15 @@ xrpl-up logs      # streams Docker Compose logs for xrpld and faucet
 
 #### CI/CD Pipeline Support
 
-`xrpl-up node --local` is a blocking interactive command. CI/CD pipelines use:
+`xrpl-up start` detaches (backgrounds) by default, which is what CI/CD pipelines want:
 
 ```bash
-xrpl-up node --local --detach   # starts sandbox, prints ready, exits 0
+xrpl-up start  # starts sandbox, prints ready, exits 0
 npm test
-xrpl-up stop                    # tears down Docker stack (use if: always() in CI)
+xrpl-up stop           # tears down Docker stack (use if: always() in CI)
 ```
+
+Pass `--foreground` instead to keep it blocking/interactive with live logs.
 
 - GitHub Actions compatible (Docker available on `ubuntu-latest`, `macos-latest`)
 - Faucet server takes over `ledger_accept` when detached
@@ -192,35 +194,34 @@ The AMM amendment (XLS-30) is enabled on the local sandbox. `xrpl-up` provides c
 to create and query pools without the manual setup friction:
 
 ```bash
-xrpl-up amm create XRP USD --local        # fund issuers, trust lines, AMMCreate — one command
-xrpl-up amm info XRP USD.rIssuer --local  # query pool reserves, LP tokens, fee
+xrpl-up amm create --asset XRP --asset2 USD/rIssuer --amount 100 --amount2 100 --trading-fee 500 --seed <lp-seed>
+xrpl-up amm info --asset XRP --asset2 USD/rIssuer
 ```
 
-- `CURRENCY.rIssuerAddress` notation for IOU assets (e.g. `USD.rHb9...`)
-- Auto-generates issuer + LP wallets, sets DefaultRipple, creates trust lines, issues tokens, calls AMMCreate
+- `CURRENCY/issuer` notation for IOU assets (e.g. `USD/rHb9...`)
+- Requires the issuer's trust line/`DefaultRipple` setup to already exist — `amm create` submits a single `AMMCreate` transaction, it does not auto-provision issuers or trust lines
 
 #### NFT Wrapper Support
 
 `xrpl-up nft` wraps common XLS-20 lifecycle actions for fast experimentation:
-mint, list, offers, sell, accept, and burn.
+mint, burn, modify, and offer create/accept/cancel/list.
 
 ```bash
-xrpl-up nft mint --local --uri https://example.com/meta.json --transferable
-xrpl-up nft sell <nft_id> 10.5.USD.rIssuer --local --seed <seed>
+xrpl-up nft mint --uri https://example.com/meta.json --transferable --seed <seed>
+xrpl-up nft offer create --nft <nft_id> --amount 10.5/USD/rIssuer --sell --seed <seed>
 ```
 
 - Designed for demonstration and interactive testing, not full NFT protocol coverage
-- Local mode can auto-fund wallets for quick trials; remote mode expects explicit wallet control
 - For advanced marketplace logic and custom flows, use `xrpl.js` or direct RPC
 
 #### Payment Channel Wrapper Support
 
-`xrpl-up channel` provides convenience flows for channels: create, list, fund, sign,
-verify, and claim.
+`xrpl-up channel` provides convenience flows for channels: create, fund, sign,
+verify, claim, and list.
 
 ```bash
-xrpl-up channel create <destination> 10 --local
-xrpl-up channel sign <channel_id> 3 --seed <seed>
+xrpl-up channel create --to <destination> --amount 10 --settle-delay 86400 --seed <src-seed>
+xrpl-up channel sign --channel <channel_id> --amount 3 --seed <seed>
 ```
 
 - Optimized for showing off-chain claim flow end-to-end in a dev sandbox
@@ -229,12 +230,12 @@ xrpl-up channel sign <channel_id> 3 --seed <seed>
 
 #### MPT Wrapper Support
 
-`xrpl-up mpt` provides high-utility XLS-33 commands: create, info, authorize, set,
-and destroy.
+`xrpl-up mptoken` provides high-utility XLS-33 commands: issuance create/destroy/set/get/list,
+and authorize.
 
 ```bash
-xrpl-up mpt create --local --max-amount 1000000 --asset-scale 6 --transferable
-xrpl-up mpt info <issuance_id> --local
+xrpl-up mptoken issuance create --max-amount 1000000 --asset-scale 6 --flags can-transfer --seed <seed>
+xrpl-up mptoken issuance get <issuance_id>
 ```
 
 - Intended for quick issuance experiments and feature demonstrations
@@ -314,7 +315,7 @@ on consensus, networking, and amendment behavior inside `xrpld`.
 
 Phase 1 — Private multi-node network:
 
-- `xrpl-up network start --nodes 3` for a local validator cluster in Docker Compose
+- `xrpl-up network start --networks 3` for a local validator cluster in Docker Compose
 - Configurable validator keys, UNL, and amendment voting settings
 - Topology controls for peer links between nodes
 

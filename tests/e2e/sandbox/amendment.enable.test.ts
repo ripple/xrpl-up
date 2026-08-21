@@ -20,12 +20,12 @@ function stripAnsi(str: string): string {
   return str.replace(/\x1B\[[0-9;]*m/g, "");
 }
 
-describe("sandbox amendment enable --local", () => {
+describe("sandbox amendment enable", () => {
   let targetAmendment: string | null = null;
 
   beforeAll(() => {
     const result = runXrplUp(
-      ["amendment", "list", "--local", "--disabled"],
+      ["amendment", "list", "--disabled"],
       {},
       30_000,
     );
@@ -34,7 +34,7 @@ describe("sandbox amendment enable --local", () => {
     // with a clear root cause rather than silently skipping.
     if (result.status !== 0) {
       throw new Error(
-        `amendment list --local --disabled failed (exit ${result.status}):\n` +
+        `amendment list --disabled failed (exit ${result.status}):\n` +
         (result.stderr || result.stdout),
       );
     }
@@ -78,7 +78,7 @@ describe("sandbox amendment enable --local", () => {
   it("enables the discovered amendment and exits 0", () => {
     if (!targetAmendment) return; // skip — no candidate (all amendments already enabled)
     const result = runXrplUp(
-      ["amendment", "enable", targetAmendment, "--local"],
+      ["amendment", "enable", targetAmendment],
       {},
       60_000,
       "n\n",  // answer "no" to the reset prompt — keeps the sandbox running

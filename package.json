@@ -1,6 +1,6 @@
 {
   "name": "xrpl-up",
-  "version": "0.2.0-beta.0",
+  "version": "0.3.0-beta.0",
   "description": "XRPL sandbox for local development",
   "author": "",
   "license": "MIT",
@@ -21,7 +21,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "build": "tsc",
@@ -35,6 +35,7 @@
     "test:e2e:local": "vitest run --config vitest.config.local.ts tests/e2e",
     "test:e2e:local-network": "vitest run --config vitest.config.local-network.ts tests/e2e",
     "test:e2e:snapshot": "vitest run --config vitest.config.snapshot.ts",
+    "test:e2e:amendment": "vitest run --config vitest.config.amendment.ts",
     "typecheck": "tsc --noEmit"
   },
   "files": [
@@ -51,13 +52,18 @@
     "commander": "^12.0.0",
     "inquirer": "^8.2.6",
     "ora": "^5.4.1",
-    "xrpl": "^4.6.0"
+    "xrpl": "^5.0.0"
   },
   "devDependencies": {
+    "@cyclonedx/cyclonedx-npm": "4.0.2",
     "@types/inquirer": "^8.2.10",
     "@types/node": "^22.0.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^2.1.9"
+  },
+  "overrides": {
+    "lodash": "^4.18.1",
+    "ws": "^8.21.1"
   }
 }

@@ -181,9 +181,13 @@ const offerCreateCommand = new Command("create")
     };
 
     // Apply --expiration
+    // isoTimeToRippleTime() never throws on an invalid date (Invalid Date's
+    // .getTime() is NaN, which just propagates) — check explicitly.
     if (options.expiration !== undefined) {
       try {
-        tx.Expiration = isoTimeToRippleTime(options.expiration);
+        const expiration = isoTimeToRippleTime(options.expiration);
+        if (isNaN(expiration)) throw new Error(`invalid date "${options.expiration}"`);
+        tx.Expiration = expiration;
       } catch (e: unknown) {
         process.stderr.write(`Error: --expiration: ${(e as Error).message}\n`);
         process.exit(1);

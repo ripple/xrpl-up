@@ -4,10 +4,10 @@ import { looksLikeMainnetUrl } from "../../core/config";
 
 let mainnetWarningShown = false;
 
-/** Returns the resolved XRPL node WebSocket URL from the global --node option. */
+/** Returns the resolved XRPL node WebSocket URL from the global --network option. */
 export function getNodeUrl(cmd: Command): string {
-  const opts = cmd.optsWithGlobals() as { node: string };
-  const url = resolveNodeUrl(opts.node);
+  const opts = cmd.optsWithGlobals() as { network: string };
+  const url = resolveNodeUrl(opts.network);
   if (!mainnetWarningShown && looksLikeMainnetUrl(url)) {
     process.stderr.write(
       "Warning: The node URL appears to be an XRPL production endpoint. " +

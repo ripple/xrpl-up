@@ -2,16 +2,16 @@
 
 A fully-controlled MPT issuance where the issuer governs every phase: holders must be explicitly authorized, individual balances can be locked (compliance hold), and tokens can be clawed back at any time. Covers the complete lifecycle through to issuance destruction.
 
-This guide complements [MPT](mpt.md) with a focus on the **policy controls** rather than the basic flow.
+This guide complements [MPT](../simple/mpt.md) with a focus on the **policy controls** rather than the basic flow.
 
 ---
 
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---
@@ -32,26 +32,21 @@ All policy flags are **set at issuance creation and cannot be changed afterwards
 ## Step 1: Create issuer and holder accounts
 
 ```bash
-xrpl-up faucet --local
-# → seed: sEdIssuerSeedXXX  address: rIssuerXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 
-xrpl-up faucet --local
-# → seed: sEdHolderASeedXXX  address: rHolderAXXX   (will be approved)
+HOLDER_A_JSON=$(xrpl-up faucet --network local --json)   # will be approved
+HOLDER_A_SEED=$(echo "$HOLDER_A_JSON" | jq -r .seed)
+HOLDER_A=$(echo "$HOLDER_A_JSON" | jq -r .address)
 
-xrpl-up faucet --local
-# → seed: sEdHolderBSeedXXX  address: rHolderBXXX   (will attempt to opt-in, then be rejected)
+HOLDER_B_JSON=$(xrpl-up faucet --network local --json)   # will attempt to opt-in, then be rejected
+HOLDER_B_SEED=$(echo "$HOLDER_B_JSON" | jq -r .seed)
+HOLDER_B=$(echo "$HOLDER_B_JSON" | jq -r .address)
 
-xrpl-up faucet --local
-# → seed: sEdHolderCSeedXXX  address: rHolderCXXX   (approved, then locked, then clawback)
-
-ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_A_SEED=sEdHolderASeedXXXXXXXXXXXXXXXXXX
-HOLDER_A=rHolderAXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_B_SEED=sEdHolderBSeedXXXXXXXXXXXXXXXXXX
-HOLDER_B=rHolderBXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_C_SEED=sEdHolderCSeedXXXXXXXXXXXXXXXXXX
-HOLDER_C=rHolderCXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER_C_JSON=$(xrpl-up faucet --network local --json)   # approved, then locked, then clawback
+HOLDER_C_SEED=$(echo "$HOLDER_C_JSON" | jq -r .seed)
+HOLDER_C=$(echo "$HOLDER_C_JSON" | jq -r .address)
 ```
 
 ---
@@ -59,22 +54,13 @@ HOLDER_C=rHolderCXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ## Step 2: Create the MPT issuance with all policy controls
 
 ```bash
-xrpl-up mptoken issuance create --seed $ISSUER_SEED \
+MPT_ID=$(xrpl-up mptoken issuance create --seed $ISSUER_SEED \
   --max-amount 1000000 \
   --asset-scale 2 \
   --transfer-fee 50 \
   --metadata "Regulated MPT v1" \
-  --flags can-transfer,require-auth,can-lock,can-clawback
-# ✔ MPT issuance created
-#   issuance ID  00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-#   issuer       rIssuerXXX...
-#   flags        transferable, require-auth, can-lock, can-clawback
-#   max-amount   1000000
-#   asset-scale  2
-#   transfer-fee 50 (0.5%)
-#   metadata     "Regulated MPT v1"
-
-MPT_ID=00070C4495F14B0EXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  --flags can-transfer,require-auth,can-lock,can-clawback \
+  --json | jq -r .issuanceId)
 ```
 
 ---
@@ -163,14 +149,15 @@ Since `--flags can-transfer` was set, holders can send tokens to each other:
 ```bash
 xrpl-up payment --to $HOLDER_C --amount 1000/$MPT_ID --seed $HOLDER_A_SEED
 # ✔ MPT payment sent  1000  →  rHolderCXXX...
-# Transfer fee: 5 tokens (0.5% of 1000) deducted and burned
 
 xrpl-up account mptokens $HOLDER_A
-# MPTAmount  3995   (5000 − 1000 − 5 fee)
+# MPTAmount  4000   (5000 − 1000)
 
 xrpl-up account mptokens $HOLDER_C
 # MPTAmount  4000   (3000 + 1000 received)
 ```
+
+> Live-verified: this holder-to-holder transfer moved the full 1000 with no fee deducted, and the issuance's `OutstandingAmount` was unchanged — despite `--transfer-fee 50` being set at issuance creation. This may be a gap in this rippled build's MPT transfer-fee enforcement rather than anything `xrpl-up`-specific; don't rely on transfer fees actually being charged until you've confirmed it against your own target network.
 
 ---
 
@@ -204,11 +191,17 @@ xrpl-up payment --to $HOLDER_C --amount 100/$MPT_ID --seed $HOLDER_A_SEED
 
 ```bash
 xrpl-up mptoken issuance set $MPT_ID --seed $ISSUER_SEED --lock
-# ✔ Issuance locked (all holders frozen)
+# ✔ Issuance locked (all holder-to-holder transfers frozen)
 
-# All payments fail during global lock, even for Holder A
-xrpl-up payment --to $HOLDER_A --amount 100/$MPT_ID --seed $ISSUER_SEED
+# Holder-to-holder transfers fail during global lock...
+xrpl-up payment --to $HOLDER_A --amount 100/$MPT_ID --seed $HOLDER_C_SEED
 # ✗  tecLOCKED
+
+# ...but the issuer can still distribute new tokens even while locked —
+# global lock freezes trading between holders, not issuance/minting.
+# Live-verified: this succeeds tesSUCCESS despite the lock being active.
+xrpl-up payment --to $HOLDER_A --amount 100/$MPT_ID --seed $ISSUER_SEED
+# ✔ MPT payment sent  100  →  rHolderAXXX...
 ```
 
 ---
@@ -237,7 +230,7 @@ xrpl-up account mptokens $HOLDER_C
 # MPTAmount  0
 
 xrpl-up mptoken issuance get $MPT_ID
-# outstanding  3995   (only Holder A remains)
+# outstanding  4000   (only Holder A remains)
 ```
 
 ---
@@ -260,7 +253,7 @@ xrpl-up mptoken authorize $MPT_ID --seed $ISSUER_SEED --holder $HOLDER_B --unaut
 
 ```bash
 # Clawback all remaining tokens from Holder A
-xrpl-up clawback --amount 3995/$MPT_ID --holder $HOLDER_A --seed $ISSUER_SEED
+xrpl-up clawback --amount 4000/$MPT_ID --holder $HOLDER_A --seed $ISSUER_SEED
 
 # Holder A opts out
 xrpl-up mptoken authorize $MPT_ID --seed $HOLDER_A_SEED --unauthorize
@@ -285,7 +278,7 @@ Holders opt in → issuer approves selectively
     ↓
 Issue tokens to approved holders
     ↓
-Holders transfer (fee deducted at each hop)
+Holders transfer to each other
     ↓
 Compliance hold: lock individual holder
     ↓
@@ -306,7 +299,7 @@ Wind down: clawback all → holders opt out → destroy
 | **can-lock** | Issuer can freeze an individual holder OR the entire issuance. Individual unlock is independent of global unlock. |
 | **can-clawback** | Issuer reclaims any amount from any holder. Partial clawback supported. |
 | **can-transfer** | Required for holder-to-holder payments. Without it, only issuer↔holder transfers work. |
-| **transfer-fee** | Deducted from the **sender** side on each holder-to-holder transfer. Burned (reduces outstanding supply). |
+| **transfer-fee** | Documented to deduct from the sender side on each holder-to-holder transfer and burn the fee (reducing outstanding supply) — not observed taking effect in live testing against this rippled build; verify against your own target network before relying on it. |
 | **asset-scale** | Number of decimal places. Scale 2 means `100` represents `1.00`. |
 
 ---

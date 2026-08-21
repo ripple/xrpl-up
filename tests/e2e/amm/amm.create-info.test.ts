@@ -77,11 +77,11 @@ describe("amm create", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const result = runCLI([
-        "--node", XRPL_WS,
+        "--network", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
-        "--amount", "100000",
+        "--amount", "1",
         "--amount2", "10",
         "--trading-fee", "300",
         "--seed", lp.seed!,
@@ -103,11 +103,11 @@ describe("amm create", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const result = runCLI([
-        "--node", XRPL_WS,
+        "--network", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
-        "--amount", "100000",
+        "--amount", "1",
         "--amount2", "10",
         "--trading-fee", "300",
         "--json",
@@ -138,11 +138,11 @@ describe("amm create", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const result = runCLI([
-        "--node", XRPL_WS,
+        "--network", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
-        "--amount", "100000",
+        "--amount", "1",
         "--amount2", "10",
         "--trading-fee", "300",
         "--dry-run",
@@ -169,11 +169,11 @@ describe("amm create", () => {
       const iouSpec = await setupPool(issuer, lp);
 
       const result = runCLI([
-        "--node", XRPL_WS,
+        "--network", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
-        "--amount", "100000",
+        "--amount", "1",
         "--amount2", "10",
         "--trading-fee", "300",
         "--no-wait",
@@ -197,11 +197,11 @@ describe("amm info", () => {
 
       // First create the pool
       const createResult = runCLI([
-        "--node", XRPL_WS,
+        "--network", XRPL_WS,
         "amm", "create",
         "--asset", "XRP",
         "--asset2", iouSpec,
-        "--amount", "100000",
+        "--amount", "1",
         "--amount2", "10",
         "--trading-fee", "300",
         "--seed", lp.seed!,
@@ -210,7 +210,7 @@ describe("amm info", () => {
 
       // Then query amm info
       const infoResult = runCLI([
-        "--node", XRPL_WS,
+        "--network", XRPL_WS,
         "amm", "info",
         "--asset", "XRP",
         "--asset2", iouSpec,

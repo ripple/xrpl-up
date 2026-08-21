@@ -26,9 +26,9 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: 'npm'
@@ -37,11 +37,10 @@ jobs:
         run: npm ci
 
       # Start a local rippled node so we can query which amendments the
-      # pinned Docker image (xrpllabsofficial/xrpld:latest) supports.
-      # The node --local --persist --detach command blocks until rippled
-      # is accepting connections, then exits 0.
+      # pinned Docker image (rippleci/xrpld:3.3.0) supports.
+      # Local sandboxes detach (background, non-blocking) by default.
       - name: Start local rippled
-        run: npx tsx src/cli.ts node --local --persist --detach
+        run: npx tsx src/cli.ts start
         timeout-minutes: 5
 
       # The faucet container starts after rippled; wait for its health endpoint
@@ -101,25 +100,36 @@ jobs:
             exit 0
           fi
 
+          # Build the PR body as a plain array joined with newlines rather
+          # than a heredoc: a heredoc's closing delimiter must be at column 0
+          # for bash to recognize it, but this YAML block scalar (`run: |`)
+          # requires every line — including that delimiter — to keep at
+          # least the block's own indentation. Those two constraints can't
+          # both be satisfied, so a heredoc silently never terminates here.
+          PR_BODY_LINES=(
+            "## Summary"
+            ""
+            "Automated monthly sync of the \`[amendments]\` genesis list in \`src/core/compose.ts\`."
+            ""
+            "- **Source:** mainnet via \`feature\` RPC (\`wss://xrplcluster.com\`)"
+            "- **Filter:** amendments enabled on mainnet AND supported by \`rippleci/xrpld:3.3.0\`"
+            "- **New entries:** ${NEW_COUNT}"
+            ""
+            "Amendments that are enabled on mainnet but _not yet supported_ by the local rippled binary are listed in the workflow log and skipped — they will appear automatically on the next run after the Docker image is upgraded."
+            ""
+            "## Review checklist"
+            ""
+            "- [ ] Cross-check each new hash against [XRPL Known Amendments](https://xrpl.org/resources/known-amendments) or the rippled changelog"
+            "- [ ] Confirm the amendment name in the diff matches the hash (names in the RPC response can alias; hash is canonical)"
+            "- [ ] Start a fresh local node (\`xrpl-up reset && xrpl-up start\`) and verify \`xrpl-up amendment list\` shows all new amendments as enabled"
+            "- [ ] Run \`npm run test:e2e:local\` to confirm the sandbox starts cleanly with the updated genesis list"
+            ""
+            "> ⚠️ Do not auto-merge. Human review required before this lands in \`main\`."
+          )
+          printf '%s\n' "${PR_BODY_LINES[@]}" > /tmp/pr-body.md
+
           gh pr create \
             --title "chore: sync [amendments] genesis list from mainnet (${DATE})" \
             --base main \
             --head "$BRANCH" \
-            --body "## Summary
-
-Automated monthly sync of the \`[amendments]\` genesis list in \`src/core/compose.ts\`.
-
-- **Source:** mainnet via \`feature\` RPC (\`wss://xrplcluster.com\`)
-- **Filter:** amendments enabled on mainnet AND supported by \`xrpllabsofficial/xrpld:latest\`
-- **New entries:** ${NEW_COUNT}
-
-Amendments that are enabled on mainnet but _not yet supported_ by the local rippled binary are listed in the workflow log and skipped — they will appear automatically on the next run after the Docker image is upgraded.
-
-## Review checklist
-
-- [ ] Cross-check each new hash against [XRPL Known Amendments](https://xrpl.org/resources/known-amendments) or the rippled changelog
-- [ ] Confirm the amendment name in the diff matches the hash (names in the RPC response can alias; hash is canonical)
-- [ ] Start a fresh local node (\`xrpl-up reset && xrpl-up node\`) and verify \`xrpl-up amendment list\` shows all new amendments as enabled
-- [ ] Run \`npm run test:e2e:local\` to confirm the sandbox starts cleanly with the updated genesis list
-
-> ⚠️ Do not auto-merge. Human review required before this lands in \`main\`."
+            --body-file /tmp/pr-body.md

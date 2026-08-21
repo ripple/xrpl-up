@@ -621,7 +621,7 @@ const credentialDeleteCommand = new Command("delete")
   });
 
 interface CredentialEntry {
-  LedgerIndex: string;
+  index: string;
   Issuer: string;
   Subject: string;
   CredentialType: string;
@@ -681,7 +681,7 @@ const credentialListCommand = new Command("list")
         const uri = cred.URI ? tryDecodeHex(cred.URI) : "none";
         const expiration = cred.Expiration !== undefined ? xrplEpochToISO(cred.Expiration) : "none";
         const accepted = (cred.Flags ?? 0) & LSF_ACCEPTED ? "yes" : "no";
-        console.log(`Credential ID: ${cred.LedgerIndex}`);
+        console.log(`Credential ID: ${cred.index}`);
         console.log(`  Issuer:          ${cred.Issuer}`);
         console.log(`  Subject:         ${cred.Subject}`);
         console.log(`  Credential Type: ${credType}`);

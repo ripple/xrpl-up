@@ -50,7 +50,7 @@ xrpl-up multisig delete --seed sEd...
 
 ```bash
 # 1. Alice configures a 2-of-3 signer list (signer1, signer2, signer3 are separate accounts)
-xrpl-up --node testnet multisig set \
+xrpl-up --network testnet multisig set \
   --quorum 2 \
   --signer rSigner1XXXX...:1 \
   --signer rSigner2XXXX...:1 \
@@ -58,13 +58,13 @@ xrpl-up --node testnet multisig set \
   --seed sEdAliceXXXX...
 
 # 2. Verify the signer list
-xrpl-up --node testnet multisig list rAliceXXXX...
+xrpl-up --network testnet multisig list rAliceXXXX...
 # → Quorum: 2
 #   rSigner1XXXX... (weight: 1)
 #   rSigner2XXXX... (weight: 1)
 #   rSigner3XXXX... (weight: 1)
 
 # 3. Remove the signer list (replace with an updated one or delete entirely)
-xrpl-up --node testnet multisig delete --seed sEdAliceXXXX...
+xrpl-up --network testnet multisig delete --seed sEdAliceXXXX...
 ```
 

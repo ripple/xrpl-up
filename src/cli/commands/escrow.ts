@@ -138,10 +138,15 @@ const escrowCreateCommand = new Command("create")
     const drops = String(Math.floor(xrpFloat * 1_000_000));
 
     // Parse --finish-after
+    // isoTimeToRippleTime() never throws on an invalid date — new Date("garbage")
+    // is Invalid Date, whose .getTime() is NaN, which just propagates silently
+    // until it crashes deep inside binary-codec's UInt32 serializer at sign time.
+    // Check for NaN explicitly so bad input fails fast with a clear message.
     let finishAfter: number | undefined;
     if (options.finishAfter !== undefined) {
       try {
         finishAfter = isoTimeToRippleTime(options.finishAfter);
+        if (isNaN(finishAfter)) throw new Error(`invalid date "${options.finishAfter}"`);
       } catch (e: unknown) {
         process.stderr.write(`Error: --finish-after: ${(e as Error).message}\n`);
         process.exit(1);
@@ -153,6 +158,7 @@ const escrowCreateCommand = new Command("create")
     if (options.cancelAfter !== undefined) {
       try {
         cancelAfter = isoTimeToRippleTime(options.cancelAfter);
+        if (isNaN(cancelAfter)) throw new Error(`invalid date "${options.cancelAfter}"`);
       } catch (e: unknown) {
         process.stderr.write(`Error: --cancel-after: ${(e as Error).message}\n`);
         process.exit(1);

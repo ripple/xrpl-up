@@ -43,6 +43,7 @@ interface SetOptions {
   confirm: boolean;
   json: boolean;
   dryRun: boolean;
+  wait: boolean;
 }
 
 export const setCommand = new Command("set")
@@ -68,6 +69,7 @@ export const setCommand = new Command("set")
   .option("--confirm", "Acknowledge irreversible operations (required with --allow-clawback)", false)
   .option("--json", "Output as JSON", false)
   .option("--dry-run", "Print unsigned tx JSON without submitting", false)
+  .option("--no-wait", "Submit without waiting for validation")
   .action(async (options: SetOptions, cmd: Command) => {
     // Validate key material
     const keyMaterialCount = [options.seed, options.mnemonic, options.account].filter(Boolean).length;
@@ -210,18 +212,40 @@ export const setCommand = new Command("set")
     await withClient(url, async (client) => {
       const filled = await client.autofill(tx);
       const signed = signerWallet!.sign(filled);
-      await client.submit(signed.tx_blob);
+
+      if (!options.wait) {
+        await client.submit(signed.tx_blob);
+        if (options.json) {
+          console.log(JSON.stringify({ hash: signed.hash }));
+        } else {
+          console.log(`Transaction submitted: ${signed.hash}`);
+        }
+        return;
+      }
+
+      const response = await client.submitAndWait(signed.tx_blob);
+      const txResult = response.result as {
+        hash?: string;
+        meta?: { TransactionResult?: string };
+      };
+      const resultCode = txResult.meta?.TransactionResult ?? "unknown";
+      const hash = txResult.hash ?? signed.hash;
+
+      if (/^te[cfm]/i.test(resultCode)) {
+        process.stderr.write(`Error: transaction failed with ${resultCode}\n`);
+        process.exit(1);
+      }
 
       if (options.json) {
         console.log(
           JSON.stringify({
-            hash: signed.hash,
-            result: "tesSUCCESS",
+            hash,
+            result: resultCode,
             tx_blob: signed.tx_blob,
           })
         );
       } else {
-        console.log(`Transaction submitted: ${signed.hash}`);
+        console.log(`Transaction submitted: ${hash}`);
       }
     });
   });

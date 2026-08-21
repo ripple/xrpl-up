@@ -150,7 +150,7 @@ describe("amm validation", () => {
       "--amount2", "100",
       "--trading-fee", "0",
       "--seed", DUMMY_SEED,
-      "--node", "ws://127.0.0.1:1",
+      "--network", "ws://127.0.0.1:1",
     ], {}, 10_000);
     // Should NOT exit 1 due to trading-fee validation (may exit non-zero due to network)
     expect(result.stderr).not.toContain("--trading-fee must be");
@@ -166,7 +166,7 @@ describe("amm validation", () => {
       "--amount2", "100",
       "--trading-fee", "1000",
       "--seed", DUMMY_SEED,
-      "--node", "ws://127.0.0.1:1",
+      "--network", "ws://127.0.0.1:1",
     ], {}, 10_000);
     expect(result.stderr).not.toContain("--trading-fee must be");
   });

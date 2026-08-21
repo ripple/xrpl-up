@@ -3,13 +3,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import net from 'node:net';
+import crypto from 'node:crypto';
 
 export const COMPOSE_PROJECT = 'xrpl-up-local';
 export const LOCAL_WS_PORT = 6006;
 export const FAUCET_PORT = 3001;
 export const LOCAL_WS_URL = `ws://localhost:${LOCAL_WS_PORT}`;
 export const FAUCET_URL = `http://localhost:${FAUCET_PORT}`;
-export const DEFAULT_IMAGE = 'xrpllabsofficial/xrpld:latest';
+export const DEFAULT_IMAGE = 'rippleci/xrpld:3.3.0';
 
 const XRPL_UP_DIR = path.join(os.homedir(), '.xrpl-up');
 const COMPOSE_FILE = path.join(XRPL_UP_DIR, 'docker-compose.yml');
@@ -72,8 +73,23 @@ const RIPPLED_CFG_FILE       = path.join(XRPL_UP_DIR, 'rippled.cfg');
 const RIPPLED_CFG_FILE_NODE1 = path.join(XRPL_UP_DIR, 'rippled-node1.cfg');
 const RIPPLED_CFG_FILE_NODE2 = path.join(XRPL_UP_DIR, 'rippled-node2.cfg');
 const VALIDATORS_CFG_FILE    = path.join(XRPL_UP_DIR, 'validators.txt');
-/** Extra amendments written by `amendment enable --local`; merged at genesis. */
+/** Extra amendments written by `amendment enable`; merged at genesis. */
 export const EXTRA_AMENDMENTS_FILE = path.join(XRPL_UP_DIR, 'genesis-amendments.txt');
+/** Records which image last started the persistent --local-network volumes. */
+const LOCAL_NETWORK_IMAGE_FILE = path.join(XRPL_UP_DIR, 'local-network-image.txt');
+/**
+ * Identifies which genesis ledger the current --local-network volumes descend
+ * from ("lineage"). Snapshots record this so `snapshot restore` can tell
+ * whether a snapshot belongs to the sandbox it is being restored into.
+ *
+ * A snapshot only restores correctly onto the same lineage: the tarball is a
+ * copy of that ledger chain's database. Seeding from the pre-built genesis DB
+ * always yields the same lineage (`seed`), while force-enabling an amendment
+ * requires building a brand-new genesis, which starts a different one.
+ */
+const GENESIS_LINEAGE_FILE = path.join(XRPL_UP_DIR, 'genesis-lineage.txt');
+/** Lineage of the pre-built genesis DB tarballs shipped with xrpl-up. */
+const SEED_LINEAGE = 'seed';
 export { RIPPLED_CFG_FILE };
 
 /**
@@ -82,6 +98,9 @@ export { RIPPLED_CFG_FILE };
  */
 export function generateRippledConfig(debug = false): string {
   return `
+[network_id]
+15791
+
 [server]
 port_rpc_admin_local
 port_ws_admin_local
@@ -110,14 +129,14 @@ small
 
 [node_db]
 type=NuDB
-path=/var/lib/rippled/db/nudb
+path=/var/lib/xrpld/db/nudb
 advisory_delete=0
 
 [database_path]
-/var/lib/rippled/db
+/var/lib/xrpld/db
 
 [debug_logfile]
-/var/log/rippled/debug.log
+/var/log/xrpld/debug.log
 
 [sntp_servers]
 time.windows.com
@@ -141,92 +160,57 @@ validators.txt
 # The [amendments] stanza only takes effect on the very first start
 # (--start flag creates the genesis ledger). Format: <hash> <name>
 #
-# Only amendments that are enabled on XRPL mainnet AND that rippled
-# activates at genesis in consensus mode are listed here. Very old
-# amendments (Escrow, PayChan, MultiSign, etc.) are built into the
-# rippled binary and always active — they don't need genesis config
-# and won't activate via [amendments] in consensus mode.
-#
-# To enable additional amendments, run:
-#   xrpl-up amendment enable <name> --local
-# then reset and restart the node.
-# Hashes verified against s1.ripple.com on 2026-04-06.
+# Every entry below was live-verified to actually force-enable on a fresh
+# genesis with rippleci/xrpld:3.3.0 (checked via the feature RPC after a
+# real --start, not assumed from being listed) — see SPEC.md §5.6 for the method
+# and why this matters: rippled retires sufficiently-old amendments from the
+# genesis-forcing/voting table as they get permanently hardcoded, so a list
+# that force-enabled cleanly on an older rippled version (this one previously
+# listed 77 entries, verified against 3.1/3.2) silently stops working for a
+# growing subset after an image upgrade, with no error — they just report
+# supported:true, enabled:false forever after a fresh genesis. Re-verify this
+# list (reset -> start --local-network -> amendment list, diff the enabled
+# set) after every rippled image upgrade; do not re-add an amendment just
+# because it's supported by the new image without re-confirming it actually
+# force-enables at genesis.
 [amendments]
-00C1FC4A53E60AB02C864641002B3172F38677E29C26C5406685179B37E1EDAC RequireFullyCanonicalSig
-03BDC0099C4E14163ADA272C1B6F6FABB448CC3E51F522F978041E4B57D9158C fixNFTokenReserve
-12523DF04B553A0B1AD74F42DDB741DE8DC06A03FC089A0EF197E2A87F1D8107 fixAMMOverflowOffer
-15D61F0C6DB6A2F86BCF96F1E2444FEC54E705923339EC175BD3E517C8B3FF91 fixDisallowIncomingV1
-157D2D480E006395B76F948E3E07A45A05FE10230D88A7993C71F97AE4B1F2D1 Checks
 1CB67D082CF7D9102412D34258CEDB400E659352D3B207348889297A6D90F5EF Credentials
 1E7ED950F2F13C4F8E2A54103B74D57D5D298FFDBD005936164EE9E6484C438C fixAMMv1_2
-1F4AFA8FA1BC8827AD4C0F682C03A8B671DCDF6B5C4DE36D44243A684103EF88 HardenedValidations
-25BA44241B3BD880770BFA4DA21C7180576831855368CBEC6A3154FDE4A7676E fix1781
-27CD95EE8E1E5A537FF2F89B6CEB7C622E78E9374EBD7DCBEDFAE21CD6F16E0A fixReducedOffersV1
-2CD5286D8D687E98B41102BDD797198E81EA41DF7BD104E6561FEB104EFF2561 fixTakerDryOfferRemoval
-2E2FB9CF8A44EB80F4694D38AADAE9B8B7ADAFD2F092E10068E61C98C4F092B0 fixUniversalNumber
-30CD365592B8EE40489BA01AE2F7555CAC9C983145871DC82A42A31CF5BAE7D9 DeletableAccounts
+21B8D2F76F68E11E9C077A43BBBC394136E9987E99DDB73966DD68419467E431 fixCleanup3_2_0
+303ACB16CF8DBD3B5C34F131A9D19A7DE01AE05F480A8A682B869D1B4AAC8CFC fixCleanup3_1_3
 31E0DA76FB8FB527CADCDF0E61CB9C94120966328EFA9DCA202135BAF319C0BA fixReducedOffersV2
-32A122F1352A4C7B3A6D790362CC34749C5E57FCE896377BFDC6CCD14F6CD627 NonFungibleTokensV1_1
+32B8614321F7E070419115ABEAB1742EA20F3E3AF34432B5E2F474F8083260DC fixTokenEscrowV1
 35291ADD2D79EB6991343BDA0912269C817D0F094B02226C1C14AD2858962ED4 fixAMMv1_1
 3318EA0CF0755AF15DAC19F2B5C5BCBFF4B78BDD57609ACCAABE2C41309B051A fixFillOrKill
-3CBC5C4E630A1B82380295CDA84B32B49DD066602E74E39B85EF64137FA65194 DepositPreauth
 41765F664A8D67FF03DDB1C1A893DE6273690BA340A6C2B07C8D29D0DD013D3A fixDirectoryLimit
-452F5906C46D46F407883344BFDD90E672B672C5E9943DB4891E3A34FEEEB9DB fixSTAmountCanonicalize
-47C3002ABA31628447E8E9A8B315FAA935CE30183F9A9B86845E469CA2CDC3DF DisallowIncoming
-4F46DF03559967AC60F2EB272FEFE3928A7594A45FF774B87A7E540DB0F8F068 fixAmendmentMajorityCalc
-56B241D7A43D40354D02A9DC4C8DF5C7A1F930D92A9035C4E12291B3CA3E1C2B Clawback
-586480873651E106F1D6339B0C4A8945BA705A777F3F4524626FF1FC07EFE41D MultiSignReserve
-58BE9B5968C4DA7C59BA900961828B113E5490699B21877DEF9A31E9D0FE5D5F fix1623
 5E9586DB3D765B4C5794658FB6BB385071E9838DF4016027E6E26820C8526724 fixAMMClawbackRounding
-621A0B264970359869E3C0363A899909AAB7A887C8B73519E4ECF952D33258A8 fixPayChanRecipientOwnerDir
 6143A27B71F7DAF9330ECA7C5EC3D54C8083A4FDEF7016737EEC06AB61E82EE0 fixIncludeKeyletFields
-67A34F2CF55BFC0F93AACD5B281413176FEE195269FA6D95219A2DF738671172 fix1513
-73761231F7F3D94EC3D8C63D91BDD0D89045C6F71B917D1925C01253515A6669 fixNonFungibleTokensV1_2
-740352F2412A9909880C23A559FCECEDA3BE2126FED62FC7660D628A06927F11 Flow
+677E401A423E3708363A36BA8B3A7D019D21AC5ABD00387BDBEA6BDE4C91247E PermissionedDEX
+726F944886BCDF7433203787E93DD9AA87FAB74DFE3AF4785BA03BEFC97ADA1F AMMClawback
 755C971C29971C9F20C6F080F2ED96F87884E40AD19554A5EBECDCEC8A1F77FE fixEmptyDID
-75A7E01C505DD5A179DFE3E000A9B6F1EDDEB55A12F95579A23E15B15DC8BE5A ImmediateOfferKilled
+763C37B352BE8C7A04E810F8E462644C45AFEAD624BF3894A08E5C917CF9FF39 fixEnforceNFTokenTrustline
 7BB62DC13EC72B775091E9C71BF8CF97E122647693B50C5E87A80DFD6FCFAC50 fixPreviousTxnID
 7CA70A7674A26FA517412858659EBC7EDEEF7D2D608824464E6FDEFD06854E14 fixAMMv1_3
 83FD6594FF83C1D105BD2B41D7E242D86ECB4A8220BD9AF4DA35CB0F69E39B2A fixFrozenLPTokenTransfer
-89308AF3B8B10B7192C4E613E1D2E4D9BA64B2EE2D5232402AE82A6A7220D953 fixQualityUpperBound
 8CC0774A3BF66D1D22E76BBDA8E8A232E6B6313834301B3B23E8601196AE6455 AMM
 8EC4304A06AF03BE953EA6EDA494864F6F3F30AA002BABA35869FBB8C6AE5D52 fixInvalidTxFlags
-8F81B066ED20DAECA20DF57187767685EEF3980B228E0667A650BAF24426D3B4 fixCheckThreading
 93E516234E35E08CA689FA33A6D38E103881F8DCB53023F728C307AA89D515A7 XRPFees
 950AE2EA4654E47F04AA8739C0B214E242097E802FD372D24047A89AB1F5EC38 MPTokensV1
-955DF3FA5891195A9DAEFA1DDC6BB244B545DDE1BAA84CBB25D5F12A8DA68A0C TicketBatch
-96FD2F293A519AE1DB6F8BED23E4AD9119342DA7CB6BAFD00953D16C54205D8B PriceOracle
-98DECF327BF79997AEC178323AD51A830E457BFC6D454DAF3E46E5EC42DC619F CheckCashMakesTrustLine
 9196110C23EA879B4229E51C286180C7D02166DA712559F634372F5264D0EC59 fixInnerObjTemplate2
+96FD2F293A519AE1DB6F8BED23E4AD9119342DA7CB6BAFD00953D16C54205D8B PriceOracle
 A730EB18A9D4BB52502C898589558B4CCEB4BE10044500EE5581137A2E80E849 PermissionedDomains
 AB8D932A5F338903FE5BCBD80B611FFED70839ABA3170E9CE01D947C0EDEDCF2 fixMPTDeliveredAmount
-AE35ABDEFBDE520372B31C957020B34A7A4A9DC3115A69803A44016477C84D6E fixNFTokenRemint
-AF8DF7465C338AE64B1E937D6C8DA138C0D63AD5134A68792BBBE1F63356C422 FlowSortStrands
-B2A4DB846F0891BF2C76AB2F2ACC8F5B4EC64437135C6E56F3F859DE5FFD5856 ExpandedSignerList
 B32752F7DCC41FB86534118FC4EEC8F56E7BD0A7DB60FD73F93F257233C08E3A fixEnforceNFTokenTrustlineV2
-B6B3EEDC0267AB50491FDC450A398AF30DBCD977CECED8BEF2499CAB5DAC19E2 fixRmSmallIncreasedQOffers
-726F944886BCDF7433203787E93DD9AA87FAB74DFE3AF4785BA03BEFC97ADA1F AMMClawback
-763C37B352BE8C7A04E810F8E462644C45AFEAD624BF3894A08E5C917CF9FF39 fixEnforceNFTokenTrustline
-C393B3AEEBF575E475F0C60D5E4241B2070CC4D0EB6C4846B1A07508FAEFC485 fixInnerObjTemplate
-C4483A1896170C66C098DEA5B0E024309C60DC960DE5F01CD7AF986AA3D9AD37 fixMasterKeyAsRegularKey
+C1CE18F2A268E6A849C27B3DE485006771B4C01B2FCEC4F18356FE92ECD6BB74 DynamicNFT
 C7981B764EC4439123A86CC7CCBA436E9B3FF73B3F10A0AE51882E404522FC41 fixNFTokenPageLinks
 D3456A862DC07E382827981CA02E21946E641877F19B8889031CC57FDCAC83E2 fixPayChanCancelAfter
+DAF3A6EB04FA5DC51E8E4F23E9B7022B693EFA636F23F22664746C77B5786B23 DeepFreeze
 DB432C3A09D9D5DFC7859F39AE5FF767ABC59AED0A9FB441E83B814D8946C109 DID
 DF8B4536989BDACE3F934F29423848B9F1D76D09BE6A1FCFE7E7F06AA26ABEAD fixRemoveNFTokenAutoTrustLine
 EE3CF852F0506782D05E65D49E5DCC3D16D50898CD1B646BAE274863401CC3CE NFTokenMintOffer
-F1ED6B4A411D8B872E65B9DCB4C8B100375B0DD3D62D07192E011D6D7F339013 fixTrustLinesToSelf
-F64E1EABBE79D55B3BB82020516CEC2C582A98A6BFE20FBE9BB6A0D233418064 DepositAuth
 FF2D1E13CF6D22427111B967BD504917F63A900CECD320D6FD3AC9FA90344631 fixPriceOracleOrder
 138B968F25822EFBF54C00F97031221C47B1EAB8321D93C7C2AEAF85F04EC5DF TokenEscrow
-32B8614321F7E070419115ABEAB1742EA20F3E3AF34432B5E2F474F8083260DC fixTokenEscrowV1
-5D08145F0A4983F23AFFFF514E83FAD355C5ABFBB6CAB76FB5BC8519FF5F33BE fix1515
-677E401A423E3708363A36BA8B3A7D019D21AC5ABD00387BDBEA6BDE4C91247E PermissionedDEX
-7117E2EC2DBF119CA55181D69819F1999ECEE1A0225A7FD2B9ED47940968479C fix1571
-C1CE18F2A268E6A849C27B3DE485006771B4C01B2FCEC4F18356FE92ECD6BB74 DynamicNFT
-CA7C02118BA27599528543DFE77BA6838D1B0F43B447D4D7F53523CE6A0E9AC2 fix1543
-DAF3A6EB04FA5DC51E8E4F23E9B7022B693EFA636F23F22664746C77B5786B23 DeepFreeze
-FBD513F1B893AC765B78F250E6FFA6A11B573209D1842ADC787C850696741288 fix1578
-B4E4F5D2D6FB84DF7399960A732309C9FD530EAE5941838160042833625A6076 NegativeUNL
+12523DF04B553A0B1AD74F42DDB741DE8DC06A03FC089A0EF197E2A87F1D8107 fixAMMOverflowOffer
 # sync:end
 `.trim();
 }
@@ -355,11 +339,24 @@ function generateStandaloneYaml(
 
   const restartLine = noRestart ? '\n    restart: "no"' : '';
 
-  const RIPPLED_BIN = '/opt/ripple/bin/rippled';
+  // Two INDEPENDENT properties of an image — do not conflate them:
+  //
+  // 1. Binary path — images named "xrpld" ship the binary at /usr/bin/xrpld;
+  //    the pre-rebrand "rippled" name uses the legacy /opt/ripple/bin/rippled.
+  //    Verified true for both xrpllabsofficial/xrpld and rippleci/xrpld.
+  //
+  // 2. Whether the entrypoint auto-injects --conf — ONLY xrpllabsofficial/xrpld
+  //    has a real wrapper script (/entrypoint.sh) that copies the mounted config
+  //    into place internally. rippleci/xrpld's entrypoint is the raw binary
+  //    (no wrapper) — passing no --conf there means rippled silently falls back
+  //    to its own built-in defaults. This must default to "needs an explicit
+  //    flag" for anything that isn't the one confirmed wrapper image.
+  const imageRepo = image.split(':')[0];
+  const usesNewXrpldBinary = imageRepo === 'xrpld' || imageRepo.endsWith('/xrpld');
+  const RIPPLED_BIN = usesNewXrpldBinary ? '/usr/bin/xrpld' : '/opt/ripple/bin/rippled';
   const RIPPLED_CFG = '--conf /config/rippled.cfg';
-  // xrpllabsofficial/xrpld entrypoint already injects --conf internally;
-  // other images (e.g. rippleci/rippled) use the raw rippled binary and need it explicitly.
-  const needsConfFlag = !image.startsWith('xrpllabsofficial/xrpld');
+  const hasConfInjectingEntrypoint = imageRepo === 'xrpllabsofficial/xrpld';
+  const needsConfFlag = !hasConfInjectingEntrypoint;
   const confArg = needsConfFlag ? `, "--conf", "/config/rippled.cfg"` : '';
   const entrypointLine = noRestart
     ? `\n    entrypoint: ["/bin/sh", "-c", "${RIPPLED_BIN} ${RIPPLED_CFG} -a --start 2>/tmp/rip.err & RPID=$! ; wait $RPID ; EC=$? ; cat /tmp/rip.err >&2 ; grep -qF Logic\\ error: /tmp/rip.err 2>/dev/null && exit 134 ; exit $EC"]`
@@ -419,13 +416,23 @@ function generateConsensusYaml(
 ): string {
   writeRippledConfig(debug, false);
 
+  // Same two independent properties as standalone mode (see generateStandaloneYaml
+  // above) — binary path and whether the entrypoint auto-injects --conf. Only
+  // xrpllabsofficial/xrpld has the /entrypoint.sh wrapper; anything else (e.g.
+  // rippleci/xrpld) needs the binary invoked directly with an explicit --conf.
+  const imageRepo = image.split(':')[0];
+  const usesNewXrpldBinary = imageRepo === 'xrpld' || imageRepo.endsWith('/xrpld');
+  const RIPPLED_BIN = usesNewXrpldBinary ? '/usr/bin/xrpld' : '/opt/ripple/bin/rippled';
+  const hasConfInjectingEntrypoint = imageRepo === 'xrpllabsofficial/xrpld';
+  const confFlag = hasConfInjectingEntrypoint ? '' : ' --conf /config/rippled.cfg';
+  const startCmd = hasConfInjectingEntrypoint ? '/entrypoint.sh' : `${RIPPLED_BIN}${confFlag}`;
+
   // Node1 (primary): creates genesis with --start on first boot, --load on resume.
   // Node2 (peer): syncs from node1 on first boot (no flags), --load on resume.
-  // Uses the image's native /entrypoint.sh which copies configs and runs rippled.
   const entrypointPrimary =
-    `["/bin/bash", "-c", "if [ -f /var/lib/rippled/db/ledger.db ]; then exec /entrypoint.sh --load; else exec /entrypoint.sh --start; fi"]`;
+    `["/bin/bash", "-c", "if [ -f /var/lib/xrpld/db/ledger.db ]; then exec ${startCmd} --load; else exec ${startCmd} --start; fi"]`;
   const entrypointPeer =
-    `["/bin/bash", "-c", "if [ -f /var/lib/rippled/db/ledger.db ]; then exec /entrypoint.sh --load; else exec /entrypoint.sh; fi"]`;
+    `["/bin/bash", "-c", "if [ -f /var/lib/xrpld/db/ledger.db ]; then exec ${startCmd} --load; else exec ${startCmd}; fi"]`;
 
   return `# Generated by xrpl-up — do not edit manually
 # 2-node private consensus network (default mode)
@@ -442,7 +449,7 @@ services:
     volumes:
       - "${RIPPLED_CFG_FILE_NODE1}:/config/rippled.cfg:ro"
       - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
-      - rippled-db:/var/lib/rippled/db
+      - rippled-db:/var/lib/xrpld/db
     networks:
       - xrpl-net
     healthcheck:
@@ -458,7 +465,7 @@ services:
     volumes:
       - "${RIPPLED_CFG_FILE_NODE2}:/config/rippled.cfg:ro"
       - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
-      - rippled-peer-db:/var/lib/rippled/db
+      - rippled-peer-db:/var/lib/xrpld/db
     networks:
       - xrpl-net
     depends_on:
@@ -558,7 +565,7 @@ export function composeDown(): void {
  * Returns true if a Docker volume exists AND contains a ledger.db file.
  * This is the same sentinel the entrypoint checks to decide --load vs --start.
  */
-function volumeHasData(volumeName: string): boolean {
+export function volumeHasData(volumeName: string): boolean {
   try {
     execSync(
       `docker run --rm -v ${volumeName}:/data alpine test -f /data/ledger.db`,
@@ -571,17 +578,136 @@ function volumeHasData(volumeName: string): boolean {
 }
 
 /**
+ * Guard against silently booting a --local-network image against a
+ * persistent volume laid out by a different image. Different rippled
+ * images can lay out their data directory differently, so an old volume
+ * booted under a new image can fail unpredictably instead of cleanly.
+ *
+ * Only blocks when there's actually data at risk (a fresh volume has
+ * nothing to be incompatible with) and only compares against a recorded
+ * image (older xrpl-up versions never wrote this file, so upgrading
+ * xrpl-up itself doesn't spuriously trigger this).
+ */
+function checkLocalNetworkImageCompatibility(image: string): void {
+  if (!fs.existsSync(LOCAL_NETWORK_IMAGE_FILE)) return;
+  const previousImage = fs.readFileSync(LOCAL_NETWORK_IMAGE_FILE, 'utf-8').trim();
+  if (!previousImage || previousImage === image) return;
+  if (!volumeHasData(VOLUME_NAME)) return;
+
+  throw new Error(
+    `This --local-network sandbox was last started with ${previousImage}, ` +
+    `but you're starting it with ${image}. Different rippled images can lay ` +
+    `out their data directory differently, so booting the new image against ` +
+    `the old volume can fail unpredictably instead of cleanly.\n\n` +
+    `Run "xrpl-up reset" first, then start again with the new image.`
+  );
+}
+
+function recordLocalNetworkImage(image: string): void {
+  fs.writeFileSync(LOCAL_NETWORK_IMAGE_FILE, image);
+}
+
+/** Called by `xrpl-up reset` — the volumes are gone, so the recorded image is stale. */
+/**
+ * Current --local-network lineage, or null if no sandbox has been created yet.
+ * `seed` means "descends from the shipped pre-built genesis DB"; anything else
+ * is a fingerprint of the amendment set a locally-built genesis was created
+ * with (see GENESIS_LINEAGE_FILE).
+ */
+export function readGenesisLineage(): string | null {
+  try {
+    return fs.readFileSync(GENESIS_LINEAGE_FILE, 'utf-8').trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeGenesisLineage(lineage: string): void {
+  fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
+  fs.writeFileSync(GENESIS_LINEAGE_FILE, lineage);
+}
+
+/**
+ * Make this machine's config match a restored snapshot's genesis.
+ *
+ * `snapshot restore` replaces the ledger wholesale, so the amendment set is
+ * whatever that ledger was built with. Writing those amendments back (and
+ * regenerating the config) keeps config and ledger in agreement, so restoring
+ * across an `amendment enable` just works instead of leaving a mismatch.
+ */
+export function adoptGenesisLineage(lineage: string, amendments: string): void {
+  fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
+  if (amendments.trim()) {
+    fs.writeFileSync(EXTRA_AMENDMENTS_FILE, amendments.endsWith('\n') ? amendments : amendments + '\n');
+  } else {
+    try { fs.unlinkSync(EXTRA_AMENDMENTS_FILE); } catch { /* already absent */ }
+  }
+  writeRippledConfig(false, !isConsensusMode());
+  writeGenesisLineage(lineage);
+}
+
+/** Called by `xrpl-up reset` — the volumes are gone, so the lineage is stale. */
+export function clearGenesisLineage(): void {
+  try { fs.unlinkSync(GENESIS_LINEAGE_FILE); } catch { /* not present — ok */ }
+}
+
+/**
+ * Lineage a genesis built from the current config would have: a short digest of
+ * the extra (manually enabled) amendments, since those are what make a locally
+ * built genesis differ from the shipped seed.
+ */
+function pendingGenesisLineage(): string {
+  const extra = fs.existsSync(EXTRA_AMENDMENTS_FILE)
+    ? fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8').trim()
+    : '';
+  if (!extra) return SEED_LINEAGE;
+  const hashes = extra.split('\n')
+    .map((l) => l.trim().split(/\s+/)[0])
+    .filter(Boolean)
+    .sort()
+    .join(',');
+  return 'amd-' + crypto.createHash('sha256').update(hashes).digest('hex').slice(0, 12);
+}
+
+export function clearLocalNetworkImageRecord(): void {
+  try { fs.unlinkSync(LOCAL_NETWORK_IMAGE_FILE); } catch { /* not present — ok */ }
+}
+
+/**
  * Seed consensus volumes with pre-built genesis DB if they are empty.
  *
  * Uses pre-built tarballs containing a ledger at ~seq 782 with all mainnet
  * amendments already activated through voting. This avoids the ~38-minute
  * amendment voting delay on first boot.
  *
- * The entrypoint checks for /var/lib/rippled/db/ledger.db and uses
+ * The entrypoint checks for /var/lib/xrpld/db/ledger.db and uses
  * --load (instead of --start) when it exists, so pre-seeded volumes
  * boot immediately into a functioning consensus network.
  */
-function seedConsensusVolumes(): void {
+/**
+ * Returns the "uid:gid" the given image's container runs as, so extracted
+ * genesis DB files can be chowned to match. Falls back to root (0:0 — a
+ * no-op chown) if the image can't be queried, which matches older rippled
+ * images that ran as root anyway.
+ */
+function getImageUidGid(image: string): string {
+  // Pin the platform on ARM hosts, matching the compose file — the official
+  // xrpld image is amd64-only, and omitting it makes Docker print a noisy
+  // "requested image's platform does not match" warning on every call.
+  const platformArg = os.arch() === 'arm64' ? '--platform linux/amd64 ' : '';
+  try {
+    // One container, both values — halves the (emulated, slow) container starts.
+    const out = execSync(
+      `docker run --rm ${platformArg}--entrypoint sh "${image}" -c "id -u; id -g"`,
+      { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] },
+    ).trim();
+    const [uid, gid] = out.split('\n').map((s) => s.trim());
+    if (uid && gid) return `${uid}:${gid}`;
+  } catch { /* fall through to root */ }
+  return '0:0';
+}
+
+function seedConsensusVolumes(image: string): void {
   const genesisDir = getGenesisDbDir();
   const node1Tar = path.join(genesisDir, 'node1-db.tar.gz');
   const node2Tar = path.join(genesisDir, 'node2-db.tar.gz');
@@ -589,11 +715,44 @@ function seedConsensusVolumes(): void {
   // If tarballs are missing (e.g. dev build without them), skip silently
   if (!fs.existsSync(node1Tar) || !fs.existsSync(node2Tar)) return;
 
+  // If the user queued extra amendments via `amendment enable`, the shipped
+  // tarball predates them: seeding it would leave an existing ledger.db, so the
+  // entrypoint boots with --load and the [amendments] stanza (which only applies
+  // on a genesis --start) is silently ignored. Skip seeding so the volumes stay
+  // empty and rippled builds a real genesis with those amendments active.
+  //
+  // That genesis starts a NEW ledger lineage, so snapshots taken on the old one
+  // can no longer be restored here — snapshot restore compares lineages and
+  // reports that clearly instead of half-restoring (see snapshot.ts).
+  const lineage = pendingGenesisLineage();
+  if (lineage !== SEED_LINEAGE) {
+    // Docker creates named volumes as root:root. Older rippled images ran as
+    // root so --start could create its genesis DB directories; 3.3.0+ runs as a
+    // non-root user and fails with a permission error unless we pre-chown.
+    const uidGid = getImageUidGid(image);
+    for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
+      if (!volumeHasData(vol)) {
+        execSync(`docker volume create ${vol}`, { stdio: 'ignore' });
+        execSync(`docker run --rm -v ${vol}:/data alpine chown -R ${uidGid} /data`, { stdio: 'ignore' });
+      }
+    }
+    writeGenesisLineage(lineage);
+    return;
+  }
+
   const node1Has = volumeHasData(VOLUME_NAME);
   const node2Has = volumeHasData(PEER_VOLUME_NAME);
 
   // Both volumes have data — nothing to do
   if (node1Has && node2Has) return;
+
+  // The genesis tarballs carry whichever UID/GID built them (mode 644/755 —
+  // no "other" write bit). Older rippled images ran their process as root,
+  // so any ownership mismatch was irrelevant; newer images (3.3.0+) run as
+  // a dedicated non-root user, which can't write to files extracted with
+  // the wrong owner. Chown to whatever UID the target image actually runs
+  // as so this self-adapts across image versions.
+  const uidGid = getImageUidGid(image);
 
   // Seed both volumes (even if one already has data, reseed to keep them in sync)
   const pairs: [string, string][] = [
@@ -608,10 +767,11 @@ function seedConsensusVolumes(): void {
       `docker run --rm ` +
       `-v ${vol}:/data ` +
       `-v "${path.dirname(tar)}":/genesis:ro ` +
-      `alpine tar xzf /genesis/${path.basename(tar)} -C /data`,
+      `alpine sh -c "tar xzf /genesis/${path.basename(tar)} -C /data && chown -R ${uidGid} /data"`,
       { stdio: 'ignore' },
     );
   }
+  writeGenesisLineage(SEED_LINEAGE);
 }
 
 /**
@@ -622,11 +782,13 @@ function seedConsensusVolumes(): void {
  * With --local-network (noConsensus=false): 2-node consensus network. Volumes preserved.
  */
 export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1'): Promise<string> {
+  if (!noConsensus) checkLocalNetworkImageCompatibility(image);
+
   writeComposeFile(image, noConsensus, debug, ledgerIntervalMs, configPath, noRestart, bindAddress);
   if (noConsensus) composeDown(); // clean slate only in standalone mode
 
   // Pre-seed consensus volumes with genesis DB on first run
-  if (!noConsensus) seedConsensusVolumes();
+  if (!noConsensus) seedConsensusVolumes(image);
 
   // Pull the rippled image if not already cached — gives clear feedback on first run
   // instead of hanging silently inside docker compose up.
@@ -657,6 +819,8 @@ export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debu
 
   await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
 
+  if (!noConsensus) recordLocalNetworkImage(image);
+
   return LOCAL_WS_URL;
 }
 
@@ -671,6 +835,20 @@ export function isConsensusMode(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * The `start` invocation that resumes whichever mode the sandbox is
+ * currently configured for — `--local-network` if the existing compose file
+ * describes a consensus network, otherwise bare `start` (standalone).
+ * No compose file yet (fresh install) falls through to standalone, the
+ * right default for a first-time user. Use this instead of hardcoding
+ * `xrpl-up start` in restart hints — suggesting standalone to a
+ * --local-network user silently discards their wallet records (see
+ * nodeCommand's pre-standalone-start warning).
+ */
+export function startCommandHint(): string {
+  return isConsensusMode() ? 'xrpl-up start --local-network' : 'xrpl-up start';
 }
 
 /**

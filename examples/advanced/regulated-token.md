@@ -9,9 +9,9 @@ A fully-regulated IOU token flow where the issuer controls every step: only appr
 ## Prerequisites
 
 ```bash
-xrpl-up node
+xrpl-up start
 xrpl-up status   # wait until "healthy"
-export XRPL_NODE=local
+export XRPL_NETWORK=local
 ```
 
 ---
@@ -35,11 +35,9 @@ Holder A (approved)        Holder B (rejected)
 ## Step 1: Create the regulated issuer account
 
 ```bash
-xrpl-up faucet --local
-# → seed: sEdIssuerSeedXXX  address: rIssuerXXX
-
-ISSUER_SEED=sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX
-ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ISSUER_JSON=$(xrpl-up faucet --network local --json)
+ISSUER_SEED=$(echo "$ISSUER_JSON" | jq -r .seed)
+ISSUER=$(echo "$ISSUER_JSON" | jq -r .address)
 ```
 
 ---
@@ -50,7 +48,7 @@ ISSUER=rIssuerXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ```bash
 # Allow clawback of issued tokens (must come first, before any trust lines)
-xrpl-up account set --allow-clawback --seed $ISSUER_SEED
+xrpl-up account set --allow-clawback --confirm --seed $ISSUER_SEED
 # ✔ Flag set: allowClawback (permanent)
 
 # Require issuer approval for every trust line
@@ -81,16 +79,13 @@ xrpl-up account info $ISSUER
 ## Step 3: Create holder accounts
 
 ```bash
-xrpl-up faucet --local
-# → seed: sEdHolderASeedXXX  address: rHolderAXXX   (will be approved)
+HOLDER_A_JSON=$(xrpl-up faucet --network local --json)   # will be approved
+HOLDER_A_SEED=$(echo "$HOLDER_A_JSON" | jq -r .seed)
+HOLDER_A=$(echo "$HOLDER_A_JSON" | jq -r .address)
 
-xrpl-up faucet --local
-# → seed: sEdHolderBSeedXXX  address: rHolderBXXX   (will be rejected)
-
-HOLDER_A_SEED=sEdHolderASeedXXXXXXXXXXXXXXXXXX
-HOLDER_A=rHolderAXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-HOLDER_B_SEED=sEdHolderBSeedXXXXXXXXXXXXXXXXXX
-HOLDER_B=rHolderBXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+HOLDER_B_JSON=$(xrpl-up faucet --network local --json)   # will be rejected
+HOLDER_B_SEED=$(echo "$HOLDER_B_JSON" | jq -r .seed)
+HOLDER_B=$(echo "$HOLDER_B_JSON" | jq -r .address)
 ```
 
 ---
@@ -113,7 +108,7 @@ xrpl-up trust set --currency USD --issuer $ISSUER --limit 10000 --seed $HOLDER_B
 
 ```bash
 # Approve Holder A's trust line
-xrpl-up trust set --currency USD --issuer $HOLDER_A --limit 0 --freeze --seed $ISSUER_SEED --authorize
+xrpl-up trust set --currency USD --issuer $HOLDER_A --limit 0 --auth --seed $ISSUER_SEED
 # ✔ Trust line authorized: USD / rHolderAXXX...
 
 # Holder B is NOT authorized — deliberately left pending
@@ -147,29 +142,8 @@ xrpl-up deposit-preauth list $ISSUER
 
 ## Step 7: Issue tokens to Holder A
 
-Use a script to send USD from the issuer to the approved holder (direct Payment):
-
-```typescript
-// scripts/issue-tokens.ts
-import { Client, Wallet } from 'xrpl';
-const client = new Client('ws://localhost:6006');
-await client.connect();
-const issuer = Wallet.fromSeed('sEdIssuerSeedXXXXXXXXXXXXXXXXXXXXX');
-const tx = {
-  TransactionType: 'Payment',
-  Account: issuer.address,
-  Destination: 'rHolderAXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-  Amount: { currency: 'USD', issuer: issuer.address, value: '1000' },
-};
-const prepared = await client.autofill(tx as any);
-const signed = issuer.sign(prepared as any);
-const result = await client.submitAndWait(signed.tx_blob);
-console.log(result.result.meta?.TransactionResult);
-await client.disconnect();
-```
-
 ```bash
-xrpl-up run scripts/issue-tokens.ts
+xrpl-up payment --to $HOLDER_A --amount 1000/USD/$ISSUER --seed $ISSUER_SEED
 # tesSUCCESS
 ```
 
@@ -237,7 +211,7 @@ xrpl-up account set --clear-flag depositAuth --seed $ISSUER_SEED
 
 | Scenario | Command |
 |----------|---------|
-| Approve a new holder | `trust set --currency USD --issuer $HOLDER --limit 0 --freeze --authorize --seed $ISSUER_SEED` |
+| Approve a new holder | `trust set --currency USD --issuer $HOLDER --limit 0 --auth --seed $ISSUER_SEED` |
 | Suspend a holder | `trust set --currency USD --issuer $HOLDER --limit 0 --freeze --seed $ISSUER_SEED` |
 | Reinstate a holder | `trust set --currency USD --issuer $HOLDER --limit 0 --unfreeze --seed $ISSUER_SEED` |
 | Freeze all holders (emergency) | `account set --set-flag globalFreeze --seed $ISSUER_SEED` |

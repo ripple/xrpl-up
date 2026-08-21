@@ -39,7 +39,7 @@ describe("multisig set", () => {
     const signer3 = Wallet.generate();
 
     const setResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -61,7 +61,7 @@ describe("multisig set", () => {
     expect(setResult.stdout).toContain("tesSUCCESS");
 
     const listResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "list",
@@ -76,6 +76,22 @@ describe("multisig set", () => {
     expect(listResult.stdout).toContain(signer2.address);
     expect(listResult.stdout).toContain(signer3.address);
     expect(listResult.stdout).toContain("weight: 1");
+
+    // Regression: `account info` never requested signer_lists from the
+    // account_info RPC, so it silently never showed a signer list even
+    // though README documented `info` as including one.
+    const infoResult = runCLI(["--network", "testnet", "account", "info", owner.address]);
+    expect(infoResult.status, `stdout: ${infoResult.stdout} stderr: ${infoResult.stderr}`).toBe(0);
+    expect(infoResult.stdout).toContain("Signer List:  quorum 2");
+    expect(infoResult.stdout).toContain(signer1.address);
+
+    const infoJsonResult = runCLI(["--network", "testnet", "account", "info", "--json", owner.address]);
+    expect(infoJsonResult.status).toBe(0);
+    const infoJson = JSON.parse(infoJsonResult.stdout) as {
+      signer_lists?: Array<{ SignerQuorum: number; SignerEntries: Array<{ SignerEntry: { Account: string } }> }>;
+    };
+    expect(infoJson.signer_lists?.[0]?.SignerQuorum).toBe(2);
+    expect(infoJson.signer_lists?.[0]?.SignerEntries.map((e) => e.SignerEntry.Account)).toContain(signer1.address);
   }, 120_000);
 
   it.concurrent("updates the signer list (replace 2-of-3 with 2-of-2)", async () => {
@@ -86,7 +102,7 @@ describe("multisig set", () => {
 
     // Set initial 2-of-3
     const set1 = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -105,7 +121,7 @@ describe("multisig set", () => {
 
     // Update to 2-of-2
     const set2 = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -122,7 +138,7 @@ describe("multisig set", () => {
     expect(set2.stdout).toContain("tesSUCCESS");
 
     const listResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "list",
@@ -139,7 +155,7 @@ describe("multisig set", () => {
     const signer1 = Wallet.generate();
 
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -169,7 +185,7 @@ describe("multisig set", () => {
     const signer1 = Wallet.generate();
 
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -195,7 +211,7 @@ describe("multisig set", () => {
     const signer1 = Wallet.generate();
 
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -223,7 +239,7 @@ describe("multisig list", () => {
     const signer3 = Wallet.generate();
 
     const setResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -244,7 +260,7 @@ describe("multisig list", () => {
     ).toBe(0);
 
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "list",
@@ -267,7 +283,7 @@ describe("multisig list", () => {
     const signer3 = Wallet.generate();
 
     const setResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -288,7 +304,7 @@ describe("multisig list", () => {
     ).toBe(0);
 
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "list",
@@ -317,7 +333,7 @@ describe("multisig list", () => {
   it.concurrent("shows 'No signer list configured.' for account with no signer list", async () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "list",
@@ -338,7 +354,7 @@ describe("multisig delete", () => {
     const signer2 = Wallet.generate();
 
     const setResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -358,7 +374,7 @@ describe("multisig delete", () => {
     expect(setResult.stdout).toContain("tesSUCCESS");
 
     const deleteResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "delete",
@@ -372,7 +388,7 @@ describe("multisig delete", () => {
     expect(deleteResult.stdout).toContain("tesSUCCESS");
 
     const listResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "list",
@@ -390,7 +406,7 @@ describe("multisig delete", () => {
     const signer1 = Wallet.generate();
 
     const setResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -407,7 +423,7 @@ describe("multisig delete", () => {
     ).toBe(0);
 
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "delete",
@@ -432,7 +448,7 @@ describe("multisig delete", () => {
     const [owner] = await createFunded(client, master, 1, FUND_AMOUNT);
 
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "delete",
@@ -455,7 +471,7 @@ describe("multisig delete", () => {
     const signer1 = Wallet.generate();
 
     const setResult = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "set",
@@ -472,7 +488,7 @@ describe("multisig delete", () => {
     ).toBe(0);
 
     const result = runCLI([
-      "--node",
+      "--network",
       "testnet",
       "multisig",
       "delete",

@@ -65,19 +65,19 @@ xrpl-up permissioned-domain delete --domain-id <64hexID> --seed sEd...
 
 ```bash
 # 1. Alice creates a permissioned domain requiring KYC credentials from a trusted issuer
-xrpl-up --node testnet permissioned-domain create \
+xrpl-up --network testnet permissioned-domain create \
   --credential rCredIssuerXXXX...:KYC \
   --seed sEdAliceXXXX...
 # → Domain ID: AABB...64chars  Tx: CCDD...
 
 # 2. Alice updates the domain to require both KYC and AML credentials
-xrpl-up --node testnet permissioned-domain update \
+xrpl-up --network testnet permissioned-domain update \
   --domain-id AABB...64chars \
   --credentials-json '[{"issuer":"rCredIssuerXXXX...","credential_type":"4b5943"},{"issuer":"rCredIssuerXXXX...","credential_type":"414d4c"}]' \
   --seed sEdAliceXXXX...
 
 # 3. Alice deletes the domain when no longer needed
-xrpl-up --node testnet permissioned-domain delete \
+xrpl-up --network testnet permissioned-domain delete \
   --domain-id AABB...64chars --seed sEdAliceXXXX...
 ```
 

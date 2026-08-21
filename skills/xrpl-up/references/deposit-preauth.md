@@ -41,22 +41,22 @@ xrpl-up deposit-preauth list rXXX... --json
 
 ```bash
 # 1. Alice enables DepositAuth on her account (requires preauthorization to receive payments)
-xrpl-up --node testnet account set \
+xrpl-up --network testnet account set \
   --set-flag depositAuth --seed sEdAliceXXXX...
 
 # 2. Alice pre-authorizes Bob to send payments directly to her
-xrpl-up --node testnet deposit-preauth set \
+xrpl-up --network testnet deposit-preauth set \
   --authorize rBobXXXX... --seed sEdAliceXXXX...
 
 # 3. List Alice's preauthorizations
-xrpl-up --node testnet deposit-preauth list rAliceXXXX...
+xrpl-up --network testnet deposit-preauth list rAliceXXXX...
 
 # 4. Bob can now send XRP to Alice (bypasses DepositAuth)
-xrpl-up --node testnet payment \
+xrpl-up --network testnet payment \
   --to rAliceXXXX... --amount 5 --seed sEdBobXXXX...
 
 # 5. Alice revokes Bob's preauthorization
-xrpl-up --node testnet deposit-preauth set \
+xrpl-up --network testnet deposit-preauth set \
   --unauthorize rBobXXXX... --seed sEdAliceXXXX...
 ```
 

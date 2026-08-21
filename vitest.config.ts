@@ -16,6 +16,7 @@ export default defineConfig({
       "tests/e2e/sandbox/status.test.ts",
       "tests/e2e/sandbox/amendment.test.ts",
       "tests/e2e/sandbox/amendment.enable.test.ts",
+      "tests/e2e/sandbox/amendment.activate.test.ts",
     ],
     pool: "forks",
     poolOptions: {

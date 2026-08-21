@@ -80,7 +80,7 @@ describe("snapshot save", () => {
   it("node WebSocket is healthy after save (verifies save resumed the sandbox)", async () => {
     // Do NOT start the sandbox here — snapshot save is supposed to resume
     // it automatically. An extra start would mask a broken resume flow.
-    const result = runXrplUp(["status", "--local"], {}, 15_000);
+    const result = runXrplUp(["status"], {}, 15_000);
     expect(result.status, cliOutput(result)).toBe(0);
     expect(result.stdout).toContain("healthy");
   });
@@ -129,13 +129,13 @@ describe("snapshot restore", () => {
   });
 
   it("node WebSocket is healthy after restore", async () => {
-    const result = runXrplUp(["status", "--local"], {}, 15_000);
+    const result = runXrplUp(["status"], {}, 15_000);
     expect(result.status, cliOutput(result)).toBe(0);
     expect(result.stdout).toContain("healthy");
   });
 
   it("faucet HTTP endpoint is healthy after restore", () => {
-    const result = runXrplUp(["status", "--local"], {}, 15_000);
+    const result = runXrplUp(["status"], {}, 15_000);
     expect(result.status, cliOutput(result)).toBe(0);
     expect(result.stdout).toContain("Faucet:");
     expect(result.stdout).toContain("healthy");
@@ -176,7 +176,7 @@ describe("snapshot rollback", () => {
     // stops the node and the funding tx may not be in the tarball.
     for (let i = 0; i < 30; i++) {
       const result = runXrplUp(
-        ["accounts", "--local", "--address", preSnapshotAddress],
+        ["accounts", "--address", preSnapshotAddress],
         {},
         15_000,
       );
@@ -205,7 +205,7 @@ describe("snapshot rollback", () => {
     // Node 22 this can take 60-90s. Use 120s timeout.
     for (let i = 0; i < 60; i++) {
       const result = runXrplUp(
-        ["accounts", "--local", "--address", postSnapshotAddress],
+        ["accounts", "--address", postSnapshotAddress],
         {},
         15_000,
       );
@@ -222,7 +222,7 @@ describe("snapshot rollback", () => {
 
   it("account A still exists after restore", () => {
     const result = runXrplUp(
-      ["accounts", "--local", "--address", preSnapshotAddress],
+      ["accounts", "--address", preSnapshotAddress],
       {},
       30_000,
     );
@@ -231,7 +231,7 @@ describe("snapshot rollback", () => {
 
   it("account B is gone after restore (proves rollback)", () => {
     const result = runXrplUp(
-      ["accounts", "--local", "--address", postSnapshotAddress],
+      ["accounts", "--address", postSnapshotAddress],
       {},
       30_000,
     );

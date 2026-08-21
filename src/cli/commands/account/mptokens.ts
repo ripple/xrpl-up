@@ -5,7 +5,7 @@ import { getKeystoreDir, resolveAccount } from "../../utils/keystore";
 
 interface MPTokenEntry {
   MPTokenIssuanceID: string;
-  MPTAmount: string;
+  MPTAmount?: string;
   Flags: number;
 }
 
@@ -49,9 +49,15 @@ export const mptokensCommand = new Command("mptokens")
       console.log(`${"MPTokenIssuanceID".padEnd(48)}  ${"Balance".padStart(20)}  Flags`);
       console.log("-".repeat(48) + "  " + "-".repeat(20) + "  " + "-----");
 
+      // lsfMPTLocked = 0x00000001. MPToken objects can have other bits set at
+      // the same time (e.g. lsfMPTAuthorized = 0x00000002 for require-auth
+      // issuances), so this must be a bitwise check, not strict equality —
+      // otherwise a locked-and-authorized holder (Flags === 3) would show "None".
       for (const token of tokens) {
-        const flags = token.Flags === 1 ? "Locked" : "None";
-        console.log(`${token.MPTokenIssuanceID}  ${token.MPTAmount.padStart(20)}  ${flags}`);
+        const flags = (token.Flags & 0x00000001) !== 0 ? "Locked" : "None";
+        // rippled omits MPTAmount entirely when the balance is exactly 0
+        const amount = token.MPTAmount ?? "0";
+        console.log(`${token.MPTokenIssuanceID}  ${amount.padStart(20)}  ${flags}`);
       }
 
       if (res.result.marker) {

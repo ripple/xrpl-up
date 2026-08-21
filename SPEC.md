@@ -1,6 +1,6 @@
 # xrpl-up — Product Specification
 
-> **Version:** 0.1.7
+> **Version:** 0.2.0-beta.0
 > **Status:** Pre-release (not yet published to npm)
 > **Source of truth:** This document supersedes inline comments when they conflict.
 
@@ -40,7 +40,7 @@
 1. **Local sandbox** — a standalone rippled node in Docker with pre-funded accounts and all modern amendments enabled. Ephemeral by default; resets on every `start`.
 2. **Local network** — a 2-node consensus network (`--local-network`) with persistent ledger state across restarts.
 3. **Transaction wrappers** — 20 commands covering AMM, NFT, MPT, DEX, escrow, channels, checks, tickets, credentials, DIDs, oracles, vaults, and more. Designed for demos and quick experiments, not as a full RPC client.
-4. **Multi-network support** — target local, testnet, or devnet with `--node` or `XRPL_NODE`. Custom networks can be added via config file.
+4. **Multi-network support** — target local, testnet, or devnet with `--network` or `XRPL_NETWORK`. Custom networks can be added via config file.
 5. **Snapshots** — save and restore ledger state by name (requires `--local-network`). Useful for reproducible test scenarios and rollback.
 6. **Scripting** — run TypeScript/JavaScript scripts against any network via `xrpl-up run`. The CLI is also importable as a library (`src/index.ts`).
 7. **Amendment management** (experimental) — list, query, and enable XRPL amendments on the local sandbox. Compare amendment status across networks with `--diff`.
@@ -83,7 +83,7 @@ xrpl-up CLI (src/cli.ts)
             Dockerfile   — Bundled and shipped with the npm package
 ```
 
-### 2.2 Standalone Mode (`xrpl-up start --local`)
+### 2.2 Standalone Mode (`xrpl-up start`)
 
 Default mode. A single rippled in standalone mode — no peers, no consensus, no persistence. Ledger state resets on every start.
 
@@ -99,7 +99,7 @@ Host
 
 | Service | Image / Build | Ports | Key details |
 |---|---|---|---|
-| `rippled` | `xrpllabsofficial/xrpld:latest` (`--image`) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. |
+| `rippled` | `rippleci/xrpld:3.3.0` (`--image`) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. Runs as a non-root user (uid 999) as of the 3.3.0 image (was root in 3.2.0). |
 | `faucet` | Built from `dist/faucet-server/` | `3001:3001` | Depends on rippled healthcheck. Connects via `host.docker.internal`. |
 
 Both share `xrpl-net` (bridge driver). `--exit-on-crash` disables restart and wraps rippled in a shell that detects `Logic error:` in stderr and exits 134.
@@ -119,8 +119,9 @@ Host
 - Two rippled containers (`rippled` + `rippled-peer`) with separate configs (`rippled-node1.cfg`, `rippled-node2.cfg`) and hardcoded validator keys
 - Named volumes: `xrpl-up-local-db` (node 1) and `xrpl-up-local-peer-db` (node 2)
 - Entrypoint checks for `ledger.db` — uses `--start` on first boot, `--load` on resume
-- Amendments activate through voting (~30–60 s on first boot), not instantly
-- Pre-seeded genesis DB (`src/core/genesis/*.tar.gz`) extracted into empty volumes for fast first boot
+- Amendments activate through the `[amendments]` genesis-forcing stanza on first `--start`, same as standalone — takes ~30–70 s (real 2-node peer discovery + consensus bootstrap) instead of standalone's near-instant boot. See §5.6.1 for a known intermittent race in this path.
+- Pre-seeded genesis DB (`src/core/genesis/*.tar.gz`) extracted into empty volumes for fast first boot (~5s) when no amendments are queued. Extraction chowns the volume to the target image's runtime uid/gid (queried via `docker run --entrypoint id`) so newer non-root images (3.3.0+) can write to it; older root-based images no-op this chown.
+- Seeding is skipped (leaving the volumes empty for a real genesis `--start`) when `amendment enable` has queued amendments — see §5.6.1 for why, how it works, and a known flaky failure mode.
 
 ### 2.4 Persistent State Layout (`~/.xrpl-up/`)
 
@@ -130,13 +131,17 @@ Host
 ├── rippled.cfg                  # Standalone mode config (auto-generated or custom via --config)
 ├── rippled-node1.cfg            # Local-network mode: node 1 config
 ├── rippled-node2.cfg            # Local-network mode: node 2 config
-├── validators.txt               # Companion to rippled.cfg (written once if missing)
+├── validators.txt               # Standalone: written once if missing (empty). Local-network: regenerated every start (validator keys)
+├── genesis-amendments.txt       # Queued by `amendment enable`; merged into the config above
+├── genesis-lineage.txt          # Fingerprint of the current --local-network genesis (see §5.6)
+├── local-network-image.txt      # Records which --image last started the --local-network volumes
 ├── local-accounts.json          # WalletStore for local network
 ├── testnet-accounts.json        # WalletStore for testnet
 ├── devnet-accounts.json         # WalletStore for devnet
 └── snapshots/
     ├── <name>.tar.gz            # Compressed NuDB ledger volume (--local-network mode only)
-    └── <name>-accounts.json     # Account store at snapshot time
+    ├── <name>-accounts.json     # Account store at snapshot time
+    └── <name>-meta.json         # Snapshot metadata ({ format, lineage, amendments })
 ```
 
 **WalletStore file format** (`{network}-accounts.json`):
@@ -213,7 +218,7 @@ const store = new WalletStore(networkKey);
 |---|---|
 | `-v, --version` | Print version and exit |
 | `--help` | Print help for any command or subcommand |
-| `--node <url\|name>` | XRPL node for interaction commands: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NODE` env var. Ignored by sandbox lifecycle commands. |
+| `-n, --network <url\|name>` | XRPL network target: `local` (default), `testnet`, `devnet`, or a raw WebSocket URL (e.g. `ws://localhost:6006`). Set via `XRPL_NETWORK` env var. Applies to XRPL interaction commands and to any sandbox lifecycle command that has a network concept (`start`, `accounts`, `faucet`, `run`, `status`, `amendment list`/`info`) — those commands read the same global option (no per-command duplicate). Commands with no network concept (`stop`, `reset`, `logs`, `init`, `config`, `snapshot`) ignore it. **Value resolution differs by command group**: sandbox lifecycle commands resolve the value against `xrpl-up.config.js`'s `networks` map (so a custom config-defined name works), while XRPL interaction commands only recognize the literals `local`/`testnet`/`devnet` or a raw URL — a config-defined custom network name is not resolved and fails. |
 
 Each command supports `--help` for detailed flag documentation. Run `xrpl-up <command> --help` or `xrpl-up <command> <subcommand> --help` for usage details.
 
@@ -223,7 +228,7 @@ Each command supports `--help` for detailed flag documentation. Run `xrpl-up <co
 
 ### 5.1 Local Node Lifecycle
 
-**`xrpl-up start --local`** startup sequence:
+**`xrpl-up start`** startup sequence:
 1. Check Docker daemon is running (`docker info`)
 2. Generate `~/.xrpl-up/rippled.cfg` (unless `--config` is provided)
 3. Write `~/.xrpl-up/validators.txt` (if missing)
@@ -234,12 +239,12 @@ Each command supports `--help` for detailed flag documentation. Run `xrpl-up <co
 8. Wait for port 3001 to accept TCP connections (30 s timeout)
 9. Fund N accounts (default 10) via the local faucet
 10. Save accounts to `~/.xrpl-up/local-accounts.json`
-11. Print account addresses and seeds (unless `--no-secrets` or `--detach`)
-12. If foreground: subscribe to ledger events and stream ledger close notifications to stdout. If `--exit-on-crash`: also start a `docker wait` watcher for exit code propagation.
+11. Print account addresses and seeds (unless `--no-secrets`, or unless detached — local sandboxes detach by default; pass `--foreground` to stay attached)
+12. If attached (`--foreground` or `--exit-on-crash`): subscribe to ledger events and stream ledger close notifications to stdout. If `--exit-on-crash`: also start a `docker wait` watcher for exit code propagation.
 
 **`xrpl-up stop`**: runs `docker compose down` on the project `xrpl-up-local`.
 
-**`xrpl-up reset`**: runs `docker compose down`, removes the `xrpl-up-local-db` volume, deletes `~/.xrpl-up/local-accounts.json`. With `--snapshots`, also deletes `~/.xrpl-up/snapshots/`.
+**`xrpl-up reset`**: runs `docker compose down`, removes the `xrpl-up-local-db` volume, deletes `~/.xrpl-up/local-accounts.json`, and clears `~/.xrpl-up/genesis-amendments.txt` (then regenerates the config) so manually enabled amendments do not silently carry into the next genesis. With `--snapshots`, also deletes `~/.xrpl-up/snapshots/`. With `--keep-amendments`, preserves the amendment queue.
 
 ### 5.2 Account Funding (Faucet / WalletStore)
 
@@ -266,6 +271,7 @@ Each command supports `--help` for detailed flag documentation. Run `xrpl-up <co
 - TypeScript scripts are executed directly — no build step required
 - TypeScript runner resolution: local `tsx` → local `ts-node` → `npx tsx`
 - JavaScript scripts are run with `node`
+- `tsx` compiles `.ts` files to CJS unless the script's project sets `"type": "module"` in `package.json` (the `init` scaffold does; an arbitrary project may not). Top-level `await` is invalid CJS — scripts should wrap their body in an `async function` instead, as the README's example does
 - Three environment variables are injected: `XRPL_NETWORK`, `XRPL_NETWORK_URL`, `XRPL_NETWORK_NAME`
 - Additional CLI arguments after the script path are passed through as `process.argv`
 - Exit code is forwarded: non-zero exits from the script cause `xrpl-up run` to exit with the same code
@@ -289,20 +295,23 @@ When `local` is the default network, example scripts use the local faucet endpoi
 
 ### 5.5 Snapshots
 
-Snapshots capture the full state of a `--local-network` session: ledger database + account store.
+Snapshots capture the full state of a `--local-network` session: ledger database, account store, and the manually enabled amendment set (see §5.6 for why the last one matters).
 
 **`snapshot save <name>`**:
-1. Stops all services (via `docker compose stop`)
-2. Runs `docker run --rm -v xrpl-up-local-db:/data -v ... busybox tar czf /out/<name>.tar.gz -C /data .`
-3. Copies `~/.xrpl-up/local-accounts.json` → `~/.xrpl-up/snapshots/<name>-accounts.json`
-4. Restarts `rippled` and `faucet` services
+1. Waits for every account in `~/.xrpl-up/local-accounts.json` to appear on a validated ledger (`waitForWalletStoreValidated()`, up to 30s, best-effort). Without this, saving immediately after `start`/`faucet` could archive a ledger that predates the accounts it records, so a later restore fails post-restore verification with "account ... not found."
+2. Stops all services (via `docker compose stop`)
+3. Runs `docker run --rm -v xrpl-up-local-db:/data -v ... alpine tar czf /out/<name>.tar.gz -C /data .`
+4. Writes sidecars: `<name>-accounts.json` (copy of the account store), `<name>-meta.json` (`{ format, lineage, amendments }` — see §5.6), atomically swapped in together with the tarball
+5. Restarts `rippled` and `faucet` services
 
 **`snapshot restore <name>`**:
-1. Stops the entire stack (`docker compose down`)
-2. Removes the existing `xrpl-up-local-db` volume
-3. Re-creates the volume and extracts `<name>.tar.gz` into it
-4. Copies `<name>-accounts.json` → `~/.xrpl-up/local-accounts.json`
-5. Restarts the stack (`docker compose up -d`)
+1. Compares the snapshot's recorded lineage (`<name>-meta.json`) against the sandbox's current lineage (`~/.xrpl-up/genesis-lineage.txt`). On a mismatch, adopts the snapshot's amendment set (`adoptGenesisLineage()`): writes it to `genesis-amendments.txt`, regenerates the config, updates the lineage marker — so the ledger about to be loaded and the running config agree.
+2. Stops the entire stack (`docker compose down`)
+3. Removes the existing `xrpl-up-local-db` volume
+4. Re-creates the volume and extracts `<name>.tar.gz` into it
+5. Copies `<name>-accounts.json` → `~/.xrpl-up/local-accounts.json`
+6. Restarts the stack (`docker compose up -d`)
+7. Verifies at least one account from the sidecar exists on the restored ledger; fails loudly if not, rather than leaving a silently inconsistent sandbox
 
 **`snapshot list`**: reads `~/.xrpl-up/snapshots/`, prints name, file size, modification date, and `+accounts` tag if the sidecar JSON exists.
 
@@ -310,7 +319,7 @@ Snapshots capture the full state of a `--local-network` session: ledger database
 
 ### 5.6 Amendment Management
 
-**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). This stanza lists all amendments known to rippled 3.1.1 by hash and name. Approximately 70+ amendments are pre-enabled.
+**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). It currently lists 37 amendments, each individually verified to force-enable on a fresh genesis with `rippleci/xrpld:3.3.0` (see §5.6.1 for the verification method and why this list needs periodic re-curation, not just re-listing everything rippled supports).
 
 **`amendment list`**:
 - Calls `feature` RPC on the target network
@@ -322,13 +331,49 @@ Snapshots capture the full state of a `--local-network` session: ledger database
 - Looks up by exact name or hash prefix
 - Shows: full hash, name, enabled status, supported status, vote count
 
-**`amendment enable <nameOrHash>`** (local only):
-- Appends `<hash> <name>` to `~/.xrpl-up/genesis-amendments.txt`
-- Regenerates `rippled.cfg` so the amendment is present in the `[amendments]` genesis stanza
-- Prompts to reset and restart (a full node reset is required for the genesis config to take effect)
+**`amendment enable <nameOrHash...>`** (local only):
+- Accepts one or more names/hashes in a single invocation; all are resolved up front (fails fast, before queuing anything, if any one is unknown or unsupported)
+- Appends `<hash> <name>` to `~/.xrpl-up/genesis-amendments.txt` for each amendment not already enabled (already-enabled ones are reported and skipped, not re-queued)
+- Regenerates `rippled.cfg` so the amendments are present in the `[amendments]` genesis stanza
+- Prompts to reset and restart once for the whole batch (a full node reset is required for the genesis config to take effect)
 - `--auto-reset`: skips the prompt and resets immediately
 
-To undo an `enable`, run `xrpl-up reset` without re-enabling the amendment — the next start will use the default genesis config.
+#### 5.6.1 How amendments actually activate, and why the `[amendments]` list needs periodic re-curation (read before touching seeding, `amendment enable`, or the genesis list)
+
+`[amendments]` **does** force-enable at the genesis ledger in both standalone and `--local-network` mode — this was wrongly disputed and re-verified multiple times in one debugging session; treat that as settled unless you have live evidence otherwise. Standalone builds and enables in ~2s. `--local-network` takes longer (~30–70s) because it's a real 2-node bootstrap: node1 boots `--start` and builds the genesis ledger from its own `[amendments]` config; node2, having no `ledger.db`, boots with **no flags at all** (not `--load`, not `--start`) and syncs the genesis ledger from node1 as a peer, inheriting node1's amendment set once synced.
+
+Verify directly:
+
+```bash
+docker exec xrpl-up-local-rippled-1 sh -c 'ps aux | grep xrpld'       # node1: ...xrpld --start
+docker exec xrpl-up-local-rippled-peer-1 sh -c 'ps aux | grep xrpld'  # node2: ...xrpld  (no flags — syncing from node1)
+xrpl-up amendment info <name>                                        # Enabled: yes, usually within the same ~30-70s the network takes to report ready
+```
+
+**Root cause of "some listed amendments never force-enable," found and fixed.** rippled periodically **retires** sufficiently-old amendments from the genesis-forcing/voting table once they're permanently hardcoded into the binary — after retirement, an amendment listed in `[amendments]` reports `supported: true, enabled: false` forever on a fresh genesis, with no error. This isn't new: commit `845d4e0` (Apr 2026) already hit this once against rippled 3.1/3.2, diagnosed it exactly this way, and re-curated the list down to 75 entries, all confirmed working at the time. The image has since been upgraded twice (3.2.0, then 3.3.0) without re-curating the list, which had grown back to 77 entries — by the time of this second occurrence, only **37 of those 77 still force-enabled** on rippled 3.3.0. The gap has no pattern by amendment age, name, or category (a first, wrong diagnosis theorized "ancient/compiled-in amendments" — disproven by `LendingProtocol`, a brand-new draft amendment, landing in the same "won't force-enable" bucket as ancient ones like `RequireFullyCanonicalSig`; it turned out `LendingProtocol` was never in the config list at all, a separate and unrelated omission). The list in `src/core/compose.ts`'s `generateRippledConfig()` was re-curated to the 37 entries verified live (via `feature` RPC after a real fresh `--start`, not assumed from being listed) to force-enable on `rippleci/xrpld:3.3.0`, reproduced identically across three independent full reset/rebuild cycles (exact same enabled-set each time, zero drift).
+
+**The `--local-network` seed tarballs (`src/core/genesis/node1-db.tar.gz`/`node2-db.tar.gz`) were also regenerated** from the corrected 37-entry list — they're a separate, pre-built binary artifact (§2.3) independent of the `[amendments]` text in `compose.ts`, so editing the list alone does not change what a plain `xrpl-up start --local-network` boots from. The old tarballs were built long ago against a since-outdated list and showed 76 enabled (an inflated, stale count carrying amendments no longer force-enable-able, mixed with real historical vote activity from whatever list was current when they were built) even after the code-level list was fixed — the fast-boot path and the fresh-genesis path disagreed until both were corrected together. Rebuilt by: temporarily moving the shipped tarballs aside (which requires manually chowning the resulting empty Docker volumes to the image's runtime uid — `seedConsensusVolumes()`'s own "tarballs missing" fallback does *not* do this, since that path assumes a degraded dev-only scenario, not a real rebuild), letting a real two-node `--local-network` boot from a blank genesis with the current config, advancing a few ledgers, stopping both containers cleanly (`docker stop`, not kill, so SQLite flushes), and re-tarring each volume's `/var/lib/xrpld/db`. Verified after: a plain `reset && start --local-network` with no `amendment enable` shows exactly 37 enabled, matching the code-level list with zero gaps — the two paths now agree.
+
+**This will happen again on the next rippled image upgrade — re-curate every time**, the same way `845d4e0` and this fix both did:
+1. `xrpl-up reset && xrpl-up start --local-network` (clean baseline, seeded — not the check)
+2. Trigger a real fresh genesis: `xrpl-up amendment enable <any-currently-disabled-amendment> --auto-reset && xrpl-up start --local-network`
+3. `xrpl-up amendment list` — every amendment shown `✔` enabled with `✔` supported is confirmed working; diff this set against the current `[amendments]` list and drop anything present in the config but not in this enabled set
+4. Repeat step 2-3 at least once more (different candidate) to confirm the enabled set is stable/reproducible before committing to a new list — do not re-curate off a single run
+5. Do **not** add an amendment to the base list just because `supported: true` — that only means the binary knows it, not that it force-enables at genesis (see `Vetoed` caveat below)
+
+**`Vetoed` in `amendment info`/`amendment list` is NOT a predictive signal for "will this force-enable at genesis."** This was tried (build a warning off it) and disproven in the same debugging pass: `vetoed: yes` just means the currently-running node isn't presently configured to support that amendment — trivially true for anything not yet in its `[amendments]` list, including amendments that force-enable perfectly fine once actually queued (`SingleAssetVault` showed `vetoed: yes` on the plain seeded baseline, before ever being queued, despite being proven to enable correctly once queued). Don't build UX off this field without a case that actually distinguishes the two situations.
+
+Consequence for tests: never assert activation on an arbitrary entry from `amendment list --disabled`; pick a newer amendment confirmed to genuinely activate via the genesis stanza (see `ACTIVATABLE_CANDIDATES` in `tests/e2e/sandbox/amendment.activate.test.ts` — cross-check this list against the current `[amendments]` list after every re-curation, since a candidate that used to force-enable can silently stop).
+
+Consequence for `amendment enable`: an amendment reported "already enabled" before a reset (this happened live with `LendingProtocol`, read off the seeded baseline) can silently revert to disabled after the reset rebuilds a fresh genesis, if that amendment isn't actually in the `[amendments]` config the fresh genesis gets built from. "Already enabled" only reflects the currently-running ledger, not what a rebuild will reproduce.
+
+**A separate, smaller open question:** during the investigation that led to the fix above, the exact same enable/reset/restart sequence was run four times against the *old, stale* 77-entry list and failed once (both queued amendments came up disabled with no error, no crash, no config difference detected). Against the corrected 37-entry list, three independent full cycles were all clean. This might mean the intermittent failure was itself a symptom of querying amendments that were already in the "won't force-enable" set for unrelated reasons (harder to notice when most of the list is unreliable), or it might be a separate, rarer race — there isn't enough evidence yet to say which. If it recurs against the corrected list, capture `docker logs` from **both** `rippled` and `rippled-peer` containers across the failing run (not just node1) — that comparison was never actually done.
+
+**Genesis lineage.** A locally built (non-seeded) genesis is a **new ledger lineage** — a fingerprint (`~/.xrpl-up/genesis-lineage.txt`; `seed` for the shipped tarball, else a digest of the enabled amendment hashes) distinct from whatever the sandbox had before. This matters because `snapshot save` records the lineage and amendment set alongside the ledger tarball, and `snapshot restore` compares lineages: on a mismatch it writes the snapshot's amendment set back to `genesis-amendments.txt`, regenerates the config, and updates the lineage marker (`adoptGenesisLineage()`), so the restored ledger and the running config always agree — restoring across an `amendment enable` (in either direction) just works rather than silently applying half of the state. `xrpl-up reset` clears both the amendment queue and the lineage marker (`--keep-amendments` preserves the queue).
+
+To undo an `enable`, run `xrpl-up reset` — it clears `~/.xrpl-up/genesis-amendments.txt` and regenerates the config, so the next start uses the default genesis list (and, on `--local-network`, resumes using the fast pre-seeded snapshot since the queue file is empty). `reset --keep-amendments` preserves the queue instead; the internal reset performed by `amendment enable` itself always preserves it, since clearing it would discard what was just queued.
+
+**Tests can pass by skipping, not just by asserting.** `tests/e2e/sandbox/amendment.activate.test.ts` skips itself (`if (!target) return`) when no candidate amendment is currently disabled. A green run of this suite does not by itself prove activation works — check the per-test duration in the run output (a real activation run takes tens of seconds; a skip completes near-instantly) before trusting a "3/3 passed" summary.
 
 ---
 
@@ -440,17 +485,25 @@ When `--exit-on-crash` is active and the foreground process is running, a `docke
 
 ### 8.1 Key Handling
 
-- Seeds and private keys are **printed to stdout by default** in local mode. This is intentional — local sandbox accounts have no real value.
+- Seeds and private keys are printed to stdout when the sandbox stays attached (`--foreground`); local sandbox accounts have no real value, so this is intentional.
 - `--no-secrets` suppresses all seed/private key output.
-- `--detach` automatically enables `--no-secrets` (no terminal to read from in CI).
+- Local sandboxes detach by default, which automatically enables `--no-secrets` too (no terminal to read from in CI).
 - Seeds are stored in plaintext in `~/.xrpl-up/{network}-accounts.json`.
 
 ### 8.2 Production URL Detection
 
-`isMainnet()` detects known production URLs (`xrplcluster.com`, `s1.ripple.com`, `s2.ripple.com`). "Mainnet" is not a named network — users cannot pass `--network mainnet`. However, if a user provides a raw production URL (e.g. `--node wss://xrplcluster.com`), the CLI detects this and:
+`isMainnet()` detects known production URLs (`xrplcluster.com`, `s1.ripple.com`, `s2.ripple.com`). "Mainnet" is not a named network — users cannot pass `--network mainnet`. However, if a user provides a raw production URL (e.g. `--network wss://xrplcluster.com`), the CLI detects this and:
 - `faucet` and `start` commands refuse to proceed.
 - Wrapper commands (e.g. `payment`, `nft mint`) print a stderr warning: "xrpl-up is intended for local and test network development only."
 - The local genesis seed (`snoPBrXtMeMyMHUVTgbuqAfg1SUTb`) is only usable on the local sandbox. It controls 100B XRP that exist only in the isolated Docker container.
+
+**Hard block at connection time (`cli/utils/client.ts`'s `withClientOnce`/`shouldBlockMainnet`).** The `isMainnet()` heuristic above is a URL-string allowlist of three known hostnames — it does not catch a mainnet-connected node with any other hostname (e.g. `wss://xrpl.ws`, a self-hosted full-history server, an internal proxy). `withClient` — the shared connection wrapper used by every built-in transaction/query command, and exported from the `xrpl-up` package for use in `xrpl-up run` scripts — additionally checks the connected server's own `networkID` (populated by xrpl.js from `server_info`; `0` is mainnet by xrpl.js's convention) immediately after connecting, before running the command's own logic (and therefore before any `autofill`/`sign`/`submit`). If `networkID === 0` and the target isn't the local sandbox, it disconnects and throws `MainnetBlockedError` unconditionally — blocks, not just warns, matching `start`/`faucet`'s existing behavior, since this tool is not designed or supported for Mainnet at all. Live-verified against a real mainnet node not in the hostname allowlist (`wss://xrpl.ws`): blocked with no warning line (the URL heuristic didn't fire), only the network_id check. No override exists — this is deliberate, decided after an initial version shipped with an `XRPL_UP_ALLOW_MAINNET=1` env var escape hatch that was then explicitly rejected in favor of a hard, unconditional block.
+
+`status` and `accounts` connect via a separate path — `NetworkManager` (`src/core/network.ts`), not `withClient` — so `NetworkManager.connect()` carries its own copy of the same `shouldBlockMainnet`/`MainnetBlockedError` gate (imported from `cli/utils/client.ts`, not reimplemented). `faucet` and `node.ts`/`start` also use `NetworkManager` but already had their own independent `isMainnet()` hostname gate before ever constructing one, so the new gate is redundant-but-harmless for those two. Live-verified against a custom `xrpl-up.config.js` network entry pointing at `wss://xrpl.ws` (a real mainnet node, not in the hostname allowlist): both `status --network <name>` and `accounts --network <name> --address <addr>` correctly blocked; `--network testnet` through the same config file unaffected.
+
+Known gap, not covered — connects via its own direct `new Client(...)` rather than `withClient` or `NetworkManager`, so it gets neither gate (accepted as-is, not planned to be fixed):
+- The scaffolded example scripts generated by `xrpl-up init` (`src/commands/init.ts`) construct `new Client(process.env.XRPL_NETWORK_URL ?? ...)` directly, so they bypass this check if run standalone (not via `xrpl-up run`) with `XRPL_NETWORK_URL` pointed at mainnet.
+- `amendment list --diff <network>` / `--network <url>` (`fetchFeatures()` in `src/commands/amendment.ts`) — zero gating at all, not even the hostname heuristic.
 
 ### 8.3 Local-Only Restrictions
 
@@ -464,19 +517,20 @@ When `--exit-on-crash` is active and the foreground process is running, a `docke
 
 ### 9.1 Node.js
 
-Minimum required: **Node.js 20** (`engines.node` in `package.json`: `>=20.0.0`; runtime guard in `src/cli.ts`).
+Minimum required: **Node.js 22** (`engines.node` in `package.json`: `>=22.0.0`; runtime guard in `src/cli.ts`). Node 20 was dropped after reaching its own upstream end-of-life (2026-04-30) and after its bundled `undici` (Node's native `fetch()` implementation) proved less reliable than Node 22/24's under the concurrent real-network load these e2e tests generate.
 
 ### 9.2 Docker
 
-Required for all `--local` commands. Any Docker Engine version that supports Compose V2 (`docker compose` plugin) is sufficient. The tool calls `docker info` to verify availability before proceeding.
+Required for the local sandbox. Any Docker Engine version that supports Compose V2 (`docker compose` plugin) is sufficient. The tool calls `docker info` to verify availability before proceeding.
 
 ### 9.3 rippled Version Pinning Strategy
 
-- Default image: `xrpllabsofficial/xrpld:latest`
-- The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.1.1**.
-- Pinning to a specific tag (`--image xrpllabsofficial/xrpld:3.1.1`) is supported via `--image`.
-- If a new rippled release adds amendments not in the `[amendments]` stanza, use `xrpl-up amendment enable <name> --local` to queue them for the next genesis start.
-- **Devnet compatibility:** XRPL Devnet may enable pre-release amendments ahead of the rippled version bundled with this tool. Transactions relying on such amendments may fail on the local sandbox. Use `xrpl-up amendment list --local --diff devnet` to identify gaps.
+- Default image: `rippleci/xrpld:3.3.0`
+- The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.3.0**.
+- Pinning to a specific tag (`--image rippleci/xrpld:3.3.0`) is supported via `--image`.
+- rippled 3.3.0 runs its process as a non-root user (uid 999) inside the container; 3.2.0 and earlier ran as root. This affects the pre-seeded genesis DB volumes for `--local-network` mode (see §2.3), which are now chowned to the target image's runtime uid/gid on extraction.
+- If a new rippled release adds amendments not in the `[amendments]` stanza, use `xrpl-up amendment enable <name>` to queue them for the next genesis start.
+- **Devnet compatibility:** XRPL Devnet may enable pre-release amendments ahead of the rippled version bundled with this tool. Transactions relying on such amendments may fail on the local sandbox. Use `xrpl-up amendment list --diff devnet` to identify gaps.
 
 ---
 
