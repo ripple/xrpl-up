@@ -1,11 +1,11 @@
 {
   "xrpllabsofficial/xrpld": {
     "latest": {
-      "digest": "sha256:261feee9ebfcc93134c71f98c70683e7573c0eabff9253d5ef863b544ef3ac17",
-      "last_updated": "2026-03-13T08:54:37.5619Z"
+      "digest": "sha256:353d5e016bb93519e9fcac715cdc8c2205b96c4cfe2d1f0f1d22a22f6efaff70",
+      "last_updated": "2026-08-07T05:41:07.912794Z"
     }
   },
   "rippleci/rippled": {
-    "known_tags": ["3.1.2", "3.2.0-b1", "3.2.0"]
+    "known_tags": []
   }
 }
