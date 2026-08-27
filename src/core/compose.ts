@@ -761,15 +761,35 @@ function seedConsensusVolumes(image: string): void {
   ];
 
   for (const [vol, tar] of pairs) {
+    // Bind-mount from XRPL_UP_DIR (~/.xrpl-up), not the tarball's original
+    // location under the npm package install dir. Docker Desktop on macOS
+    // only shares specific host paths by default (~/Users, /Volumes,
+    // /private, /tmp) — a global npm prefix outside those (e.g. Homebrew's
+    // /opt/homebrew on Apple Silicon) makes this mount fail immediately with
+    // no indication why. ~/.xrpl-up is already used for all other host
+    // state and is always under $HOME, which Docker does share by default.
+    const stagedTar = path.join(XRPL_UP_DIR, path.basename(tar));
+    fs.copyFileSync(tar, stagedTar);
+
     try { execSync(`docker volume rm -f ${vol}`, { stdio: 'ignore' }); } catch { /* ok */ }
     execSync(`docker volume create ${vol}`, { stdio: 'ignore' });
-    execSync(
-      `docker run --rm ` +
-      `-v ${vol}:/data ` +
-      `-v "${path.dirname(tar)}":/genesis:ro ` +
-      `alpine sh -c "tar xzf /genesis/${path.basename(tar)} -C /data && chown -R ${uidGid} /data"`,
-      { stdio: 'ignore' },
-    );
+    try {
+      execSync(
+        `docker run --rm ` +
+        `-v ${vol}:/data ` +
+        `-v "${XRPL_UP_DIR}":/genesis:ro ` +
+        `alpine sh -c "tar xzf /genesis/${path.basename(stagedTar)} -C /data && chown -R ${uidGid} /data"`,
+        { stdio: ['ignore', 'pipe', 'pipe'] },
+      );
+    } catch (err) {
+      const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
+      throw new Error(
+        `Failed to seed --local-network genesis volume "${vol}" from ${stagedTar}.\n` +
+        (stderr ? `Docker error: ${stderr}\n` : '') +
+        `If this mentions a mount/bind error, check Docker Desktop's file sharing settings ` +
+        `(Settings > Resources > File Sharing) includes: ${XRPL_UP_DIR}`
+      );
+    }
   }
   writeGenesisLineage(SEED_LINEAGE);
 }
