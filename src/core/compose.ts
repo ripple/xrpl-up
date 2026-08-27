@@ -820,10 +820,23 @@ export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debu
     execSync(`docker pull ${image}`, { stdio: 'inherit' });
   }
 
-  execSync(
-    `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up --build -d`,
-    { stdio: 'ignore' }
-  );
+  // This runs on every start, not just a fresh genesis build — surface the
+  // real Docker error on failure (e.g. a bad --config path outside Docker
+  // Desktop's shared folders, a port conflict, a faucet build failure)
+  // instead of a bare "Command failed" with no detail regardless of --debug.
+  try {
+    execSync(
+      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up --build -d`,
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+  } catch (err) {
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
+    throw new Error(
+      `Failed to start the Docker Compose stack.\n` +
+      (stderr ? `Docker error: ${stderr}\n` : '') +
+      `Check: docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" logs`
+    );
+  }
 
   // Wait for rippled WebSocket port
   await waitForPort(LOCAL_WS_PORT, 30_000, 'rippled WebSocket');

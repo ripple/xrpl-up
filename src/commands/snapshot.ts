@@ -209,14 +209,16 @@ export async function snapshotSave(name: string): Promise<void> {
   try {
     execSync(
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" stop`,
-      { stdio: 'ignore' },
+      { stdio: ['ignore', 'pipe', 'pipe'] },
     );
     const stopElapsed = ((Date.now() - stopStartMs) / 1000).toFixed(1);
     stopSpinner.succeed(chalk.dim(`Sandbox stopped (${stopElapsed}s)`));
-  } catch {
+  } catch (err) {
     stopSpinner.fail('Failed to stop sandbox');
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
     throw new Error(
       'Could not stop sandbox for snapshot.\n' +
+      (stderr ? `Docker error: ${stderr}\n` : '') +
       '  Check:  docker ps | grep xrpl-up\n' +
       '  Logs:   docker compose -p xrpl-up-local logs --tail 20'
     );
@@ -232,10 +234,11 @@ export async function snapshotSave(name: string): Promise<void> {
       `-v ${VOLUME_NAME}:/data ` +
       `-v "${SNAPSHOTS_DIR}":/snapshots ` +
       `alpine tar czf /snapshots/${path.basename(tmpDest)} -C /data .`,
-      { stdio: 'ignore' },
+      { stdio: ['ignore', 'pipe', 'pipe'] },
     );
   } catch (err) {
-    saveSpinner.fail(`Failed to save snapshot "${name}"`);
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
+    saveSpinner.fail(`Failed to save snapshot "${name}"${stderr ? `: ${stderr}` : ''}`);
     if (fs.existsSync(tmpDest)) fs.unlinkSync(tmpDest);
     // Restart services even on failure
     execSync(
@@ -309,14 +312,15 @@ export async function snapshotSave(name: string): Promise<void> {
   try {
     execSync(
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d`,
-      { stdio: 'ignore' },
+      { stdio: ['ignore', 'pipe', 'pipe'] },
     );
     await waitForPort(LOCAL_WS_PORT, 60_000, 'rippled WebSocket');
     await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
     const resumeElapsed = ((Date.now() - resumeStartMs) / 1000).toFixed(1);
     startSpinner.succeed(chalk.dim(`Sandbox resumed (${resumeElapsed}s)`));
   } catch (err) {
-    startSpinner.fail(chalk.red('Sandbox failed to resume'));
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
+    startSpinner.fail(chalk.red('Sandbox failed to resume') + (stderr ? `: ${stderr}` : ''));
     throw err;
   }
 
@@ -374,14 +378,16 @@ export async function snapshotRestore(name: string): Promise<void> {
   try {
     execSync(
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" down`,
-      { stdio: 'ignore' },
+      { stdio: ['ignore', 'pipe', 'pipe'] },
     );
     const restoreStopElapsed = ((Date.now() - restoreStopMs) / 1000).toFixed(1);
     stopSpinner.succeed(chalk.dim(`Sandbox stopped (${restoreStopElapsed}s)`));
-  } catch {
+  } catch (err) {
     stopSpinner.fail('Failed to stop sandbox');
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
     throw new Error(
       'Could not stop sandbox.\n' +
+      (stderr ? `Docker error: ${stderr}\n` : '') +
       '  Check:  docker ps | grep xrpl-up\n' +
       '  Logs:   docker compose -p xrpl-up-local logs --tail 20'
     );
@@ -404,13 +410,14 @@ export async function snapshotRestore(name: string): Promise<void> {
         `-v ${vol}:/data ` +
         `-v "${SNAPSHOTS_DIR}":/snapshots ` +
         `alpine sh -c "rm -rf /data/* /data/..?* /data/.[!.]* 2>/dev/null; tar xzf /snapshots/${name}.tar.gz -C /data${rmWalletDb}"`,
-        { stdio: 'ignore' },
+        { stdio: ['ignore', 'pipe', 'pipe'] },
       );
     }
     const restoreExtractElapsed = ((Date.now() - restoreExtractMs) / 1000).toFixed(1);
     restoreSpinner.succeed(chalk.green(`Snapshot "${name}" restored to both nodes`) + chalk.dim(` (${restoreExtractElapsed}s)`));
   } catch (err) {
-    restoreSpinner.fail(`Failed to restore snapshot "${name}"`);
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
+    restoreSpinner.fail(`Failed to restore snapshot "${name}"${stderr ? `: ${stderr}` : ''}`);
     throw err;
   }
 
@@ -444,7 +451,7 @@ export async function snapshotRestore(name: string): Promise<void> {
   try {
     execSync(
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d`,
-      { stdio: 'ignore' },
+      { stdio: ['ignore', 'pipe', 'pipe'] },
     );
     await waitForPort(LOCAL_WS_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'rippled WebSocket');
     await waitForPort(FAUCET_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'faucet HTTP');
@@ -452,11 +459,13 @@ export async function snapshotRestore(name: string): Promise<void> {
     startSpinner.succeed(chalk.dim(`Sandbox resumed (${restoreResumeElapsed}s)`));
   } catch (err) {
     startSpinner.fail(chalk.red('Sandbox failed to resume'));
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
     const rippledLogs = safeCommandOutput(
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" logs --no-color --tail 30 rippled`
     );
     throw new Error(
       `${(err as Error).message}\n\n` +
+      (stderr ? `Docker error: ${stderr}\n\n` : '') +
       `rippled logs (last 30 lines):\n${rippledLogs}`
     );
   }
