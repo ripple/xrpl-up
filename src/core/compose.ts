@@ -10,7 +10,7 @@ export const LOCAL_WS_PORT = 6006;
 export const FAUCET_PORT = 3001;
 export const LOCAL_WS_URL = `ws://localhost:${LOCAL_WS_PORT}`;
 export const FAUCET_URL = `http://localhost:${FAUCET_PORT}`;
-export const DEFAULT_IMAGE = 'rippleci/xrpld:3.3.0';
+export const DEFAULT_IMAGE = 'rippleci/xrpld:3.4.0';
 
 const XRPL_UP_DIR = path.join(os.homedir(), '.xrpl-up');
 const COMPOSE_FILE = path.join(XRPL_UP_DIR, 'docker-compose.yml');
@@ -161,7 +161,7 @@ validators.txt
 # (--start flag creates the genesis ledger). Format: <hash> <name>
 #
 # Every entry below was live-verified to actually force-enable on a fresh
-# genesis with rippleci/xrpld:3.3.0 (checked via the feature RPC after a
+# genesis with rippleci/xrpld:3.4.0 (checked via the feature RPC after a
 # real --start, not assumed from being listed) — see SPEC.md §5.6 for the method
 # and why this matters: rippled retires sufficiently-old amendments from the
 # genesis-forcing/voting table as they get permanently hardcoded, so a list
@@ -210,7 +210,7 @@ DF8B4536989BDACE3F934F29423848B9F1D76D09BE6A1FCFE7E7F06AA26ABEAD fixRemoveNFToke
 EE3CF852F0506782D05E65D49E5DCC3D16D50898CD1B646BAE274863401CC3CE NFTokenMintOffer
 FF2D1E13CF6D22427111B967BD504917F63A900CECD320D6FD3AC9FA90344631 fixPriceOracleOrder
 138B968F25822EFBF54C00F97031221C47B1EAB8321D93C7C2AEAF85F04EC5DF TokenEscrow
-12523DF04B553A0B1AD74F42DDB741DE8DC06A03FC089A0EF197E2A87F1D8107 fixAMMOverflowOffer
+3298D47E1F3A8A24FECAA30F699B8FE1DD234E072834BA099AD8180FFCE0FEC4 fixCleanup3_3_0
 # sync:end
 `.trim();
 }

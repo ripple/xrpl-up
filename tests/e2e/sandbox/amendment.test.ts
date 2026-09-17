@@ -180,6 +180,16 @@ describe("sandbox amendments match mainnet", () => {
       "HardenedValidations", "ImmediateOfferKilled", "MultiSignReserve",
       "NegativeUNL", "NonFungibleTokensV1_1", "RequireFullyCanonicalSig",
       "TicketBatch",
+      // Found during the rippled 3.4.0 re-curation (see SPEC.md §5.6.2):
+      // mainnet-enabled, but the fresh-genesis feature RPC diff
+      // (reset -> start -> amendment list) showed enabled:false and
+      // Vetoed: yes on rippleci/xrpld:3.4.0 where 3.3.0 had it
+      // force-enabling, reproduced on both standalone and --local-network.
+      // Not independently re-verified functional (AMM offer overflow is
+      // not trivial to trigger from the CLI) — flagged here on the
+      // strength of the same retirement mechanism already confirmed for
+      // the rest of this set.
+      "fixAMMOverflowOffer",
     ]);
 
     // Amendments known to rippled but NOT on mainnet — ok to be disabled.
@@ -189,7 +199,15 @@ describe("sandbox amendments match mainnet", () => {
       "XChainBridge", "LendingProtocol", "SingleAssetVault",
       // New in rippled 3.3.0, 0% validator consensus as of 2026-08-11 — not
       // yet on mainnet. See https://data.xrpl.org/v1/network/amendments/vote/main.
-      "BatchV1_1", "ConfidentialTransfer", "DynamicMPT", "fixCleanup3_3_0",
+      // (fixCleanup3_3_0 was here too as of that date; it has since reached
+      // mainnet consensus — moved to [amendments] in compose.ts instead.)
+      "BatchV1_1", "ConfidentialTransfer", "DynamicMPT",
+      // New in rippled 3.4.0 (verified 2026-09-17): mainnet's feature table
+      // doesn't list either one at all yet, so they can't be on mainnet.
+      // Both DO force-enable at genesis, but that alone is not the bar for
+      // [amendments] — see §5.6.1 step 5. They belong here until mainnet
+      // actually enables them.
+      "fixCleanup3_4_0", "LendingProtocolV1_1",
       "PermissionDelegationV1_1", "Sponsor",
     ]);
 
