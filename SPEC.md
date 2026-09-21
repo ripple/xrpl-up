@@ -319,7 +319,7 @@ Snapshots capture the full state of a `--local-network` session: ledger database
 
 ### 5.6 Amendment Management
 
-**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). It currently lists 37 amendments, each individually verified to force-enable on a fresh genesis with `rippleci/xrpld:3.3.0` (see §5.6.1 for the verification method and why this list needs periodic re-curation, not just re-listing everything rippled supports).
+**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). It currently lists 37 amendments, each individually verified to force-enable on a fresh genesis (both standalone and `--local-network`) with `rippleci/xrpld:3.4.0` **and** confirmed enabled on mainnet (see §5.6.1 for the verification method and why this list needs periodic re-curation, not just re-listing everything rippled supports; see §5.6.2 for the 3.4.0 upgrade specifics).
 
 **`amendment list`**:
 - Calls `feature` RPC on the target network
@@ -374,6 +374,36 @@ Consequence for `amendment enable`: an amendment reported "already enabled" befo
 To undo an `enable`, run `xrpl-up reset` — it clears `~/.xrpl-up/genesis-amendments.txt` and regenerates the config, so the next start uses the default genesis list (and, on `--local-network`, resumes using the fast pre-seeded snapshot since the queue file is empty). `reset --keep-amendments` preserves the queue instead; the internal reset performed by `amendment enable` itself always preserves it, since clearing it would discard what was just queued.
 
 **Tests can pass by skipping, not just by asserting.** `tests/e2e/sandbox/amendment.activate.test.ts` skips itself (`if (!target) return`) when no candidate amendment is currently disabled. A green run of this suite does not by itself prove activation works — check the per-test duration in the run output (a real activation run takes tens of seconds; a skip completes near-instantly) before trusting a "3/3 passed" summary.
+
+#### 5.6.2 rippled 3.4.0 upgrade: what changed, and a rebuild-procedure pitfall (not a rippled bug)
+
+Following the same re-curation procedure as §5.6.1 for the `rippleci/xrpld:3.4.0` upgrade found:
+
+- Two new amendments appeared in the table: `LendingProtocolV1_1` and `fixCleanup3_4_0`. Mainnet's `feature` RPC doesn't list either one at all (checked 2026-09-17), so neither is on mainnet, so **neither belongs in `[amendments]`** — that reason alone is sufficient. Both went into `NOT_ON_MAINNET`. (Both were briefly added to `[amendments]` during this upgrade on the reasoning that they force-enable successfully, then reverted: §5.6.1 step 5 exists precisely because "force-enables" is not the bar — *enabled on mainnet* is, since the list exists to mirror mainnet's state, not to switch on everything the binary knows.)
+- **`enabled: true` on a `V1_1` amendment does not mean the feature works.** Force-enabling `LendingProtocolV1_1` by itself flips its flag to `enabled: true` while the lending feature stays completely inert — a `LoanBrokerSet` submission returns `temDISABLED`. Adding the base `LendingProtocol` is still `temDISABLED`; only with `SingleAssetVault` enabled as well does it become `tecNO_ENTRY` (the correct "no such vault" response for a bogus `VaultID`, i.e. the feature is finally live). So the real dependency chain for local lending work is `SingleAssetVault` + `LendingProtocol` + `LendingProtocolV1_1`, and a flipped amendment flag is never by itself evidence that a feature is usable — submit a transaction and read the engine result.
+- `fixAMMOverflowOffer` — enabled on mainnet, previously force-enabled fine on 3.3.0 — no longer force-enables on a fresh 3.4.0 genesis (`supported: true, enabled: false`, and `amendment info` reports it `Vetoed: yes`). Moved to `NO_LONGER_FORCE_ENABLES` in `amendment.test.ts`, same as the rest of that set.
+- `fixCleanup3_3_0` had been sitting in `NOT_ON_MAINNET` since the 3.3.0 re-curation (dated 2026-08-11 in that comment, "0% validator consensus, not yet on mainnet"). A fresh mainnet `feature` RPC check during this upgrade showed it's since reached mainnet consensus and is now enabled there. Live-verified it force-enables fine on a fresh 3.4.0 genesis — moved from `NOT_ON_MAINNET` into `[amendments]`. **Re-check this every upgrade in both directions:** an amendment in `NOT_ON_MAINNET` may have since reached mainnet (add it), and a newly-appeared amendment may look like a good addition while not being on mainnet at all (don't add it).
+
+Net effect: one out (`fixAMMOverflowOffer`), one in (`fixCleanup3_3_0`) — still 37 entries, live-verified identically on both standalone and `--local-network`.
+
+**A dead end worth recording so it isn't repeated:** the first attempt at rebuilding the `--local-network` seed tarballs used a manually-improvised version of §5.6.1's procedure — moving the shipped tarballs aside, then manually running `docker volume create` + `docker run alpine chown` to mimic what `seedConsensusVolumes()` does, before calling `start --local-network`. This failed 3 times in a row with **zero** amendments enabled, reproduced with detailed log analysis, and even survived a controlled A/B test against 3.3.0 (which worked fine under the identical manual steps) — strong-looking but ultimately misleading evidence of a rippled regression. The actual, real `xrpl-up` user path — `amendment enable <name> --auto-reset` followed by `start --local-network`, which exercises `seedConsensusVolumes()`'s own automatic lineage-mismatch branch rather than a hand-rolled imitation of it — built a correct fresh 3.4.0 genesis on the very first try, all amendments enabled exactly as configured. The manual reproduction diverged from the real code path in some way that was never isolated; rippled 3.4.0 has no consensus-mode genesis-amendment bug. **Lesson: when a hand-rolled reproduction of "what the code should do" disagrees with the real code path, trust the real path — don't conclude a dependency regressed on the strength of an improvised procedure, no matter how repeatable or well-controlled it looks.**
+
+The `--local-network` seed tarballs were rebuilt through that same real code path and verified: a plain `reset && start --local-network` now shows 37 enabled, matching standalone exactly — no drift between the two modes.
+
+**To rebuild the tarballs against the base `[amendments]` list exactly** (no extra amendments baked in), note that `seedConsensusVolumes()` only builds a fresh genesis when `genesis-amendments.txt` exists *and* the tarballs are present (an absent tarball hits the early return and does no chown — that's the trap above). Writing a **duplicate** of an amendment already in the base list into `~/.xrpl-up/genesis-amendments.txt` satisfies the lineage-mismatch check without changing the resulting enabled set:
+
+```bash
+xrpl-up reset
+printf '<hash> <name>\n' > ~/.xrpl-up/genesis-amendments.txt   # any entry already in [amendments]
+xrpl-up start --local-network                                  # fresh genesis, base list only
+# verify the expected count, advance a few ledgers, then:
+docker stop xrpl-up-local-rippled-1 xrpl-up-local-rippled-peer-1 xrpl-up-local-faucet-1
+docker run --rm -v xrpl-up-local-db:/data -v /tmp/nt:/out alpine sh -c "cd /data && tar czf /out/node1-db.tar.gz ."
+docker run --rm -v xrpl-up-local-peer-db:/data -v /tmp/nt:/out alpine sh -c "cd /data && tar czf /out/node2-db.tar.gz ."
+rm -f ~/.xrpl-up/genesis-amendments.txt   # don't leave the queue file behind
+```
+
+Then copy both into `src/core/genesis/`, `npm run build`, and confirm a plain `reset && start --local-network` reports `seed` lineage with the expected count.
 
 ---
 

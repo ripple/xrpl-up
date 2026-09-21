@@ -180,16 +180,39 @@ describe("sandbox amendments match mainnet", () => {
       "HardenedValidations", "ImmediateOfferKilled", "MultiSignReserve",
       "NegativeUNL", "NonFungibleTokensV1_1", "RequireFullyCanonicalSig",
       "TicketBatch",
+      // Found during the rippled 3.4.0 re-curation (see SPEC.md §5.6.2).
+      // rippled 3.4.0 reports this one as `vetoed: "Obsolete"` in the
+      // (admin-only) feature RPC — i.e. permanently retired into the
+      // binary, so its fix is unconditionally active and the amendment
+      // can no longer be enabled at all. Confirmed: with the hash in
+      // [amendments] on a fresh genesis it still comes up enabled:false.
+      // Mainnet still lists it enabled only because mainnet runs 3.3.0,
+      // which hasn't retired it yet — not a behavioural difference.
+      "fixAMMOverflowOffer",
+      // Also reported `vetoed: "Obsolete"` by 3.4.0; it was previously
+      // (harmlessly) filed under NOT_ON_MAINNET. All four sets are treated
+      // identically by the check below, so this move changes no outcome —
+      // it just puts it under the reason rippled actually gives.
+      "CryptoConditionsSuite",
     ]);
 
     // Amendments known to rippled but NOT on mainnet — ok to be disabled.
     const NOT_ON_MAINNET = new Set([
-      "CryptoConditionsSuite", "NonFungibleTokensV1", "fixNFTokenDirV1",
+      "NonFungibleTokensV1", "fixNFTokenDirV1",
       "fixNFTokenNegOffer", "fixXChainRewardRounding",
       "XChainBridge", "LendingProtocol", "SingleAssetVault",
       // New in rippled 3.3.0, 0% validator consensus as of 2026-08-11 — not
       // yet on mainnet. See https://data.xrpl.org/v1/network/amendments/vote/main.
-      "BatchV1_1", "ConfidentialTransfer", "DynamicMPT", "fixCleanup3_3_0",
+      // (fixCleanup3_3_0 was here too as of that date; it has since reached
+      // mainnet consensus — moved to [amendments] in compose.ts instead.)
+      "BatchV1_1", "ConfidentialTransfer", "DynamicMPT",
+      // New in rippled 3.4.0: mainnet's feature table doesn't list either one
+      // at all (verified 2026-09-17), so they can't be on mainnet — that is
+      // the whole reason they're here (see §5.6.1 step 5; "it force-enables"
+      // is not the bar). Note LendingProtocolV1_1's flag can be flipped to
+      // enabled while the feature stays unusable — it also needs the base
+      // LendingProtocol and SingleAssetVault. See SPEC.md §5.6.2.
+      "fixCleanup3_4_0", "LendingProtocolV1_1",
       "PermissionDelegationV1_1", "Sponsor",
     ]);
 
