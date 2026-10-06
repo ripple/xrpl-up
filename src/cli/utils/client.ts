@@ -1,4 +1,5 @@
 import { Client } from "xrpl";
+import { normalizeDevBuildVersion } from "../../utils/dev-build";
 
 /**
  * Registered in the RippleX SourceTag Registry for xrpl-up. Permanent, opaque —
@@ -65,6 +66,7 @@ export function shouldBlockMainnet(networkID: number | undefined, isLocal: boole
 async function withClientOnce<T>(nodeUrl: string, isLocal: boolean, fn: (client: Client) => Promise<T>): Promise<T> {
   const client = new Client(nodeUrl, { timeout: 60_000 });
   await client.connect();
+  normalizeDevBuildVersion(client);
 
   // Guard against xrpl.js race: connect() can resolve before the
   // underlying WebSocket is fully open (observed on Node 20 under load).

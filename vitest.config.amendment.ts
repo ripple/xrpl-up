@@ -21,6 +21,7 @@ export default defineConfig({
     testTimeout: 200_000,
     hookTimeout: 180_000,
     include: ["tests/e2e/sandbox/amendment.activate.test.ts"],
+    setupFiles: ["tests/setup/dev-build.ts"],
     globalSetup: ["tests/setup/amendment-activate-setup.ts"],
   },
 });

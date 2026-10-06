@@ -17,6 +17,12 @@ async function getClient(): Promise<Client> {
   // The HTTP server stays up; the next request will reconnect via this function.
   client.on('error', () => { client = null; });
   await client.connect();
+  // A build off plain develop reports `0.0.0-dev+<sha>`. xrpl.js only adds the
+  // required NetworkID for servers reporting >= 1.11.0, so every payment would
+  // be rejected with telREQUIRES_NETWORK_ID. A 0.0.0 build is the newest code.
+  if (client.buildVersion && /^0\.0\.0(?![0-9])/.test(client.buildVersion)) {
+    client.buildVersion = '999.0.0';
+  }
   return client;
 }
 
@@ -60,7 +66,14 @@ async function fundWallet(destination?: string): Promise<{ address: string; seed
   });
 
   const { tx_blob } = genesis.sign(paymentTx);
-  await c.submit(tx_blob);
+  const submitted = await c.submit(tx_blob);
+
+  // tem/tef/tel mean the payment was rejected outright. Reporting success here
+  // would hand the caller an address that never reaches the ledger.
+  const engineResult = submitted.result.engine_result;
+  if (/^(tem|tef|tel)/.test(engineResult)) {
+    throw new Error(`Funding payment rejected: ${engineResult} ${submitted.result.engine_result_message}`);
+  }
 
   // Advance the ledger to validate the funding transaction.
   // Wrap in try/catch — the CLI's auto-advance ticker may beat us to it; harmless.

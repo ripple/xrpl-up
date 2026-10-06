@@ -18,7 +18,7 @@ export default defineConfig({
     globals: true,
     // Patch Date.now() to account for standalone rippled startup ledger drift.
     // See tests/setup/patch-clock.ts for details.
-    setupFiles: ["tests/setup/patch-clock.ts"],
+    setupFiles: ["tests/setup/patch-clock.ts", "tests/setup/dev-build.ts"],
     // Standalone mode: fast, instant ledger close
     testTimeout: 10_000,
     hookTimeout: 30_000,
