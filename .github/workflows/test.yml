@@ -15,6 +15,11 @@ on:
         required: false
         type: boolean
         default: false
+      network-tests:
+        description: 'Also run the suite against the live public testnet/devnet (npm releases only)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,25 +27,32 @@ concurrency:
 
 jobs:
   test:
-    name: e2e (node-${{ matrix.node-version }}, ${{ matrix.mode }})
+    name: e2e (node-${{ matrix.node-version }}, ${{ matrix.mode.name }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
     timeout-minutes: 180
     strategy:
       fail-fast: false
+      # standalone, local-network and snapshot run a local xrpld in Docker, so
+      # they are deterministic and run everywhere.
+      #
+      # "testnet" runs the whole suite against the live public testnet/devnet
+      # (including vault/** and the *.network.test.ts files that the local
+      # config excludes because they need a real network). It is slow and fails
+      # on upstream connectivity rather than on our changes, so it only runs
+      # when the caller passes network-tests: true (the npm release does; pushes,
+      # PRs and per-xrpld-build runs do not).
+      #
+      # Modes are objects rather than a list plus include:, because an include:
+      # entry whose mode matches no combination creates one and would silently
+      # bring testnet back.
       matrix:
         node-version: [22, 24]
-        mode: [standalone, local-network, snapshot, testnet]
-        include:
-          - mode: standalone
-            test-script: test:e2e:local
-          - mode: local-network
-            test-script: test:e2e:local-network
-          - mode: snapshot
-            test-script: test:e2e:snapshot
-          - mode: testnet
-            test-script: test:e2e
+        mode: >-
+          ${{ inputs.network-tests
+              && fromJSON('[{"name":"standalone","script":"test:e2e:local"},{"name":"local-network","script":"test:e2e:local-network"},{"name":"snapshot","script":"test:e2e:snapshot"},{"name":"testnet","script":"test:e2e"}]')
+              || fromJSON('[{"name":"standalone","script":"test:e2e:local"},{"name":"local-network","script":"test:e2e:local-network"},{"name":"snapshot","script":"test:e2e:snapshot"}]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -55,14 +67,14 @@ jobs:
         # Builds the pinned deb into a local image, or pulls a registry image,
         # whichever src/core/xrpld-source.json says — nothing is hardcoded here.
         run: node -e "const x = require('./dist/core/xrpld-image'); x.ensureImage(x.DEFAULT_IMAGE)"
-      - name: Run e2e tests (${{ matrix.mode }})
+      - name: Run e2e tests (${{ matrix.mode.name }})
         env:
           XRPL_LOCAL_TEARDOWN: '1'
-        run: npm run ${{ matrix.test-script }}
+        run: npm run ${{ matrix.mode.script }}
       - name: Upload dist artifact
         # Only upload from the canonical Node version used by the release job.
         # Uploading from all matrix legs would create duplicate artifacts.
-        if: ${{ inputs.upload-dist && matrix.node-version == 22 && matrix.mode == 'standalone' }}
+        if: ${{ inputs.upload-dist && matrix.node-version == 22 && matrix.mode.name == 'standalone' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dist
