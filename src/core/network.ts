@@ -1,4 +1,5 @@
 import { Client } from 'xrpl';
+import { normalizeDevBuildVersion } from '../utils/dev-build';
 import { NetworkConfig } from './config';
 import { shouldBlockMainnet, MainnetBlockedError } from '../cli/utils/client';
 
@@ -38,6 +39,7 @@ export class NetworkManager {
 
   async connect(): Promise<void> {
     await this._client.connect();
+    normalizeDevBuildVersion(this._client);
     // Same gate as cli/utils/client.ts's withClient — status/accounts go
     // through this separate connection path, not withClient, and previously
     // had no mainnet check of any kind (faucet/node.ts already have their

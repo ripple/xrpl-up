@@ -4,13 +4,15 @@ import path from 'node:path';
 import os from 'node:os';
 import net from 'node:net';
 import crypto from 'node:crypto';
+import { DEFAULT_IMAGE, ensureImage, dockerPlatformArg } from './xrpld-image';
+import { DEFAULT_AMENDMENTS, type Amendment } from './genesis-amendments';
 
 export const COMPOSE_PROJECT = 'xrpl-up-local';
 export const LOCAL_WS_PORT = 6006;
 export const FAUCET_PORT = 3001;
 export const LOCAL_WS_URL = `ws://localhost:${LOCAL_WS_PORT}`;
 export const FAUCET_URL = `http://localhost:${FAUCET_PORT}`;
-export const DEFAULT_IMAGE = 'rippleci/xrpld:3.3.0';
+export { DEFAULT_IMAGE };
 
 const XRPL_UP_DIR = path.join(os.homedir(), '.xrpl-up');
 const COMPOSE_FILE = path.join(XRPL_UP_DIR, 'docker-compose.yml');
@@ -59,16 +61,6 @@ function getFaucetBuildContext(): string {
   return fromDist;
 }
 
-/**
- * Returns the absolute path to the pre-built genesis DB tarball directory.
- *
- * At runtime (compiled):  __dirname = dist/core/  → genesis/ is dist/core/genesis/
- * In dev mode (tsx):      __dirname = src/core/   → genesis/ is src/core/genesis/
- */
-function getGenesisDbDir(): string {
-  return path.resolve(__dirname, 'genesis');
-}
-
 const RIPPLED_CFG_FILE       = path.join(XRPL_UP_DIR, 'rippled.cfg');
 const RIPPLED_CFG_FILE_NODE1 = path.join(XRPL_UP_DIR, 'rippled-node1.cfg');
 const RIPPLED_CFG_FILE_NODE2 = path.join(XRPL_UP_DIR, 'rippled-node2.cfg');
@@ -82,21 +74,22 @@ const LOCAL_NETWORK_IMAGE_FILE = path.join(XRPL_UP_DIR, 'local-network-image.txt
  * from ("lineage"). Snapshots record this so `snapshot restore` can tell
  * whether a snapshot belongs to the sandbox it is being restored into.
  *
- * A snapshot only restores correctly onto the same lineage: the tarball is a
- * copy of that ledger chain's database. Seeding from the pre-built genesis DB
- * always yields the same lineage (`seed`), while force-enabling an amendment
- * requires building a brand-new genesis, which starts a different one.
+ * A snapshot only restores correctly onto the same lineage: it is a copy of
+ * that ledger chain's database. `base` is a genesis built from the default
+ * amendment list alone; force-enabling extra amendments builds a different
+ * genesis, which starts a different lineage.
  */
 const GENESIS_LINEAGE_FILE = path.join(XRPL_UP_DIR, 'genesis-lineage.txt');
-/** Lineage of the pre-built genesis DB tarballs shipped with xrpl-up. */
-const SEED_LINEAGE = 'seed';
+/** Lineage of a genesis built from the default amendment list alone. */
+const BASE_LINEAGE = 'base';
 export { RIPPLED_CFG_FILE };
 
 /**
  * Returns the default rippled.cfg content as a string (pure, no side effects).
  * Exported so callers can display or save it without starting a node.
  */
-export function generateRippledConfig(debug = false): string {
+export function generateRippledConfig(debug = false, amendments: Amendment[] = DEFAULT_AMENDMENTS): string {
+  const amendmentLines = amendments.map((a) => `${a.hash} ${a.name}`).join('\n');
   return `
 [network_id]
 15791
@@ -156,61 +149,13 @@ validators.txt
 [amendment_majority_time]
 15 minutes
 
-# Force-enable amendments at genesis ledger creation.
-# The [amendments] stanza only takes effect on the very first start
-# (--start flag creates the genesis ledger). Format: <hash> <name>
+# Force-enable amendments at genesis ledger creation. Only takes effect on the
+# very first start (--start creates the genesis ledger). Format: <hash> <name>
 #
-# Every entry below was live-verified to actually force-enable on a fresh
-# genesis with rippleci/xrpld:3.3.0 (checked via the feature RPC after a
-# real --start, not assumed from being listed) — see SPEC.md §5.6 for the method
-# and why this matters: rippled retires sufficiently-old amendments from the
-# genesis-forcing/voting table as they get permanently hardcoded, so a list
-# that force-enabled cleanly on an older rippled version (this one previously
-# listed 77 entries, verified against 3.1/3.2) silently stops working for a
-# growing subset after an image upgrade, with no error — they just report
-# supported:true, enabled:false forever after a fresh genesis. Re-verify this
-# list (reset -> start --local-network -> amendment list, diff the enabled
-# set) after every rippled image upgrade; do not re-add an amendment just
-# because it's supported by the new image without re-confirming it actually
-# force-enables at genesis.
+# Generated per xrpld build: every amendment enabled on mainnet that this xrpld
+# supports and has not retired (Obsolete). See src/core/default-amendments.json.
 [amendments]
-1CB67D082CF7D9102412D34258CEDB400E659352D3B207348889297A6D90F5EF Credentials
-1E7ED950F2F13C4F8E2A54103B74D57D5D298FFDBD005936164EE9E6484C438C fixAMMv1_2
-21B8D2F76F68E11E9C077A43BBBC394136E9987E99DDB73966DD68419467E431 fixCleanup3_2_0
-303ACB16CF8DBD3B5C34F131A9D19A7DE01AE05F480A8A682B869D1B4AAC8CFC fixCleanup3_1_3
-31E0DA76FB8FB527CADCDF0E61CB9C94120966328EFA9DCA202135BAF319C0BA fixReducedOffersV2
-32B8614321F7E070419115ABEAB1742EA20F3E3AF34432B5E2F474F8083260DC fixTokenEscrowV1
-35291ADD2D79EB6991343BDA0912269C817D0F094B02226C1C14AD2858962ED4 fixAMMv1_1
-3318EA0CF0755AF15DAC19F2B5C5BCBFF4B78BDD57609ACCAABE2C41309B051A fixFillOrKill
-41765F664A8D67FF03DDB1C1A893DE6273690BA340A6C2B07C8D29D0DD013D3A fixDirectoryLimit
-5E9586DB3D765B4C5794658FB6BB385071E9838DF4016027E6E26820C8526724 fixAMMClawbackRounding
-6143A27B71F7DAF9330ECA7C5EC3D54C8083A4FDEF7016737EEC06AB61E82EE0 fixIncludeKeyletFields
-677E401A423E3708363A36BA8B3A7D019D21AC5ABD00387BDBEA6BDE4C91247E PermissionedDEX
-726F944886BCDF7433203787E93DD9AA87FAB74DFE3AF4785BA03BEFC97ADA1F AMMClawback
-755C971C29971C9F20C6F080F2ED96F87884E40AD19554A5EBECDCEC8A1F77FE fixEmptyDID
-763C37B352BE8C7A04E810F8E462644C45AFEAD624BF3894A08E5C917CF9FF39 fixEnforceNFTokenTrustline
-7BB62DC13EC72B775091E9C71BF8CF97E122647693B50C5E87A80DFD6FCFAC50 fixPreviousTxnID
-7CA70A7674A26FA517412858659EBC7EDEEF7D2D608824464E6FDEFD06854E14 fixAMMv1_3
-83FD6594FF83C1D105BD2B41D7E242D86ECB4A8220BD9AF4DA35CB0F69E39B2A fixFrozenLPTokenTransfer
-8CC0774A3BF66D1D22E76BBDA8E8A232E6B6313834301B3B23E8601196AE6455 AMM
-8EC4304A06AF03BE953EA6EDA494864F6F3F30AA002BABA35869FBB8C6AE5D52 fixInvalidTxFlags
-93E516234E35E08CA689FA33A6D38E103881F8DCB53023F728C307AA89D515A7 XRPFees
-950AE2EA4654E47F04AA8739C0B214E242097E802FD372D24047A89AB1F5EC38 MPTokensV1
-9196110C23EA879B4229E51C286180C7D02166DA712559F634372F5264D0EC59 fixInnerObjTemplate2
-96FD2F293A519AE1DB6F8BED23E4AD9119342DA7CB6BAFD00953D16C54205D8B PriceOracle
-A730EB18A9D4BB52502C898589558B4CCEB4BE10044500EE5581137A2E80E849 PermissionedDomains
-AB8D932A5F338903FE5BCBD80B611FFED70839ABA3170E9CE01D947C0EDEDCF2 fixMPTDeliveredAmount
-B32752F7DCC41FB86534118FC4EEC8F56E7BD0A7DB60FD73F93F257233C08E3A fixEnforceNFTokenTrustlineV2
-C1CE18F2A268E6A849C27B3DE485006771B4C01B2FCEC4F18356FE92ECD6BB74 DynamicNFT
-C7981B764EC4439123A86CC7CCBA436E9B3FF73B3F10A0AE51882E404522FC41 fixNFTokenPageLinks
-D3456A862DC07E382827981CA02E21946E641877F19B8889031CC57FDCAC83E2 fixPayChanCancelAfter
-DAF3A6EB04FA5DC51E8E4F23E9B7022B693EFA636F23F22664746C77B5786B23 DeepFreeze
-DB432C3A09D9D5DFC7859F39AE5FF767ABC59AED0A9FB441E83B814D8946C109 DID
-DF8B4536989BDACE3F934F29423848B9F1D76D09BE6A1FCFE7E7F06AA26ABEAD fixRemoveNFTokenAutoTrustLine
-EE3CF852F0506782D05E65D49E5DCC3D16D50898CD1B646BAE274863401CC3CE NFTokenMintOffer
-FF2D1E13CF6D22427111B967BD504917F63A900CECD320D6FD3AC9FA90344631 fixPriceOracleOrder
-138B968F25822EFBF54C00F97031221C47B1EAB8321D93C7C2AEAF85F04EC5DF TokenEscrow
-12523DF04B553A0B1AD74F42DDB741DE8DC06A03FC089A0EF197E2A87F1D8107 fixAMMOverflowOffer
+${amendmentLines}
 # sync:end
 `.trim();
 }
@@ -610,9 +555,9 @@ function recordLocalNetworkImage(image: string): void {
 /** Called by `xrpl-up reset` — the volumes are gone, so the recorded image is stale. */
 /**
  * Current --local-network lineage, or null if no sandbox has been created yet.
- * `seed` means "descends from the shipped pre-built genesis DB"; anything else
- * is a fingerprint of the amendment set a locally-built genesis was created
- * with (see GENESIS_LINEAGE_FILE).
+ * `base` is a genesis built from the default amendment list alone; anything
+ * else is a fingerprint of the extra amendments it was built with (see
+ * GENESIS_LINEAGE_FILE).
  */
 export function readGenesisLineage(): string | null {
   try {
@@ -660,7 +605,7 @@ function pendingGenesisLineage(): string {
   const extra = fs.existsSync(EXTRA_AMENDMENTS_FILE)
     ? fs.readFileSync(EXTRA_AMENDMENTS_FILE, 'utf-8').trim()
     : '';
-  if (!extra) return SEED_LINEAGE;
+  if (!extra) return BASE_LINEAGE;
   const hashes = extra.split('\n')
     .map((l) => l.trim().split(/\s+/)[0])
     .filter(Boolean)
@@ -694,7 +639,7 @@ function getImageUidGid(image: string): string {
   // Pin the platform on ARM hosts, matching the compose file — the official
   // xrpld image is amd64-only, and omitting it makes Docker print a noisy
   // "requested image's platform does not match" warning on every call.
-  const platformArg = os.arch() === 'arm64' ? '--platform linux/amd64 ' : '';
+  const platformArg = dockerPlatformArg();
   try {
     // One container, both values — halves the (emulated, slow) container starts.
     const out = execSync(
@@ -707,91 +652,25 @@ function getImageUidGid(image: string): string {
   return '0:0';
 }
 
-function seedConsensusVolumes(image: string): void {
-  const genesisDir = getGenesisDbDir();
-  const node1Tar = path.join(genesisDir, 'node1-db.tar.gz');
-  const node2Tar = path.join(genesisDir, 'node2-db.tar.gz');
-
-  // If tarballs are missing (e.g. dev build without them), skip silently
-  if (!fs.existsSync(node1Tar) || !fs.existsSync(node2Tar)) return;
-
-  // If the user queued extra amendments via `amendment enable`, the shipped
-  // tarball predates them: seeding it would leave an existing ledger.db, so the
-  // entrypoint boots with --load and the [amendments] stanza (which only applies
-  // on a genesis --start) is silently ignored. Skip seeding so the volumes stay
-  // empty and rippled builds a real genesis with those amendments active.
-  //
-  // That genesis starts a NEW ledger lineage, so snapshots taken on the old one
-  // can no longer be restored here — snapshot restore compares lineages and
-  // reports that clearly instead of half-restoring (see snapshot.ts).
+/**
+ * Create the consensus volumes (if missing) and make them writable by the
+ * image's runtime user. Docker creates named volumes as root:root; 3.3.0+
+ * images run as a non-root user and fail with a permission error otherwise.
+ * Empty volumes make rippled build a real genesis from [amendments] on first
+ * start, so a fresh --local-network genesis always matches this build's
+ * amendment list.
+ */
+function prepareConsensusVolumes(image: string): void {
   const lineage = pendingGenesisLineage();
-  if (lineage !== SEED_LINEAGE) {
-    // Docker creates named volumes as root:root. Older rippled images ran as
-    // root so --start could create its genesis DB directories; 3.3.0+ runs as a
-    // non-root user and fails with a permission error unless we pre-chown.
-    const uidGid = getImageUidGid(image);
-    for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
-      if (!volumeHasData(vol)) {
-        execSync(`docker volume create ${vol}`, { stdio: 'ignore' });
-        execSync(`docker run --rm -v ${vol}:/data alpine chown -R ${uidGid} /data`, { stdio: 'ignore' });
-      }
-    }
-    writeGenesisLineage(lineage);
-    return;
-  }
+  const empty = [VOLUME_NAME, PEER_VOLUME_NAME].filter((vol) => !volumeHasData(vol));
+  if (empty.length === 0) return;
 
-  const node1Has = volumeHasData(VOLUME_NAME);
-  const node2Has = volumeHasData(PEER_VOLUME_NAME);
-
-  // Both volumes have data — nothing to do
-  if (node1Has && node2Has) return;
-
-  // The genesis tarballs carry whichever UID/GID built them (mode 644/755 —
-  // no "other" write bit). Older rippled images ran their process as root,
-  // so any ownership mismatch was irrelevant; newer images (3.3.0+) run as
-  // a dedicated non-root user, which can't write to files extracted with
-  // the wrong owner. Chown to whatever UID the target image actually runs
-  // as so this self-adapts across image versions.
   const uidGid = getImageUidGid(image);
-
-  // Seed both volumes (even if one already has data, reseed to keep them in sync)
-  const pairs: [string, string][] = [
-    [VOLUME_NAME, node1Tar],
-    [PEER_VOLUME_NAME, node2Tar],
-  ];
-
-  for (const [vol, tar] of pairs) {
-    // Bind-mount from XRPL_UP_DIR (~/.xrpl-up), not the tarball's original
-    // location under the npm package install dir. Docker Desktop on macOS
-    // only shares specific host paths by default (~/Users, /Volumes,
-    // /private, /tmp) — a global npm prefix outside those (e.g. Homebrew's
-    // /opt/homebrew on Apple Silicon) makes this mount fail immediately with
-    // no indication why. ~/.xrpl-up is already used for all other host
-    // state and is always under $HOME, which Docker does share by default.
-    const stagedTar = path.join(XRPL_UP_DIR, path.basename(tar));
-    fs.copyFileSync(tar, stagedTar);
-
-    try { execSync(`docker volume rm -f ${vol}`, { stdio: 'ignore' }); } catch { /* ok */ }
+  for (const vol of empty) {
     execSync(`docker volume create ${vol}`, { stdio: 'ignore' });
-    try {
-      execSync(
-        `docker run --rm ` +
-        `-v ${vol}:/data ` +
-        `-v "${XRPL_UP_DIR}":/genesis:ro ` +
-        `alpine sh -c "tar xzf /genesis/${path.basename(stagedTar)} -C /data && chown -R ${uidGid} /data"`,
-        { stdio: ['ignore', 'pipe', 'pipe'] },
-      );
-    } catch (err) {
-      const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
-      throw new Error(
-        `Failed to seed --local-network genesis volume "${vol}" from ${stagedTar}.\n` +
-        (stderr ? `Docker error: ${stderr}\n` : '') +
-        `If this mentions a mount/bind error, check Docker Desktop's file sharing settings ` +
-        `(Settings > Resources > File Sharing) includes: ${XRPL_UP_DIR}`
-      );
-    }
+    execSync(`docker run --rm -v ${vol}:/data alpine chown -R ${uidGid} /data`, { stdio: 'ignore' });
   }
-  writeGenesisLineage(SEED_LINEAGE);
+  writeGenesisLineage(lineage);
 }
 
 /**
@@ -807,18 +686,12 @@ export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debu
   writeComposeFile(image, noConsensus, debug, ledgerIntervalMs, configPath, noRestart, bindAddress);
   if (noConsensus) composeDown(); // clean slate only in standalone mode
 
-  // Pre-seed consensus volumes with genesis DB on first run
-  if (!noConsensus) seedConsensusVolumes(image);
+  // Make sure the consensus volumes exist and are writable
+  if (!noConsensus) prepareConsensusVolumes(image);
 
-  // Pull the rippled image if not already cached — gives clear feedback on first run
-  // instead of hanging silently inside docker compose up.
-  try {
-    execSync(`docker image inspect ${image}`, { stdio: 'ignore' });
-  } catch {
-    // Image not found locally — pull with visible output
-    console.log(`  Pulling ${image} (first time only)…`);
-    execSync(`docker pull ${image}`, { stdio: 'inherit' });
-  }
+  // Build (deb pin) or pull (registry image) xrpld if it isn't cached yet —
+  // gives clear feedback on first run instead of hanging inside compose up.
+  ensureImage(image);
 
   // This runs on every start, not just a fresh genesis build — surface the
   // real Docker error on failure (e.g. a bad --config path outside Docker

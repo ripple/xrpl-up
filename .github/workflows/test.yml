@@ -51,8 +51,10 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
-      - name: Pull rippled Docker image
-        run: docker pull rippleci/xrpld:3.3.0
+      - name: Prepare xrpld image
+        # Builds the pinned deb into a local image, or pulls a registry image,
+        # whichever src/core/xrpld-source.json says — nothing is hardcoded here.
+        run: node -e "const x = require('./dist/core/xrpld-image'); x.ensureImage(x.DEFAULT_IMAGE)"
       - name: Run e2e tests (${{ matrix.mode }})
         env:
           XRPL_LOCAL_TEARDOWN: '1'

@@ -29,6 +29,7 @@ export default defineConfig({
     include: ["tests/e2e/sandbox/snapshot.test.ts"],
     // Use snapshot-setup (not local-node) so the node is always restarted
     // with --persist, even when the node was already running without it.
+    setupFiles: ["tests/setup/dev-build.ts"],
     globalSetup: ["tests/setup/snapshot-setup.ts"],
   },
 });

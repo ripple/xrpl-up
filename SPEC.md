@@ -99,7 +99,7 @@ Host
 
 | Service | Image / Build | Ports | Key details |
 |---|---|---|---|
-| `rippled` | `rippleci/xrpld:3.3.0` (`--image`) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. Runs as a non-root user (uid 999) as of the 3.3.0 image (was root in 3.2.0). |
+| `rippled` | xrpld pinned in `src/core/xrpld-source.json` (`--image` overrides) | `6006:6006` | Config: `~/.xrpl-up/rippled.cfg:ro`. Healthcheck: TCP 6006, 2 s interval, 20 retries. ARM64: `platform: linux/amd64` auto-injected. Runs as a non-root user (uid 999) as of the 3.3.0 image (was root in 3.2.0). |
 | `faucet` | Built from `dist/faucet-server/` | `3001:3001` | Depends on rippled healthcheck. Connects via `host.docker.internal`. |
 
 Both share `xrpl-net` (bridge driver). `--exit-on-crash` disables restart and wraps rippled in a shell that detects `Logic error:` in stderr and exits 134.
@@ -120,8 +120,7 @@ Host
 - Named volumes: `xrpl-up-local-db` (node 1) and `xrpl-up-local-peer-db` (node 2)
 - Entrypoint checks for `ledger.db` — uses `--start` on first boot, `--load` on resume
 - Amendments activate through the `[amendments]` genesis-forcing stanza on first `--start`, same as standalone — takes ~30–70 s (real 2-node peer discovery + consensus bootstrap) instead of standalone's near-instant boot. See §5.6.1 for a known intermittent race in this path.
-- Pre-seeded genesis DB (`src/core/genesis/*.tar.gz`) extracted into empty volumes for fast first boot (~5s) when no amendments are queued. Extraction chowns the volume to the target image's runtime uid/gid (queried via `docker run --entrypoint id`) so newer non-root images (3.3.0+) can write to it; older root-based images no-op this chown.
-- Seeding is skipped (leaving the volumes empty for a real genesis `--start`) when `amendment enable` has queued amendments — see §5.6.1 for why, how it works, and a known flaky failure mode.
+- Empty volumes are created and chowned to the image's runtime uid/gid (queried via `docker run --entrypoint id`) before first start, so non-root images (3.3.0+) can write to them. rippled then builds a real genesis from `[amendments]`. There is no pre-built genesis artifact: a fresh genesis always matches this build's amendment list, including after `amendment enable`.
 
 ### 2.4 Persistent State Layout (`~/.xrpl-up/`)
 
@@ -319,7 +318,7 @@ Snapshots capture the full state of a `--local-network` session: ledger database
 
 ### 5.6 Amendment Management
 
-**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). It currently lists 37 amendments, each individually verified to force-enable on a fresh genesis with `rippleci/xrpld:3.3.0` (see §5.6.1 for the verification method and why this list needs periodic re-curation, not just re-listing everything rippled supports).
+**Context**: The local sandbox's `rippled.cfg` includes an `[amendments]` stanza that force-enables amendments at genesis (first `--start`). The list is not hand-maintained: it is generated for the exact xrpld a build of xrpl-up runs and stored in `src/core/default-amendments.json` (see §5.6.1).
 
 **`amendment list`**:
 - Calls `feature` RPC on the target network
@@ -338,42 +337,36 @@ Snapshots capture the full state of a `--local-network` session: ledger database
 - Prompts to reset and restart once for the whole batch (a full node reset is required for the genesis config to take effect)
 - `--auto-reset`: skips the prompt and resets immediately
 
-#### 5.6.1 How amendments actually activate, and why the `[amendments]` list needs periodic re-curation (read before touching seeding, `amendment enable`, or the genesis list)
+#### 5.6.1 Where the default amendments come from
 
-`[amendments]` **does** force-enable at the genesis ledger in both standalone and `--local-network` mode — this was wrongly disputed and re-verified multiple times in one debugging session; treat that as settled unless you have live evidence otherwise. Standalone builds and enables in ~2s. `--local-network` takes longer (~30–70s) because it's a real 2-node bootstrap: node1 boots `--start` and builds the genesis ledger from its own `[amendments]` config; node2, having no `ledger.db`, boots with **no flags at all** (not `--load`, not `--start`) and syncs the genesis ledger from node1 as a peer, inheriting node1's amendment set once synced.
+An amendment is force-enabled at genesis iff it is **enabled on mainnet**, **supported** by the xrpld being run, and **not `Obsolete`** in it. `Obsolete` is rippled's marker (the `vetoed` field of the admin `feature` RPC) for an amendment retired into the binary: its behaviour is always on and the flag can no longer be enabled, so listing it does nothing. Amendments that are not on mainnet (e.g. ones new in a develop build) stay off; opt in with `xrpl-up amendment enable <name...>`.
 
-Verify directly:
+Two generated files define a build, and nothing else carries a version or an amendment name:
 
-```bash
-docker exec xrpl-up-local-rippled-1 sh -c 'ps aux | grep xrpld'       # node1: ...xrpld --start
-docker exec xrpl-up-local-rippled-peer-1 sh -c 'ps aux | grep xrpld'  # node2: ...xrpld  (no flags — syncing from node1)
-xrpl-up amendment info <name>                                        # Enabled: yes, usually within the same ~30-70s the network takes to report ready
-```
+| File | Holds | Written by |
+|---|---|---|
+| `src/core/xrpld-source.json` | which xrpld to run: a registry `image`, or a `deb` (`{ channel, version }` from packages.xrplf.org) | the develop-build workflow, or by hand for a release |
+| `src/core/default-amendments.json` | the derived amendment list for that xrpld | `npm run generate:amendments` (`scripts/generate-default-amendments.ts`) |
 
-**Root cause of "some listed amendments never force-enable," found and fixed.** rippled periodically **retires** sufficiently-old amendments from the genesis-forcing/voting table once they're permanently hardcoded into the binary — after retirement, an amendment listed in `[amendments]` reports `supported: true, enabled: false` forever on a fresh genesis, with no error. This isn't new: commit `845d4e0` (Apr 2026) already hit this once against rippled 3.1/3.2, diagnosed it exactly this way, and re-curated the list down to 75 entries, all confirmed working at the time. The image has since been upgraded twice (3.2.0, then 3.3.0) without re-curating the list, which had grown back to 77 entries — by the time of this second occurrence, only **37 of those 77 still force-enabled** on rippled 3.3.0. The gap has no pattern by amendment age, name, or category (a first, wrong diagnosis theorized "ancient/compiled-in amendments" — disproven by `LendingProtocol`, a brand-new draft amendment, landing in the same "won't force-enable" bucket as ancient ones like `RequireFullyCanonicalSig`; it turned out `LendingProtocol` was never in the config list at all, a separate and unrelated omission). The list in `src/core/compose.ts`'s `generateRippledConfig()` was re-curated to the 37 entries verified live (via `feature` RPC after a real fresh `--start`, not assumed from being listed) to force-enable on `rippleci/xrpld:3.3.0`, reproduced identically across three independent full reset/rebuild cycles (exact same enabled-set each time, zero drift).
+`generate:amendments` builds/pulls the pinned xrpld, boots it standalone with no `[amendments]`, reads its `feature` table, intersects with live mainnet, and writes the file. It refuses to write an empty list.
 
-**The `--local-network` seed tarballs (`src/core/genesis/node1-db.tar.gz`/`node2-db.tar.gz`) were also regenerated** from the corrected 37-entry list — they're a separate, pre-built binary artifact (§2.3) independent of the `[amendments]` text in `compose.ts`, so editing the list alone does not change what a plain `xrpl-up start --local-network` boots from. The old tarballs were built long ago against a since-outdated list and showed 76 enabled (an inflated, stale count carrying amendments no longer force-enable-able, mixed with real historical vote activity from whatever list was current when they were built) even after the code-level list was fixed — the fast-boot path and the fresh-genesis path disagreed until both were corrected together. Rebuilt by: temporarily moving the shipped tarballs aside (which requires manually chowning the resulting empty Docker volumes to the image's runtime uid — `seedConsensusVolumes()`'s own "tarballs missing" fallback does *not* do this, since that path assumes a degraded dev-only scenario, not a real rebuild), letting a real two-node `--local-network` boot from a blank genesis with the current config, advancing a few ledgers, stopping both containers cleanly (`docker stop`, not kill, so SQLite flushes), and re-tarring each volume's `/var/lib/xrpld/db`. Verified after: a plain `reset && start --local-network` with no `amendment enable` shows exactly 37 enabled, matching the code-level list with zero gaps — the two paths now agree.
+**A deb build has no registry image.** `src/xrpld-image/Dockerfile` installs the pinned deb into a plain Ubuntu image, built locally on first `start` (same pattern as the faucet image), tagged `xrpl-up/xrpld:<version with ~ → ->`. The image name must end in `/xrpld`: xrpl-up picks the binary path (`/usr/bin/xrpld`) from the name. The image must use `ENTRYPOINT`, not `CMD`, for the binary: standalone passes `command: ["-a", "--start"]`, which would otherwise replace it.
 
-**This will happen again on the next rippled image upgrade — re-curate every time**, the same way `845d4e0` and this fix both did:
-1. `xrpl-up reset && xrpl-up start --local-network` (clean baseline, seeded — not the check)
-2. Trigger a real fresh genesis: `xrpl-up amendment enable <any-currently-disabled-amendment> --auto-reset && xrpl-up start --local-network`
-3. `xrpl-up amendment list` — every amendment shown `✔` enabled with `✔` supported is confirmed working; diff this set against the current `[amendments]` list and drop anything present in the config but not in this enabled set
-4. Repeat step 2-3 at least once more (different candidate) to confirm the enabled set is stable/reproducible before committing to a new list — do not re-curate off a single run
-5. Do **not** add an amendment to the base list just because `supported: true` — that only means the binary knows it, not that it force-enables at genesis (see `Vetoed` caveat below)
+**Develop build versions.** Develop packages are `<xrpld version>-<CI run number>.<date>git<sha>`. Builds off plain `develop` report `0.0.0~dev` (rippled's placeholder, sorting below every release); builds on a release line report e.g. `3.5.0~b0`. The version prefix therefore does not identify a build; the run number (monotonic) and sha do. `scripts/latest-xrpld-deb.ts` picks the highest run number.
 
-**`Vetoed` in `amendment info`/`amendment list` is NOT a predictive signal for "will this force-enable at genesis."** This was tried (build a warning off it) and disproven in the same debugging pass: `vetoed: yes` just means the currently-running node isn't presently configured to support that amendment — trivially true for anything not yet in its `[amendments]` list, including amendments that force-enable perfectly fine once actually queued (`SingleAssetVault` showed `vetoed: yes` on the plain seeded baseline, before ever being queued, despite being proven to enable correctly once queued). Don't build UX off this field without a case that actually distinguishes the two situations.
+**`0.0.0` builds and xrpl.js.** xrpl.js adds the required `NetworkID` only when the server's build version is >= 1.11.0, and `0.0.0-dev+<sha>` compares as older, so against such a build every transaction on this sandbox's custom network id is rejected with `telREQUIRES_NETWORK_ID`. `normalizeDevBuildVersion` (`src/utils/dev-build.ts`) reports a `0.0.0` build as recent after each connect; the tests apply it through `tests/setup/dev-build.ts`. Scripts scaffolded by `xrpl-up init` create their own clients and are not covered.
 
-Consequence for tests: never assert activation on an arbitrary entry from `amendment list --disabled`; pick a newer amendment confirmed to genuinely activate via the genesis stanza (see `ACTIVATABLE_CANDIDATES` in `tests/e2e/sandbox/amendment.activate.test.ts` — cross-check this list against the current `[amendments]` list after every re-curation, since a candidate that used to force-enable can silently stop).
+**Automation** (`.github/workflows/xrpld-develop-build.yml`): on a new `deb-develop` build — pin the deb, run `generate:amendments`, run the hermetic e2e suites, then tag `xrpld-<slug>` and publish `xrpl-up-<ver>-xrpld-<slug>.tgz` as a release asset. No npm or Docker registry is involved.
 
-Consequence for `amendment enable`: an amendment reported "already enabled" before a reset (this happened live with `LendingProtocol`, read off the seeded baseline) can silently revert to disabled after the reset rebuilds a fresh genesis, if that amendment isn't actually in the `[amendments]` config the fresh genesis gets built from. "Already enabled" only reflects the currently-running ledger, not what a rebuild will reproduce.
+**Why the list is generated.** rippled retires old amendments over time, and a retired amendment listed in `[amendments]` silently stays disabled with no error. A hand-curated list therefore rots on every rippled upgrade (it shrank 77 → 37 over two upgrades before being replaced). A build-time derivation cannot drift from the binary it ships with. `Vetoed: yes` in `amendment info` is *not* evidence an amendment can't be enabled — it is trivially true for anything not in `[amendments]`; only `"Obsolete"` is definitive.
 
-**A separate, smaller open question:** during the investigation that led to the fix above, the exact same enable/reset/restart sequence was run four times against the *old, stale* 77-entry list and failed once (both queued amendments came up disabled with no error, no crash, no config difference detected). Against the corrected 37-entry list, three independent full cycles were all clean. This might mean the intermittent failure was itself a symptom of querying amendments that were already in the "won't force-enable" set for unrelated reasons (harder to notice when most of the list is unreliable), or it might be a separate, rarer race — there isn't enough evidence yet to say which. If it recurs against the corrected list, capture `docker logs` from **both** `rippled` and `rippled-peer` containers across the failing run (not just node1) — that comparison was never actually done.
+**Enabling extra amendments.** `xrpl-up amendment enable A B C` queues them in `~/.xrpl-up/genesis-amendments.txt` and resets; they are merged into `[amendments]` at the next genesis. A flipped flag does not mean the feature works: `LendingProtocolV1_1` alone leaves `LoanBrokerSet` returning `temDISABLED`; it also needs `LendingProtocol` and `SingleAssetVault`. Submit a transaction and read the engine result.
 
-**Genesis lineage.** A locally built (non-seeded) genesis is a **new ledger lineage** — a fingerprint (`~/.xrpl-up/genesis-lineage.txt`; `seed` for the shipped tarball, else a digest of the enabled amendment hashes) distinct from whatever the sandbox had before. This matters because `snapshot save` records the lineage and amendment set alongside the ledger tarball, and `snapshot restore` compares lineages: on a mismatch it writes the snapshot's amendment set back to `genesis-amendments.txt`, regenerates the config, and updates the lineage marker (`adoptGenesisLineage()`), so the restored ledger and the running config always agree — restoring across an `amendment enable` (in either direction) just works rather than silently applying half of the state. `xrpl-up reset` clears both the amendment queue and the lineage marker (`--keep-amendments` preserves the queue).
+**Known intermittent failure: a fresh `--local-network` genesis can come up with 0 amendments enabled.** The network reports ready, both nodes are healthy and the config lists every amendment, but none activate and they stay that way for as long as the network runs; a `reset` and second start gives the full list. Observed in roughly one in three fresh boots, on both 3.4.0 and a develop build; cause not isolated (node1 `--start`s while node2 syncs from it, and the genesis amendment set is somehow lost). Standalone is not affected. If it recurs, capture `docker logs` from **both** `rippled` and `rippled-peer`. Until fixed, tests that depend on default amendments in `--local-network` mode can fail on this alone; `tests/e2e/sandbox/amendment.test.ts` will say which amendments did not activate.
 
-To undo an `enable`, run `xrpl-up reset` — it clears `~/.xrpl-up/genesis-amendments.txt` and regenerates the config, so the next start uses the default genesis list (and, on `--local-network`, resumes using the fast pre-seeded snapshot since the queue file is empty). `reset --keep-amendments` preserves the queue instead; the internal reset performed by `amendment enable` itself always preserves it, since clearing it would discard what was just queued.
+**Genesis lineage.** A genesis built from the default list is lineage `base`; one built with extra amendments is a different lineage, fingerprinted by those amendments (`~/.xrpl-up/genesis-lineage.txt`). `snapshot save` records it and `snapshot restore` compares it, adopting the snapshot's amendment set on mismatch so the restored ledger and the config agree. `xrpl-up reset` clears the queue and the lineage marker (`--keep-amendments` keeps the queue).
 
-**Tests can pass by skipping, not just by asserting.** `tests/e2e/sandbox/amendment.activate.test.ts` skips itself (`if (!target) return`) when no candidate amendment is currently disabled. A green run of this suite does not by itself prove activation works — check the per-test duration in the run output (a real activation run takes tens of seconds; a skip completes near-instantly) before trusting a "3/3 passed" summary.
+**Tests can pass by skipping.** `tests/e2e/sandbox/amendment.activate.test.ts` skips when no candidate amendment is currently disabled. Check per-test duration (a real activation takes tens of seconds) before trusting a green run.
 
 ---
 
@@ -525,11 +518,11 @@ Required for the local sandbox. Any Docker Engine version that supports Compose 
 
 ### 9.3 rippled Version Pinning Strategy
 
-- Default image: `rippleci/xrpld:3.3.0`
-- The `[amendments]` section in `rippled.cfg` lists amendments verified against **rippled 3.3.0**.
-- Pinning to a specific tag (`--image rippleci/xrpld:3.3.0`) is supported via `--image`.
-- rippled 3.3.0 runs its process as a non-root user (uid 999) inside the container; 3.2.0 and earlier ran as root. This affects the pre-seeded genesis DB volumes for `--local-network` mode (see §2.3), which are now chowned to the target image's runtime uid/gid on extraction.
-- If a new rippled release adds amendments not in the `[amendments]` stanza, use `xrpl-up amendment enable <name>` to queue them for the next genesis start.
+- The xrpld a build runs is pinned in `src/core/xrpld-source.json` (§5.6.1); `--image` overrides it for one start.
+- The default amendment list is generated for that xrpld, not hand-maintained.
+- A deb-pinned xrpld is built into a local image on first `start`; a registry image is pulled.
+- rippled 3.3.0+ runs as a non-root user (uid 999); volumes are chowned to the image's runtime uid/gid before first start (§2.3).
+- Amendments new in a build but not yet on mainnet stay off; use `xrpl-up amendment enable <name...>`.
 - **Devnet compatibility:** XRPL Devnet may enable pre-release amendments ahead of the rippled version bundled with this tool. Transactions relying on such amendments may fail on the local sandbox. Use `xrpl-up amendment list --diff devnet` to identify gaps.
 
 ---

@@ -25,7 +25,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "postbuild": "cp src/faucet-server/package.json dist/faucet-server/package.json && cp src/faucet-server/Dockerfile dist/faucet-server/Dockerfile && chmod +x dist/cli.js && mkdir -p dist/core/genesis && cp src/core/genesis/*.tar.gz dist/core/genesis/",
+    "postbuild": "cp src/faucet-server/package.json dist/faucet-server/package.json && cp src/faucet-server/Dockerfile dist/faucet-server/Dockerfile && mkdir -p dist/xrpld-image && cp src/xrpld-image/Dockerfile dist/xrpld-image/Dockerfile && chmod +x dist/cli.js",
     "dev": "tsx src/cli.ts",
     "clean": "rm -rf dist",
     "prepare": "npm run build",
@@ -36,12 +36,14 @@
     "test:e2e:local-network": "vitest run --config vitest.config.local-network.ts tests/e2e",
     "test:e2e:snapshot": "vitest run --config vitest.config.snapshot.ts",
     "test:e2e:amendment": "vitest run --config vitest.config.amendment.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:amendments": "tsx scripts/generate-default-amendments.ts"
   },
   "files": [
     "dist/",
     "src/faucet-server/Dockerfile",
     "src/faucet-server/package.json",
+    "src/xrpld-image/Dockerfile",
     "LICENSE",
     "README.md"
   ],

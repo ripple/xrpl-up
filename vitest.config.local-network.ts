@@ -12,7 +12,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    setupFiles: ["tests/setup/patch-clock.ts"],
+    setupFiles: ["tests/setup/patch-clock.ts", "tests/setup/dev-build.ts"],
     // Consensus network: ~4s ledger close, needs generous timeouts
     testTimeout: 120_000,
     hookTimeout: 120_000,

@@ -1,3 +1,4 @@
+import { normalizeDevBuildVersion } from './dev-build';
 import { Client } from "xrpl";
 
 export const TESTNET_URL = "wss://s.altnet.rippletest.net:51233";
@@ -25,6 +26,7 @@ const RETRY_MAX = 5;
 async function withClientOnce<T>(nodeUrl: string, fn: (client: Client) => Promise<T>): Promise<T> {
   const client = new Client(nodeUrl, { timeout: 60_000 });
   await client.connect();
+  normalizeDevBuildVersion(client);
   try {
     return await fn(client);
   } finally {

@@ -21,7 +21,7 @@ import { runCommand } from './commands/run';
 import { initCommand } from './commands/init';
 import { logsCommand } from './commands/logs';
 import { statusCommand } from './commands/status';
-import { composeDown, startCommandHint } from './core/compose';
+import { composeDown, startCommandHint, DEFAULT_IMAGE } from './core/compose';
 import { snapshotSave, snapshotRestore, snapshotList } from './commands/snapshot';
 import { configExport, configValidate } from './commands/config';
 import { resetCommand } from './commands/reset';
@@ -78,7 +78,7 @@ program
   .option(
     '--image <image>',
     'Docker image to use for local rippled',
-    'rippleci/xrpld:3.3.0'
+    DEFAULT_IMAGE
   )
   .option(
     '--ledger-interval <ms>',

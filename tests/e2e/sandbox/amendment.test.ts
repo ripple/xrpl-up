@@ -7,21 +7,16 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
+import { Client } from "xrpl";
 import { runXrplUp } from "../../helpers/sandbox-cli";
 
-/** Parse amendment names from the [amendments] section of compose.ts. */
+/** Names of the amendments xrpl-up force-enables at genesis (generated per xrpld build). */
 function getConfiguredAmendmentNames(): Set<string> {
-  const composePath = path.resolve(process.cwd(), "src/core/compose.ts");
-  const composeSrc = fs.readFileSync(composePath, "utf-8");
-  const section = composeSrc.match(/\[amendments\]\n([\s\S]*?)# sync:end/);
-  if (!section) throw new Error("Could not find [amendments] section in compose.ts");
-
-  const names = new Set<string>();
-  for (const line of section[1].split("\n")) {
-    const m = line.trim().match(/^[0-9A-Fa-f]{64}\s+(\S+)/);
-    if (m) names.add(m[1]);
-  }
-  return names;
+  const file = path.resolve(process.cwd(), "src/core/default-amendments.json");
+  const { amendments } = JSON.parse(fs.readFileSync(file, "utf-8")) as {
+    amendments: { name: string }[];
+  };
+  return new Set(amendments.map((a) => a.name));
 }
 
 describe("sandbox amendment list", () => {
@@ -49,9 +44,8 @@ describe("sandbox amendment list", () => {
     // Note: in consensus mode, amendments activate through voting (~17 min),
     // NOT at genesis. So we check "known" (appears in feature list), not "enabled".
     const configuredNames = getConfiguredAmendmentNames();
-    // Re-curated for rippled 3.3.0 (see SPEC.md §5.6.1): the list dropped from
-    // ~77 to 37 after live-verifying which entries actually force-enable on a
-    // fresh genesis. Sanity bound tightened to match, not loosened blindly.
+    // The list is derived per xrpld build, so only sanity-check that it is
+    // non-trivial rather than pinning an exact count.
     expect(configuredNames.size).toBeGreaterThan(30);
 
     const result = runXrplUp(["amendment", "list"], {}, 30_000);
@@ -128,109 +122,27 @@ describe("sandbox amendment list --diff testnet", () => {
   });
 });
 
-describe("sandbox amendments match mainnet", () => {
-  it("no mainnet-enabled amendment is missing from the configured set", () => {
-    // Query the local node's feature list — it reports ALL amendments the
-    // rippled build knows about, with enabled/supported status.
-    // Amendments that are enabled on mainnet but missing from our config
-    // would show as supported:true, enabled:false and NOT be in our config.
-    //
-    // We can't query mainnet directly in e2e tests (slow, flaky), so we
-    // check the inverse: every amendment the local node reports as
-    // supported:true should either be enabled:true (in our config) or be
-    // a known legacy/non-mainnet amendment.
+describe("sandbox default amendments", () => {
+  it("every default amendment is enabled on the local node", async () => {
+    // default-amendments.json is derived for this exact xrpld build (mainnet-enabled,
+    // supported, not Obsolete — see scripts/generate-default-amendments.ts), so
+    // each entry must actually have activated at genesis. This is the check
+    // that the [amendments] stanza took effect.
+    const { amendments } = JSON.parse(
+      fs.readFileSync(path.resolve(process.cwd(), "src/core/default-amendments.json"), "utf-8"),
+    ) as { amendments: { hash: string; name: string }[] };
 
-    const configuredNames = getConfiguredAmendmentNames();
-
-    const result = runXrplUp(["amendment", "list"], {}, 30_000);
-    expect(result.status).toBe(0);
-
-    // Amendments that are built into rippled (always active, show enabled:false
-    // in consensus mode). These are on mainnet but don't need [amendments] config.
-    // Original 16, found and removed in 845d4e0 (rippled 3.1/3.2 curation).
-    const LEGACY_BUILTIN = new Set([
-      "Escrow", "PayChan", "CryptoConditions", "FlowCross", "MultiSign",
-      "TickSize", "TrustSetAuth", "SortedDirectories", "EnforceInvariants",
-      "FeeEscalation", "fix1373", "fix1201", "fix1512", "fix1528", "fix1523",
-      "fix1368",
-    ]);
-
-    // Same phenomenon as LEGACY_BUILTIN above, found again during the rippled
-    // 3.3.0 re-curation (see SPEC.md §5.6.1): these are on mainnet and fully
-    // functional, but no longer force-enable at genesis on this rippled build,
-    // so they were deliberately dropped from [amendments] rather than left in
-    // as false advertising. Live-verified functional despite enabled:false:
-    // `check create`, `escrow create`, `account set --set-flag depositAuth`
-    // all succeeded on a fresh genesis where the corresponding amendment
-    // showed disabled. Re-verify against LEGACY_BUILTIN's method (fresh
-    // genesis + feature RPC diff) before adding to either set after a future
-    // rippled upgrade — don't assume growth here is more of the same without
-    // checking.
-    const NO_LONGER_FORCE_ENABLES = new Set([
-      "CheckCashMakesTrustLine", "Checks", "Clawback", "DeletableAccounts",
-      "DepositAuth", "DepositPreauth", "DisallowIncoming", "ExpandedSignerList",
-      "fix1513", "fix1515", "fix1543", "fix1571", "fix1578", "fix1623",
-      "fix1781", "fixAmendmentMajorityCalc", "fixCheckThreading",
-      "fixDisallowIncomingV1", "fixInnerObjTemplate", "fixMasterKeyAsRegularKey",
-      "fixNFTokenRemint", "fixNFTokenReserve", "fixNonFungibleTokensV1_2",
-      "fixPayChanRecipientOwnerDir", "fixQualityUpperBound",
-      "fixReducedOffersV1", "fixRmSmallIncreasedQOffers",
-      "fixSTAmountCanonicalize", "fixTakerDryOfferRemoval",
-      "fixTrustLinesToSelf", "fixUniversalNumber", "Flow", "FlowSortStrands",
-      "HardenedValidations", "ImmediateOfferKilled", "MultiSignReserve",
-      "NegativeUNL", "NonFungibleTokensV1_1", "RequireFullyCanonicalSig",
-      "TicketBatch",
-    ]);
-
-    // Amendments known to rippled but NOT on mainnet — ok to be disabled.
-    const NOT_ON_MAINNET = new Set([
-      "CryptoConditionsSuite", "NonFungibleTokensV1", "fixNFTokenDirV1",
-      "fixNFTokenNegOffer", "fixXChainRewardRounding",
-      "XChainBridge", "LendingProtocol", "SingleAssetVault",
-      // New in rippled 3.3.0, 0% validator consensus as of 2026-08-11 — not
-      // yet on mainnet. See https://data.xrpl.org/v1/network/amendments/vote/main.
-      "BatchV1_1", "ConfidentialTransfer", "DynamicMPT", "fixCleanup3_3_0",
-      "PermissionDelegationV1_1", "Sponsor",
-    ]);
-
-    // Parse all amendment lines from the output
-    // Lines: "  <name-padded>  <hash…>  ✔/✗  ✔/✗"
-    const lines = result.stdout.split("\n");
-    const supportedButNotEnabled: string[] = [];
-
-    for (const line of lines) {
-      // Match lines with amendment data (contain a hash-like pattern)
-      const m = line.match(/^\s+(\S+)\s+[0-9A-Fa-f]{12,}…?\s+([✔✗])\s+([✔✗])/);
-      if (!m) continue;
-
-      const [, name, enabledMark, supportedMark] = m;
-      const isEnabled = enabledMark === "✔";
-      const isSupported = supportedMark === "✔";
-
-      if (isSupported && !isEnabled) {
-        // This amendment is supported but not enabled.
-        // It's a problem if it's not in our config AND not a known exception.
-        if (
-          !configuredNames.has(name) &&
-          !LEGACY_BUILTIN.has(name) &&
-          !NO_LONGER_FORCE_ENABLES.has(name) &&
-          !NOT_ON_MAINNET.has(name)
-        ) {
-          supportedButNotEnabled.push(name);
-        }
-      }
+    const client = new Client("ws://localhost:6006");
+    await client.connect();
+    try {
+      const { result } = (await client.request({ command: "feature" } as never)) as unknown as {
+        result: { features: Record<string, { enabled?: boolean }> };
+      };
+      const byHash = new Map(Object.entries(result.features).map(([h, f]) => [h.toUpperCase(), f]));
+      const notEnabled = amendments.filter((a) => !byHash.get(a.hash.toUpperCase())?.enabled).map((a) => a.name);
+      expect(notEnabled, `default amendments that did not activate: ${notEnabled.join(", ")}`).toEqual([]);
+    } finally {
+      await client.disconnect();
     }
-
-    expect(
-      supportedButNotEnabled,
-      `These amendments are supported by rippled but not in our config ` +
-      `and not in the known exceptions list. If they are enabled on mainnet ` +
-      `AND actually force-enable on a fresh genesis, add them to [amendments] ` +
-      `in src/core/compose.ts. If they're on mainnet but no longer force-enable ` +
-      `(verify per SPEC.md §5.6.1's method before assuming this), add them to ` +
-      `NO_LONGER_FORCE_ENABLES. If not on mainnet at all, add them to ` +
-      `NOT_ON_MAINNET.\n` +
-      `Missing: ${supportedButNotEnabled.join(", ")}`,
-    ).toEqual([]);
   });
 });
