@@ -660,10 +660,10 @@ function getImageUidGid(image: string): string {
  * start, so a fresh --local-network genesis always matches this build's
  * amendment list.
  */
-function prepareConsensusVolumes(image: string): void {
+function prepareConsensusVolumes(image: string): boolean {
   const lineage = pendingGenesisLineage();
   const empty = [VOLUME_NAME, PEER_VOLUME_NAME].filter((vol) => !volumeHasData(vol));
-  if (empty.length === 0) return;
+  if (empty.length === 0) return false;
 
   const uidGid = getImageUidGid(image);
   for (const vol of empty) {
@@ -671,6 +671,27 @@ function prepareConsensusVolumes(image: string): void {
     execSync(`docker run --rm -v ${vol}:/data alpine chown -R ${uidGid} /data`, { stdio: 'ignore' });
   }
   writeGenesisLineage(lineage);
+  return true;
+}
+
+/**
+ * Names of the default amendments that are not enabled on the running node.
+ * Empty means the genesis took the full list.
+ */
+async function missingDefaultAmendments(): Promise<string[]> {
+  const { Client } = await import('xrpl');
+  const client = new Client(LOCAL_WS_URL, { timeout: 15_000 });
+  try {
+    await client.connect();
+    const res = await client.request({ command: 'feature' } as any);
+    const features = (res.result as any).features as Record<string, { enabled?: boolean }>;
+    const enabled = new Set(
+      Object.entries(features).filter(([, f]) => f.enabled).map(([hash]) => hash.toUpperCase()),
+    );
+    return DEFAULT_AMENDMENTS.filter((a) => !enabled.has(a.hash.toUpperCase())).map((a) => a.name);
+  } finally {
+    try { await client.disconnect(); } catch { /* ignore */ }
+  }
 }
 
 /**
@@ -686,42 +707,69 @@ export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debu
   writeComposeFile(image, noConsensus, debug, ledgerIntervalMs, configPath, noRestart, bindAddress);
   if (noConsensus) composeDown(); // clean slate only in standalone mode
 
-  // Make sure the consensus volumes exist and are writable
-  if (!noConsensus) prepareConsensusVolumes(image);
+  // Make sure the consensus volumes exist and are writable. `fresh` means rippled
+  // is about to build a new genesis (as opposed to resuming existing ledger data).
+  const fresh = !noConsensus && prepareConsensusVolumes(image);
 
   // Build (deb pin) or pull (registry image) xrpld if it isn't cached yet —
   // gives clear feedback on first run instead of hanging inside compose up.
   ensureImage(image);
 
-  // This runs on every start, not just a fresh genesis build — surface the
-  // real Docker error on failure (e.g. a bad --config path outside Docker
-  // Desktop's shared folders, a port conflict, a faucet build failure)
-  // instead of a bare "Command failed" with no detail regardless of --debug.
-  try {
-    execSync(
-      `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up --build -d`,
-      { stdio: ['ignore', 'pipe', 'pipe'] },
-    );
-  } catch (err) {
-    const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
-    throw new Error(
-      `Failed to start the Docker Compose stack.\n` +
-      (stderr ? `Docker error: ${stderr}\n` : '') +
-      `Check: docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" logs`
-    );
+  const bringUp = async (): Promise<void> => {
+    // This runs on every start, not just a fresh genesis build — surface the
+    // real Docker error on failure (e.g. a bad --config path outside Docker
+    // Desktop's shared folders, a port conflict, a faucet build failure)
+    // instead of a bare "Command failed" with no detail regardless of --debug.
+    try {
+      execSync(
+        `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up --build -d`,
+        { stdio: ['ignore', 'pipe', 'pipe'] },
+      );
+    } catch (err) {
+      const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
+      throw new Error(
+        `Failed to start the Docker Compose stack.\n` +
+        (stderr ? `Docker error: ${stderr}\n` : '') +
+        `Check: docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" logs`
+      );
+    }
+
+    // Wait for rippled WebSocket port
+    await waitForPort(LOCAL_WS_PORT, 30_000, 'rippled WebSocket');
+
+    // In consensus mode, wait for the network to reach validated state.
+    // First boot: ~30-70s (real 2-node peer discovery + consensus).
+    if (!noConsensus) await waitForConsensus(120_000);
+  };
+
+  await bringUp();
+
+  // A fresh --local-network genesis intermittently comes up with none of its
+  // [amendments] active (nodes healthy, config correct, cause not isolated —
+  // see SPEC.md 5.6.1); a second genesis is fine. Only ever redo a genesis we
+  // just created: a resumed network holds the user's ledger and accounts.
+  if (!noConsensus && fresh) {
+    let missing = await missingDefaultAmendments();
+    if (missing.length > 0) {
+      console.log(`  Genesis came up without ${missing.length} default amendment(s); rebuilding it once…`);
+      composeDown();
+      for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
+        try { execSync(`docker volume rm -f ${vol}`, { stdio: 'ignore' }); } catch { /* absent */ }
+      }
+      prepareConsensusVolumes(image);
+      await bringUp();
+      missing = await missingDefaultAmendments();
+      if (missing.length > 0) {
+        console.log(
+          `  ⚠ ${missing.length} default amendment(s) are still not enabled: ${missing.slice(0, 5).join(', ')}` +
+          `${missing.length > 5 ? ', …' : ''}. Run "xrpl-up reset" and start again.`
+        );
+      }
+    }
   }
 
-  // Wait for rippled WebSocket port
-  await waitForPort(LOCAL_WS_PORT, 30_000, 'rippled WebSocket');
-
-  // In consensus mode, wait for the network to reach validated state
-  // AND for all amendments to activate. First boot: ~30-60s for consensus
-  // + amendment activation. Restart with --load: ~10-15s.
-  if (!noConsensus) {
-    await waitForConsensus(120_000);
-    // Check ledger clock drift and warn if significant
-    await warnIfDrifted();
-  }
+  // Check ledger clock drift and warn if significant
+  if (!noConsensus) await warnIfDrifted();
 
   await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
 
