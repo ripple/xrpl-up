@@ -28,7 +28,7 @@
     "postbuild": "cp src/faucet-server/package.json dist/faucet-server/package.json && cp src/faucet-server/Dockerfile dist/faucet-server/Dockerfile && mkdir -p dist/xrpld-image && cp src/xrpld-image/Dockerfile dist/xrpld-image/Dockerfile && chmod +x dist/cli.js",
     "dev": "tsx src/cli.ts",
     "clean": "rm -rf dist",
-    "prepare": "npm run build",
+    "prepare": "node scripts/prepare.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run tests/e2e",
