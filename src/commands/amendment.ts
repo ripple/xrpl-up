@@ -16,7 +16,9 @@ interface AmendmentInfo {
   name: string;
   enabled: boolean;
   supported: boolean;
-  vetoed: boolean;
+  // rippled reports true, nothing, or "Obsolete" (retired into the binary: its
+  // behaviour is always on and the flag can no longer be enabled).
+  vetoed?: boolean | 'Obsolete';
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -47,7 +49,7 @@ async function fetchFeatures(url: string): Promise<AmendmentInfo[]> {
       name?: string;
       enabled: boolean;
       supported: boolean;
-      vetoed: boolean;
+      vetoed?: boolean | 'Obsolete';
     }>;
     return Object.entries(features).map(([hash, info]) => ({
       hash,
@@ -233,10 +235,12 @@ export async function amendmentInfoCommand(nameOrHash: string, options: Amendmen
     row('Hash',      chalk.dim(found.hash));
     row('Enabled',   found.enabled   ? chalk.green('✔ yes') : chalk.dim('✗ no'));
     row('Supported', found.supported ? chalk.green('✔ yes') : chalk.red('✗ no (rippled image too old)'));
-    row('Vetoed',    found.vetoed    ? chalk.red('✔ yes') : chalk.dim('no'));
+    row('Vetoed',    found.vetoed === 'Obsolete'
+      ? chalk.yellow('retired (Obsolete) — always on in this rippled, cannot be enabled')
+      : found.vetoed ? chalk.red('✔ yes') : chalk.dim('no'));
     logger.blank();
 
-    if (!found.enabled && found.supported) {
+    if (!found.enabled && found.supported && found.vetoed !== 'Obsolete') {
       logger.dim(`  Enable with: xrpl-up amendment enable ${found.name}`);
       logger.blank();
     }
@@ -299,6 +303,13 @@ export async function amendmentEnableCommand(namesOrHashes: string[], options: A
       if (!found.supported) {
         spinner.fail(`Amendment not supported by local rippled build: ${found.name}`);
         logger.dim('  Upgrade the local rippled image to include this amendment.');
+        await client.disconnect();
+        process.exit(1);
+      }
+
+      if (found.vetoed === 'Obsolete') {
+        spinner.fail(`${found.name} is retired (Obsolete) in this rippled and cannot be enabled`);
+        logger.dim('  Its behaviour is already always on; queueing it would do nothing.');
         await client.disconnect();
         process.exit(1);
       }
@@ -382,15 +393,6 @@ export async function amendmentEnableCommand(namesOrHashes: string[], options: A
       printQueuedAmendments();
       logger.dim('  Run the following to start with the new amendment(s) active:');
       logger.dim(`    ${startCommand}`);
-      if (wasConsensusMode) {
-        // Force-enable at genesis does work here (both nodes build/sync the same
-        // genesis ledger with [amendments] applied) but has been observed to be
-        // intermittently racy on the first boot after a reset — see SPEC.md
-        // §5.6.1. If it doesn't show enabled right away, this is why.
-        logger.dim('  If xrpl-up amendment list still shows these as disabled a');
-        logger.dim('  few seconds after the network is ready, this is a known');
-        logger.dim('  intermittent race — run xrpl-up amendment list again.');
-      }
       logger.blank();
     } else {
       logger.blank();
