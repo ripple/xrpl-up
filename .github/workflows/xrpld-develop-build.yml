@@ -171,4 +171,4 @@ jobs:
           TAG="xrpld-$SLUG"
           gh release create "$TAG" "$FILE" --target "$(git rev-parse HEAD)" --prerelease \
             --title "xrpl-up for xrpld $VERSION" \
-            --notes "xrpl-up built against xrpld \`$VERSION\` (\`$DEB_CHANNEL\`). Install: \`npm install -g github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
+            --notes "xrpl-up built against xrpld \`$VERSION\` (\`$DEB_CHANNEL\`). Install the attached tarball: \`npm install -g https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$FILE\`. (Do not install from the git ref: that builds on your machine, and npm 10 skips the dev dependencies the build needs, so it fails with \"tsc: command not found\".) The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
