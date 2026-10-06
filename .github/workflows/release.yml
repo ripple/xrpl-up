@@ -117,6 +117,9 @@ jobs:
     with:
       ref: ${{ needs.get_version.outputs.release_branch }}
       upload-dist: true
+      # Releases additionally run the live testnet/devnet suite; ordinary
+      # pushes and PRs skip it (see test.yml's matrix comment).
+      network-tests: true
 
   pre_release:
     runs-on: ubuntu-latest

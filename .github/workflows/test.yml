@@ -15,6 +15,11 @@ on:
         required: false
         type: boolean
         default: false
+      network-tests:
+        description: 'Also run the testnet/devnet suite against live public networks (release only)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,25 +27,32 @@ concurrency:
 
 jobs:
   test:
-    name: e2e (node-${{ matrix.node-version }}, ${{ matrix.mode }})
+    name: e2e (node-${{ matrix.node-version }}, ${{ matrix.mode.name }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
     timeout-minutes: 180
     strategy:
       fail-fast: false
+      # The first three modes are hermetic — they run against a local rippled in
+      # Docker, so they are deterministic and safe to run on every push.
+      #
+      # "testnet" runs the full suite against the live public testnet/devnet
+      # (vault/**, permissioned-domain/** and the 18 *.network.test.ts files,
+      # which vitest.config.local.ts excludes precisely because they need a real
+      # public network). Those are slow and fail on upstream connectivity rather
+      # than on our changes, so they only run when the release pipeline asks for
+      # them via network-tests.
+      #
+      # Modes are objects rather than a plain list + include: an include: entry
+      # whose mode matches no combination *creates* one, which would silently
+      # re-add testnet to every run.
       matrix:
         node-version: [22, 24]
-        mode: [standalone, local-network, snapshot, testnet]
-        include:
-          - mode: standalone
-            test-script: test:e2e:local
-          - mode: local-network
-            test-script: test:e2e:local-network
-          - mode: snapshot
-            test-script: test:e2e:snapshot
-          - mode: testnet
-            test-script: test:e2e
+        mode: >-
+          ${{ inputs.network-tests
+              && fromJSON('[{"name":"standalone","script":"test:e2e:local"},{"name":"local-network","script":"test:e2e:local-network"},{"name":"snapshot","script":"test:e2e:snapshot"},{"name":"testnet","script":"test:e2e"}]')
+              || fromJSON('[{"name":"standalone","script":"test:e2e:local"},{"name":"local-network","script":"test:e2e:local-network"},{"name":"snapshot","script":"test:e2e:snapshot"}]') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -52,15 +64,18 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Pull rippled Docker image
-        run: docker pull rippleci/xrpld:3.3.0
-      - name: Run e2e tests (${{ matrix.mode }})
+        # Read from the built source rather than hardcoding a tag here, so this
+        # cannot go stale when DEFAULT_IMAGE is bumped (it previously pinned
+        # 3.3.0 and kept pulling an image no test used).
+        run: docker pull "$(node -p "require('./dist/core/compose.js').DEFAULT_IMAGE")"
+      - name: Run e2e tests (${{ matrix.mode.name }})
         env:
           XRPL_LOCAL_TEARDOWN: '1'
-        run: npm run ${{ matrix.test-script }}
+        run: npm run ${{ matrix.mode.script }}
       - name: Upload dist artifact
         # Only upload from the canonical Node version used by the release job.
         # Uploading from all matrix legs would create duplicate artifacts.
-        if: ${{ inputs.upload-dist && matrix.node-version == 22 && matrix.mode == 'standalone' }}
+        if: ${{ inputs.upload-dist && matrix.node-version == 22 && matrix.mode.name == 'standalone' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dist
