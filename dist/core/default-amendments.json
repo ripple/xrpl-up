@@ -1,0 +1,154 @@
+{
+    "xrpld": "deb deb-develop 0.0.0~dev-1236.20261005git63c97e7",
+    "mainnet": "wss://xrplcluster.com",
+    "amendments": [
+        {
+            "hash": "8CC0774A3BF66D1D22E76BBDA8E8A232E6B6313834301B3B23E8601196AE6455",
+            "name": "AMM"
+        },
+        {
+            "hash": "726F944886BCDF7433203787E93DD9AA87FAB74DFE3AF4785BA03BEFC97ADA1F",
+            "name": "AMMClawback"
+        },
+        {
+            "hash": "1CB67D082CF7D9102412D34258CEDB400E659352D3B207348889297A6D90F5EF",
+            "name": "Credentials"
+        },
+        {
+            "hash": "DAF3A6EB04FA5DC51E8E4F23E9B7022B693EFA636F23F22664746C77B5786B23",
+            "name": "DeepFreeze"
+        },
+        {
+            "hash": "DB432C3A09D9D5DFC7859F39AE5FF767ABC59AED0A9FB441E83B814D8946C109",
+            "name": "DID"
+        },
+        {
+            "hash": "C1CE18F2A268E6A849C27B3DE485006771B4C01B2FCEC4F18356FE92ECD6BB74",
+            "name": "DynamicNFT"
+        },
+        {
+            "hash": "5E9586DB3D765B4C5794658FB6BB385071E9838DF4016027E6E26820C8526724",
+            "name": "fixAMMClawbackRounding"
+        },
+        {
+            "hash": "35291ADD2D79EB6991343BDA0912269C817D0F094B02226C1C14AD2858962ED4",
+            "name": "fixAMMv1_1"
+        },
+        {
+            "hash": "1E7ED950F2F13C4F8E2A54103B74D57D5D298FFDBD005936164EE9E6484C438C",
+            "name": "fixAMMv1_2"
+        },
+        {
+            "hash": "7CA70A7674A26FA517412858659EBC7EDEEF7D2D608824464E6FDEFD06854E14",
+            "name": "fixAMMv1_3"
+        },
+        {
+            "hash": "303ACB16CF8DBD3B5C34F131A9D19A7DE01AE05F480A8A682B869D1B4AAC8CFC",
+            "name": "fixCleanup3_1_3"
+        },
+        {
+            "hash": "21B8D2F76F68E11E9C077A43BBBC394136E9987E99DDB73966DD68419467E431",
+            "name": "fixCleanup3_2_0"
+        },
+        {
+            "hash": "3298D47E1F3A8A24FECAA30F699B8FE1DD234E072834BA099AD8180FFCE0FEC4",
+            "name": "fixCleanup3_3_0"
+        },
+        {
+            "hash": "41765F664A8D67FF03DDB1C1A893DE6273690BA340A6C2B07C8D29D0DD013D3A",
+            "name": "fixDirectoryLimit"
+        },
+        {
+            "hash": "755C971C29971C9F20C6F080F2ED96F87884E40AD19554A5EBECDCEC8A1F77FE",
+            "name": "fixEmptyDID"
+        },
+        {
+            "hash": "763C37B352BE8C7A04E810F8E462644C45AFEAD624BF3894A08E5C917CF9FF39",
+            "name": "fixEnforceNFTokenTrustline"
+        },
+        {
+            "hash": "B32752F7DCC41FB86534118FC4EEC8F56E7BD0A7DB60FD73F93F257233C08E3A",
+            "name": "fixEnforceNFTokenTrustlineV2"
+        },
+        {
+            "hash": "3318EA0CF0755AF15DAC19F2B5C5BCBFF4B78BDD57609ACCAABE2C41309B051A",
+            "name": "fixFillOrKill"
+        },
+        {
+            "hash": "83FD6594FF83C1D105BD2B41D7E242D86ECB4A8220BD9AF4DA35CB0F69E39B2A",
+            "name": "fixFrozenLPTokenTransfer"
+        },
+        {
+            "hash": "6143A27B71F7DAF9330ECA7C5EC3D54C8083A4FDEF7016737EEC06AB61E82EE0",
+            "name": "fixIncludeKeyletFields"
+        },
+        {
+            "hash": "9196110C23EA879B4229E51C286180C7D02166DA712559F634372F5264D0EC59",
+            "name": "fixInnerObjTemplate2"
+        },
+        {
+            "hash": "8EC4304A06AF03BE953EA6EDA494864F6F3F30AA002BABA35869FBB8C6AE5D52",
+            "name": "fixInvalidTxFlags"
+        },
+        {
+            "hash": "AB8D932A5F338903FE5BCBD80B611FFED70839ABA3170E9CE01D947C0EDEDCF2",
+            "name": "fixMPTDeliveredAmount"
+        },
+        {
+            "hash": "C7981B764EC4439123A86CC7CCBA436E9B3FF73B3F10A0AE51882E404522FC41",
+            "name": "fixNFTokenPageLinks"
+        },
+        {
+            "hash": "D3456A862DC07E382827981CA02E21946E641877F19B8889031CC57FDCAC83E2",
+            "name": "fixPayChanCancelAfter"
+        },
+        {
+            "hash": "7BB62DC13EC72B775091E9C71BF8CF97E122647693B50C5E87A80DFD6FCFAC50",
+            "name": "fixPreviousTxnID"
+        },
+        {
+            "hash": "FF2D1E13CF6D22427111B967BD504917F63A900CECD320D6FD3AC9FA90344631",
+            "name": "fixPriceOracleOrder"
+        },
+        {
+            "hash": "31E0DA76FB8FB527CADCDF0E61CB9C94120966328EFA9DCA202135BAF319C0BA",
+            "name": "fixReducedOffersV2"
+        },
+        {
+            "hash": "DF8B4536989BDACE3F934F29423848B9F1D76D09BE6A1FCFE7E7F06AA26ABEAD",
+            "name": "fixRemoveNFTokenAutoTrustLine"
+        },
+        {
+            "hash": "32B8614321F7E070419115ABEAB1742EA20F3E3AF34432B5E2F474F8083260DC",
+            "name": "fixTokenEscrowV1"
+        },
+        {
+            "hash": "950AE2EA4654E47F04AA8739C0B214E242097E802FD372D24047A89AB1F5EC38",
+            "name": "MPTokensV1"
+        },
+        {
+            "hash": "EE3CF852F0506782D05E65D49E5DCC3D16D50898CD1B646BAE274863401CC3CE",
+            "name": "NFTokenMintOffer"
+        },
+        {
+            "hash": "677E401A423E3708363A36BA8B3A7D019D21AC5ABD00387BDBEA6BDE4C91247E",
+            "name": "PermissionedDEX"
+        },
+        {
+            "hash": "A730EB18A9D4BB52502C898589558B4CCEB4BE10044500EE5581137A2E80E849",
+            "name": "PermissionedDomains"
+        },
+        {
+            "hash": "96FD2F293A519AE1DB6F8BED23E4AD9119342DA7CB6BAFD00953D16C54205D8B",
+            "name": "PriceOracle"
+        },
+        {
+            "hash": "138B968F25822EFBF54C00F97031221C47B1EAB8321D93C7C2AEAF85F04EC5DF",
+            "name": "TokenEscrow"
+        },
+        {
+            "hash": "93E516234E35E08CA689FA33A6D38E103881F8DCB53023F728C307AA89D515A7",
+            "name": "XRPFees"
+        }
+    ]
+}
