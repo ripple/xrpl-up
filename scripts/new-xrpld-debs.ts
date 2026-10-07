@@ -1,23 +1,30 @@
 /**
- * Lists the xrpld builds in a packages.xrplf.org deb channel that are newer
- * than the last one already built, oldest first, as JSON:
+ * Lists the xrpld builds in a packages.xrplf.org deb channel that still need an
+ * xrpl-up built for them, oldest first, as JSON:
  *
- *   [{ "version": "0.0.0~dev-1238.20261005git9cbf78b", "slug": "0.0.0-dev-1238.20261005git9cbf78b", "run": 1238 }]
+ *   [{ "version": "0.0.0~dev-1238.20261005git9cbf78b", "slug": "0.0.0-dev-1238.20261005git9cbf78b", "run": 1238, "tested": true }]
  *
- *   npx tsx scripts/new-xrpld-debs.ts <channel> <lastRun> [cap]
+ *   DONE_SLUGS="<slug>\n<slug>" npx tsx scripts/new-xrpld-debs.ts <channel> [cap] [window]
+ *
+ * A build is done when its slug is in DONE_SLUGS (one per line): it has a release
+ * tag, or a failure marker. Only the newest `window` builds in the channel are
+ * considered (default 30, about a week), so a gap left by a failed build is
+ * retried but old history is never built. At most `cap` (default 4) are
+ * returned, keeping the newest. Only the newest returned build has
+ * tested = true; the rest are packaged and tagged without running the e2e suites.
  *
  * Develop versions are <xrpld version>-<CI run number>.<date>git<sha>; the run
- * number only ever increases. <lastRun> is the run number of the newest build
- * that already has a tag, or 0 if none does, in which case only the newest build
- * is returned rather than the channel's whole history. At most <cap> (default
- * 10) builds are returned, keeping the newest.
+ * number only ever increases.
  */
 const channel = process.argv[2] ?? 'deb-develop';
-const lastRun = Number(process.argv[3] ?? 0);
-const cap = Number(process.argv[4] ?? 10);
+const cap = Number(process.argv[3] ?? 4);
+const window = Number(process.argv[4] ?? 30);
+const done = new Set(
+  (process.env.DONE_SLUGS ?? '').split('\n').map((s) => s.trim()).filter(Boolean),
+);
 const url = `https://packages.xrplf.org/repository/${channel}/dists/any/main/binary-amd64/Packages`;
 
-interface Build { version: string; slug: string; run: number }
+interface Build { version: string; slug: string; run: number; tested: boolean }
 
 async function main(): Promise<void> {
   const res = await fetch(url);
@@ -30,13 +37,14 @@ async function main(): Promise<void> {
     if (pkg !== 'xrpld' || !version) continue; // not xrpld-assert / -dbgsym
     const run = Number(/-(\d+)\./.exec(version)?.[1] ?? /-(\d+)$/.exec(version)?.[1]);
     if (!Number.isFinite(run)) continue;
-    byRun.set(run, { version, slug: version.replace(/[^A-Za-z0-9_.-]/g, '-'), run });
+    byRun.set(run, { version, slug: version.replace(/[^A-Za-z0-9_.-]/g, '-'), run, tested: false });
   }
   if (byRun.size === 0) throw new Error(`no xrpld packages found in ${channel}`);
 
-  const all = [...byRun.values()].sort((a, b) => a.run - b.run);
-  const fresh = lastRun > 0 ? all.filter((b) => b.run > lastRun) : all.slice(-1);
-  console.log(JSON.stringify(fresh.slice(-cap)));
+  const recent = [...byRun.values()].sort((a, b) => a.run - b.run).slice(-window);
+  const todo = recent.filter((b) => !done.has(b.slug)).slice(-cap);
+  if (todo.length > 0) todo[todo.length - 1].tested = true;
+  console.log(JSON.stringify(todo));
 }
 
 main().catch((err) => {
