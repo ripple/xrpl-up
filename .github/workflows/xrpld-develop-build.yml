@@ -14,9 +14,12 @@ name: xrpld develop build
 #   npm install -g github:<repo>#xrpld-<slug>
 #
 # How a build counts as done (this is all the state there is):
-#   - a tag xrpld-<slug>         the build was published
-#   - a tag xrpld-failed-<slug>  its tests failed; it is not retried
-#     (delete the tag, or dispatch with `version`, to try it again)
+#   - a tag xrpld-<slug>           the build was published
+#   - tags xrpld-failed-<n>-<slug> one per failed attempt (tests, pin or packaging);
+#     a build is retried until it has 3, then skipped. Failures are mostly
+#     temporary (package server, Docker, the mainnet node the amendment step
+#     queries), so one is never final. Delete the tags, or dispatch with
+#     `version`, to try a build again.
 # Only the newest 30 builds are considered, at most 4 are built per run, and a run
 # does nothing while another run is active.
 
@@ -80,9 +83,11 @@ jobs:
             exit 0
           fi
 
-          # Builds with a release tag or a failure marker are done.
-          export DONE_SLUGS=$(git ls-remote --tags origin 'refs/tags/xrpld-*' \
-            | sed 's|.*refs/tags/||; s/^xrpld-failed-//; s/^xrpld-//')
+          # Done: published, or failed 3 times.
+          TAGS=$(git ls-remote --tags origin 'refs/tags/xrpld-*' | sed 's|.*refs/tags/||' | grep -v '\^{}$' || true)
+          PUBLISHED=$(printf '%s\n' "$TAGS" | grep -v '^xrpld-failed-' | sed 's/^xrpld-//' || true)
+          GAVE_UP=$(printf '%s\n' "$TAGS" | grep '^xrpld-failed-' | sed -E 's/^xrpld-failed-[0-9]+-//' | sort | uniq -c | awk '$1 >= 3 {print $2}' || true)
+          export DONE_SLUGS=$(printf '%s\n%s\n' "$PUBLISHED" "$GAVE_UP")
           BUILDS=$(npx tsx scripts/new-xrpld-debs.ts "$DEB_CHANNEL" 4 30)
           echo "to build: $BUILDS"
           emit "$BUILDS"
@@ -199,18 +204,18 @@ jobs:
             --notes "xrpl-up built against xrpld \`$VERSION\` (\`$DEB_CHANNEL\`). Install: \`npm install -g github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
           # The tag keeps the commit; the build branch is no longer needed.
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
-      # If the pin or packaging failed (a deb that won't install, a missing build
-      # branch), mark the build so later runs don't retry it forever.
+      # If the pin or packaging failed, count one failed attempt (see the header).
       - name: Mark the build failed
         if: ${{ failure() }}
         env:
           GH_TOKEN: ${{ github.token }}
           SLUG: ${{ matrix.slug }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$SLUG" -f "sha=$GITHUB_SHA" || true
+          N=$(( $(git ls-remote --tags origin "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$N-$SLUG" -f "sha=$GITHUB_SHA" || true
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
 
-  # Mark a build whose tests failed so later runs don't retry it forever.
+  # Count a failed attempt for a build whose tests failed.
   mark-failed:
     name: Mark failed ${{ matrix.slug }}
     needs: [detect, test]
@@ -223,10 +228,11 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.detect.outputs.tested) }}
     steps:
-      - name: Tag the build as failed and drop its branch
+      - name: Count the failed attempt and drop the build branch
         env:
           GH_TOKEN: ${{ github.token }}
           SLUG: ${{ matrix.slug }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$SLUG" -f "sha=$GITHUB_SHA" || true
+          N=$(( $(git ls-remote --tags origin "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$N-$SLUG" -f "sha=$GITHUB_SHA" || true
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
