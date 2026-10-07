@@ -2,6 +2,6 @@
   "image": null,
   "deb": {
     "channel": "deb-develop",
-    "version": "0.0.0~dev-1238.20261005git9cbf78b"
+    "version": "3.5.0~b0-1209.20260929git768aef3"
   }
 }
