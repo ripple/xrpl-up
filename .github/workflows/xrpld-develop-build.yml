@@ -50,7 +50,8 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - run: npm ci
+      # Only tsx is needed to list builds, so skip `prepare` (a full tsc build).
+      - run: npm ci --ignore-scripts
       - name: List builds that still need an xrpl-up
         id: detect
         env:
@@ -198,6 +199,16 @@ jobs:
             --notes "xrpl-up built against xrpld \`$VERSION\` (\`$DEB_CHANNEL\`). Install: \`npm install -g github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
           # The tag keeps the commit; the build branch is no longer needed.
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
+      # If the pin or packaging failed (a deb that won't install, a missing build
+      # branch), mark the build so later runs don't retry it forever.
+      - name: Mark the build failed
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SLUG: ${{ matrix.slug }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$SLUG" -f "sha=$GITHUB_SHA" || true
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
 
   # Mark a build whose tests failed so later runs don't retry it forever.
   mark-failed:
@@ -217,5 +228,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SLUG: ${{ matrix.slug }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$SLUG" -f "sha=$GITHUB_SHA"
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$SLUG" -f "sha=$GITHUB_SHA" || true
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
