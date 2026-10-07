@@ -21,8 +21,13 @@ on:
         type: boolean
         default: false
 
+# One group per ref under test. When this workflow is called with an explicit
+# `ref` (one xrpld build, or a release), that ref is the key, so different builds
+# never cancel each other. Keying on github.ref alone put every build's jobs in
+# one group with cancel-in-progress, so each job that started cancelled the
+# previous one and nothing finished.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
