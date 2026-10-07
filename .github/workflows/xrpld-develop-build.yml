@@ -1,17 +1,8 @@
 name: xrpld develop build
 
-# Builds an xrpl-up for every new xrpld build in packages.xrplf.org's deb-develop
-# channel. Each build:
-#   1. pins the deb in src/core/xrpld-source.json
-#   2. builds the xrpld image from it, boots it, and derives the default genesis
-#      amendments (enabled on mainnet, supported, not Obsolete) into
-#      src/core/default-amendments.json
-#   3. is tagged and published as a release with the packed tarball
-# The e2e suites run only for the newest build in a run; older builds in the same
-# run are packaged and tagged without them.
-#
-# No npm or Docker registry is involved. Install a build with
-#   npm install -g github:<repo>#xrpld-<slug>
+# Polls packages.xrplf.org's deb-develop channel and calls xrpld-build.yml (pin,
+# derive amendments, e2e test, tag, release) for every new xrpld build. Every
+# build is tested before it is tagged.
 #
 # How a build counts as done (this is all the state there is):
 #   - a tag xrpld-<slug>           the build was published
@@ -20,8 +11,11 @@ name: xrpld develop build
 #     temporary (package server, Docker, the mainnet node the amendment step
 #     queries), so one is never final. Delete the tags, or dispatch with
 #     `version`, to try a build again.
-# Only the newest 30 builds are considered, at most 4 are built per run, and a run
-# does nothing while another run is active.
+# Only the newest 30 builds are considered, at most 4 are built per poll, and a poll
+# does nothing while another poll is still running.
+#
+# Install a build with
+#   npm install -g github:<repo>#xrpld-<slug>
 
 on:
   schedule:
@@ -29,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Build this one xrpld deb version (tested), ignoring done/failed tags'
+        description: 'Build this one xrpld deb version, ignoring done/failed tags'
         required: false
         type: string
 
@@ -45,7 +39,6 @@ jobs:
       actions: read
     outputs:
       builds: ${{ steps.detect.outputs.builds }}
-      tested: ${{ steps.detect.outputs.tested }}
       any: ${{ steps.detect.outputs.any }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -64,21 +57,19 @@ jobs:
         run: |
           emit() {
             echo "builds=$1" >> "$GITHUB_OUTPUT"
-            echo "tested=$(node -e 'console.log(JSON.stringify(JSON.parse(process.argv[1]).filter(b => b.tested)))' "$1")" >> "$GITHUB_OUTPUT"
             if [ "$1" = "[]" ]; then echo "any=false" >> "$GITHUB_OUTPUT"; else echo "any=true" >> "$GITHUB_OUTPUT"; fi
           }
 
           if [ -n "$INPUT_VERSION" ]; then
-            SLUG=$(printf '%s' "$INPUT_VERSION" | sed 's/[^A-Za-z0-9_.-]/-/g')
-            emit "$(node -e 'console.log(JSON.stringify([{version: process.argv[1], slug: process.argv[2], run: 0, tested: true}]))' "$INPUT_VERSION" "$SLUG")"
+            emit "$(node -e 'console.log(JSON.stringify([{version: process.argv[1]}]))' "$INPUT_VERSION")"
             exit 0
           fi
 
-          # Don't overlap: a run takes longer than the poll interval.
+          # Don't overlap: a poll with builds in flight outlasts the poll interval.
           OTHERS=$(gh run list --workflow=xrpld-develop-build.yml --json databaseId,status \
             --jq "[.[] | select((.status == \"in_progress\" or .status == \"queued\") and .databaseId != $RUN_ID)] | length")
           if [ "$OTHERS" -gt 0 ]; then
-            echo "another run is active; nothing to do"
+            echo "another poll is still running; nothing to do"
             emit "[]"
             exit 0
           fi
@@ -92,147 +83,18 @@ jobs:
           echo "to build: $BUILDS"
           emit "$BUILDS"
 
-  prepare:
-    name: Pin ${{ matrix.slug }}
+  build:
+    name: Build ${{ matrix.version }}
     needs: detect
     if: needs.detect.outputs.any == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.detect.outputs.builds) }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - name: Pin the xrpld deb
-        env:
-          VERSION: ${{ matrix.version }}
-        run: |
-          node -e '
-            const fs = require("fs");
-            fs.writeFileSync("src/core/xrpld-source.json", JSON.stringify({
-              image: null,
-              deb: { channel: process.env.DEB_CHANNEL, version: process.env.VERSION },
-            }, null, 2) + "\n");
-          '
-      - name: Build the xrpld image and derive default amendments
-        run: npm run generate:amendments
-      - name: Commit to a build branch
-        env:
-          SLUG: ${{ matrix.slug }}
-        run: |
-          BRANCH="xrpld-build/$SLUG"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          # Commit the built dist/ too, so `npm install -g github:<repo>#<tag>` needs
-          # no build on the user's machine (npm 10 skips the dev dependencies a build
-          # needs). dist/ is gitignored, hence -f.
-          npm run build
-          git add -f dist
-          git add src/core/xrpld-source.json src/core/default-amendments.json
-          git commit -m "chore: build against xrpld $SLUG"
-          git push --force origin "$BRANCH"
-
-  # Only the newest build in a run is tested.
-  test:
-    name: Test ${{ matrix.slug }}
-    needs: [detect, prepare]
-    if: ${{ always() && needs.detect.outputs.any == 'true' && needs.prepare.result != 'cancelled' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.detect.outputs.tested) }}
-    uses: ./.github/workflows/test.yml
+    permissions:
+      contents: write
+      actions: read
+    uses: ./.github/workflows/xrpld-build.yml
     with:
-      ref: xrpld-build/${{ matrix.slug }}
-      upload-dist: false
-
-  # A build that is not tested is published once it is pinned; a tested one only
-  # if its tests passed.
-  publish:
-    name: Publish ${{ matrix.slug }}
-    needs: [detect, prepare, test]
-    if: ${{ always() && needs.detect.outputs.any == 'true' && needs.prepare.result != 'cancelled' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.detect.outputs.builds) }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        if: ${{ !matrix.tested || needs.test.result == 'success' }}
-        with:
-          ref: xrpld-build/${{ matrix.slug }}
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        if: ${{ !matrix.tested || needs.test.result == 'success' }}
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-        if: ${{ !matrix.tested || needs.test.result == 'success' }}
-      - name: Pack
-        id: pack
-        if: ${{ !matrix.tested || needs.test.result == 'success' }}
-        env:
-          SLUG: ${{ matrix.slug }}
-        run: |
-          PKG=$(npm pack --silent)
-          OUT="${PKG%.tgz}-xrpld-$SLUG.tgz"
-          mv "$PKG" "$OUT"
-          echo "file=$OUT" >> "$GITHUB_OUTPUT"
-      - name: Tag and release
-        if: ${{ !matrix.tested || needs.test.result == 'success' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SLUG: ${{ matrix.slug }}
-          VERSION: ${{ matrix.version }}
-          FILE: ${{ steps.pack.outputs.file }}
-        run: |
-          TAG="xrpld-$SLUG"
-          gh release create "$TAG" "$FILE" --target "$(git rev-parse HEAD)" --prerelease \
-            --title "xrpl-up for xrpld $VERSION" \
-            --notes "xrpl-up built against xrpld \`$VERSION\` (\`$DEB_CHANNEL\`). Install: \`npm install -g github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
-          # The tag keeps the commit; the build branch is no longer needed.
-          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
-      # If the pin or packaging failed, count one failed attempt (see the header).
-      - name: Mark the build failed
-        if: ${{ failure() }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SLUG: ${{ matrix.slug }}
-        run: |
-          N=$(( $(git ls-remote --tags origin "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$N-$SLUG" -f "sha=$GITHUB_SHA" || true
-          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
-
-  # Count a failed attempt for a build whose tests failed.
-  mark-failed:
-    name: Mark failed ${{ matrix.slug }}
-    needs: [detect, test]
-    if: ${{ always() && needs.test.result == 'failure' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.detect.outputs.tested) }}
-    steps:
-      - name: Count the failed attempt and drop the build branch
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SLUG: ${{ matrix.slug }}
-        run: |
-          N=$(( $(git ls-remote --tags origin "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$N-$SLUG" -f "sha=$GITHUB_SHA" || true
-          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
+      version: ${{ matrix.version }}
+      channel: deb-develop

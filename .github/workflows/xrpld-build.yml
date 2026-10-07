@@ -1,0 +1,168 @@
+name: xrpld build
+
+# Builds, tests and publishes an xrpl-up for ONE xrpld deb. Reusable: the poller
+# (xrpld-develop-build.yml) calls it for every new build it finds, and it can be
+# dispatched by hand with a version.
+#   1. pin the deb in src/core/xrpld-source.json
+#   2. build the xrpld image from it, boot it, and derive the default genesis
+#      amendments (enabled on mainnet, supported, not Obsolete) into
+#      src/core/default-amendments.json
+#   3. run the e2e suites (no testnet) against that build
+#   4. if they pass, tag xrpld-<slug> and publish a release with the packed tarball
+# If any step fails, one xrpld-failed-<n>-<slug> tag is added (see the poller for
+# how failures are counted).
+#
+# No npm or Docker registry is involved. Install a build with
+#   npm install -g github:<repo>#xrpld-<slug>
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'xrpld deb version, e.g. 0.0.0~dev-1238.20261005git9cbf78b'
+        required: true
+        type: string
+      channel:
+        description: 'packages.xrplf.org deb channel'
+        required: false
+        type: string
+        default: deb-develop
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'xrpld deb version, e.g. 0.0.0~dev-1238.20261005git9cbf78b'
+        required: true
+        type: string
+      channel:
+        description: 'packages.xrplf.org deb channel'
+        required: false
+        type: string
+        default: deb-develop
+
+# The same build never runs twice at once, however it was started.
+concurrency:
+  group: xrpld-build-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  meta:
+    name: Name the build
+    runs-on: ubuntu-latest
+    outputs:
+      slug: ${{ steps.slug.outputs.slug }}
+    steps:
+      - id: slug
+        env:
+          VERSION: ${{ inputs.version }}
+        run: echo "slug=$(printf '%s' "$VERSION" | sed 's/[^A-Za-z0-9_.-]/-/g')" >> "$GITHUB_OUTPUT"
+
+  prepare:
+    name: Pin ${{ needs.meta.outputs.slug }}
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - name: Pin the xrpld deb
+        env:
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            fs.writeFileSync("src/core/xrpld-source.json", JSON.stringify({
+              image: null,
+              deb: { channel: process.env.CHANNEL, version: process.env.VERSION },
+            }, null, 2) + "\n");
+          '
+      - name: Build the xrpld image and derive default amendments
+        run: npm run generate:amendments
+      - name: Commit to a build branch
+        env:
+          SLUG: ${{ needs.meta.outputs.slug }}
+        run: |
+          BRANCH="xrpld-build/$SLUG"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          # Commit the built dist/ too, so `npm install -g github:<repo>#<tag>` needs
+          # no build on the user's machine (npm 10 skips the dev dependencies a build
+          # needs). dist/ is gitignored, hence -f.
+          npm run build
+          git add -f dist
+          git add src/core/xrpld-source.json src/core/default-amendments.json
+          git commit -m "chore: build against xrpld $SLUG"
+          git push --force origin "$BRANCH"
+
+  test:
+    name: Test ${{ needs.meta.outputs.slug }}
+    needs: [meta, prepare]
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: xrpld-build/${{ needs.meta.outputs.slug }}
+      upload-dist: false
+
+  publish:
+    name: Publish ${{ needs.meta.outputs.slug }}
+    needs: [meta, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: xrpld-build/${{ needs.meta.outputs.slug }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - name: Pack
+        id: pack
+        env:
+          SLUG: ${{ needs.meta.outputs.slug }}
+        run: |
+          PKG=$(npm pack --silent)
+          OUT="${PKG%.tgz}-xrpld-$SLUG.tgz"
+          mv "$PKG" "$OUT"
+          echo "file=$OUT" >> "$GITHUB_OUTPUT"
+      - name: Tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SLUG: ${{ needs.meta.outputs.slug }}
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+          FILE: ${{ steps.pack.outputs.file }}
+        run: |
+          TAG="xrpld-$SLUG"
+          gh release create "$TAG" "$FILE" --target "$(git rev-parse HEAD)" --prerelease \
+            --title "xrpl-up for xrpld $VERSION" \
+            --notes "xrpl-up built against xrpld \`$VERSION\` (\`$CHANNEL\`), e2e tested. Install: \`npm install -g github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
+          # The tag keeps the commit; the build branch is no longer needed.
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
+
+  # Count one failed attempt if pinning, testing or publishing failed (a
+  # cancelled run is not a failure), and drop the build branch.
+  mark-failed:
+    name: Mark failed ${{ needs.meta.outputs.slug }}
+    needs: [meta, prepare, test, publish]
+    if: ${{ always() && (needs.prepare.result == 'failure' || needs.test.result == 'failure' || needs.publish.result == 'failure') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Count the failed attempt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SLUG: ${{ needs.meta.outputs.slug }}
+        run: |
+          N=$(( $(git ls-remote "https://github.com/$GITHUB_REPOSITORY" "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$N-$SLUG" -f "sha=$GITHUB_SHA" || true
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
