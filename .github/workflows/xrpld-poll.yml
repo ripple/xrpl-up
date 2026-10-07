@@ -1,0 +1,100 @@
+name: xrpld poll
+
+# Polls packages.xrplf.org's deb-develop channel and calls xrpld-tag.yml (pin,
+# derive amendments, e2e test, tag, release) for every new xrpld build. Every
+# build is tested before it is tagged.
+#
+# How a build counts as done (this is all the state there is):
+#   - a tag xrpld-<slug>           the build was published
+#   - tags xrpld-failed-<n>-<slug> one per failed attempt (tests, pin or packaging);
+#     a build is retried until it has 3, then skipped. Failures are mostly
+#     temporary (package server, Docker, the mainnet node the amendment step
+#     queries), so one is never final. Delete the tags, or dispatch with
+#     `version`, to try a build again.
+# Only the newest 30 builds are considered, at most 4 are built per poll, and a poll
+# does nothing while another poll is still running.
+#
+# Install a build with
+#   npm install -g github:<repo>#xrpld-<slug>
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Build this one xrpld deb version, ignoring done/failed tags'
+        required: false
+        type: string
+
+env:
+  DEB_CHANNEL: deb-develop
+
+jobs:
+  detect:
+    name: Find new xrpld builds
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      builds: ${{ steps.detect.outputs.builds }}
+      any: ${{ steps.detect.outputs.any }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+      # Only tsx is needed to list builds, so skip `prepare` (a full tsc build).
+      - run: npm ci --ignore-scripts
+      - name: List builds that still need an xrpl-up
+        id: detect
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          emit() {
+            echo "builds=$1" >> "$GITHUB_OUTPUT"
+            if [ "$1" = "[]" ]; then echo "any=false" >> "$GITHUB_OUTPUT"; else echo "any=true" >> "$GITHUB_OUTPUT"; fi
+          }
+
+          if [ -n "$INPUT_VERSION" ]; then
+            emit "$(node -e 'console.log(JSON.stringify([{version: process.argv[1]}]))' "$INPUT_VERSION")"
+            exit 0
+          fi
+
+          # Don't overlap: a poll with builds in flight outlasts the poll interval.
+          OTHERS=$(gh run list --workflow=xrpld-poll.yml --json databaseId,status \
+            --jq "[.[] | select((.status == \"in_progress\" or .status == \"queued\") and .databaseId != $RUN_ID)] | length")
+          if [ "$OTHERS" -gt 0 ]; then
+            echo "another poll is still running; nothing to do"
+            emit "[]"
+            exit 0
+          fi
+
+          # Done: published, or failed 3 times.
+          TAGS=$(git ls-remote --tags origin 'refs/tags/xrpld-*' | sed 's|.*refs/tags/||' | grep -v '\^{}$' || true)
+          PUBLISHED=$(printf '%s\n' "$TAGS" | grep -v '^xrpld-failed-' | sed 's/^xrpld-//' || true)
+          GAVE_UP=$(printf '%s\n' "$TAGS" | grep '^xrpld-failed-' | sed -E 's/^xrpld-failed-[0-9]+-//' | sort | uniq -c | awk '$1 >= 3 {print $2}' || true)
+          export DONE_SLUGS=$(printf '%s\n%s\n' "$PUBLISHED" "$GAVE_UP")
+          BUILDS=$(npx tsx scripts/new-xrpld-debs.ts "$DEB_CHANNEL" 4 30)
+          echo "to build: $BUILDS"
+          emit "$BUILDS"
+
+  build:
+    name: Tag ${{ matrix.version }}
+    needs: detect
+    if: needs.detect.outputs.any == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.detect.outputs.builds) }}
+    permissions:
+      contents: write
+      actions: read
+    uses: ./.github/workflows/xrpld-tag.yml
+    with:
+      version: ${{ matrix.version }}
+      channel: deb-develop
