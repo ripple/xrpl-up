@@ -1,6 +1,6 @@
-name: xrpld develop build
+name: xrpld poll
 
-# Polls packages.xrplf.org's deb-develop channel and calls xrpld-build.yml (pin,
+# Polls packages.xrplf.org's deb-develop channel and calls xrpld-tag.yml (pin,
 # derive amendments, e2e test, tag, release) for every new xrpld build. Every
 # build is tested before it is tagged.
 #
@@ -66,7 +66,7 @@ jobs:
           fi
 
           # Don't overlap: a poll with builds in flight outlasts the poll interval.
-          OTHERS=$(gh run list --workflow=xrpld-develop-build.yml --json databaseId,status \
+          OTHERS=$(gh run list --workflow=xrpld-poll.yml --json databaseId,status \
             --jq "[.[] | select((.status == \"in_progress\" or .status == \"queued\") and .databaseId != $RUN_ID)] | length")
           if [ "$OTHERS" -gt 0 ]; then
             echo "another poll is still running; nothing to do"
@@ -84,7 +84,7 @@ jobs:
           emit "$BUILDS"
 
   build:
-    name: Build ${{ matrix.version }}
+    name: Tag ${{ matrix.version }}
     needs: detect
     if: needs.detect.outputs.any == 'true'
     strategy:
@@ -94,7 +94,7 @@ jobs:
     permissions:
       contents: write
       actions: read
-    uses: ./.github/workflows/xrpld-build.yml
+    uses: ./.github/workflows/xrpld-tag.yml
     with:
       version: ${{ matrix.version }}
       channel: deb-develop

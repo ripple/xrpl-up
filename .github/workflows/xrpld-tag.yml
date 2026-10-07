@@ -1,7 +1,7 @@
-name: xrpld build
+name: xrpld tag
 
 # Builds, tests and publishes an xrpl-up for ONE xrpld deb. Reusable: the poller
-# (xrpld-develop-build.yml) calls it for every new build it finds, and it can be
+# (xrpld-poll.yml) calls it for every new build it finds, and it can be
 # dispatched by hand with a version.
 #   1. pin the deb in src/core/xrpld-source.json
 #   2. build the xrpld image from it, boot it, and derive the default genesis
