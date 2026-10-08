@@ -15,7 +15,7 @@ name: xrpld poll
 # does nothing while another poll is still running.
 #
 # Install a build with
-#   npm install -g github:<repo>#xrpld-<slug>
+#   npm install -g --install-links github:<repo>#xrpld-<slug>
 
 on:
   schedule:

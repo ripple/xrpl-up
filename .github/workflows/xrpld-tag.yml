@@ -14,7 +14,7 @@ name: xrpld tag
 # how failures are counted).
 #
 # No npm or Docker registry is involved. Install a build with
-#   npm install -g github:<repo>#xrpld-<slug>
+#   npm install -g --install-links github:<repo>#xrpld-<slug>
 
 on:
   workflow_call:
@@ -93,7 +93,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          # Commit the built dist/ too, so `npm install -g github:<repo>#<tag>` needs
+          # Commit the built dist/ too, so `npm install -g --install-links github:<repo>#<tag>` needs
           # no build on the user's machine (npm 10 skips the dev dependencies a build
           # needs). dist/ is gitignored, hence -f.
           npm run build
@@ -138,8 +138,10 @@ jobs:
         run: |
           git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
           git config --global --add url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "git@github.com:"
+          # Without --install-links npm 10 and 11 link the global install to a temp
+          # clone that is deleted afterwards, leaving no `xrpl-up` on PATH.
           npm --version
-          npm install -g "github:${GITHUB_REPOSITORY}#xrpld-build/${SLUG}"
+          npm install -g --install-links "github:${GITHUB_REPOSITORY}#xrpld-build/${SLUG}"
           xrpl-up --version
       - name: Start the local network
         working-directory: ${{ runner.temp }}
@@ -207,7 +209,7 @@ jobs:
           TAG="xrpld-$SLUG"
           gh release create "$TAG" "$FILE" --target "$(git rev-parse HEAD)" --prerelease \
             --title "xrpl-up for xrpld $VERSION" \
-            --notes "xrpl-up built against xrpld \`$VERSION\` (\`$CHANNEL\`), e2e tested. Install: \`npm install -g github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
+            --notes "xrpl-up built against xrpld \`$VERSION\` (\`$CHANNEL\`), e2e tested. Install: \`npm install -g --install-links github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
           # The tag keeps the commit; the build branch is no longer needed.
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
 
