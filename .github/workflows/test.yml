@@ -36,6 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
     timeout-minutes: 180
     strategy:
       fail-fast: false
@@ -68,6 +69,12 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+      - name: Log in to ghcr.io
+        # A pinned xrpld image may live in the calling repo's ghcr.io namespace. Public
+        # images and local deb builds don't need the login, so a failure is ignored.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin || true
       - name: Prepare xrpld image
         # Builds the pinned deb into a local image, or pulls a registry image,
         # whichever src/core/xrpld-source.json says — nothing is hardcoded here.
