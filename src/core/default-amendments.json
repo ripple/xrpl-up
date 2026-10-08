@@ -1,5 +1,5 @@
 {
-  "xrpld": "deb deb-develop 0.0.0~dev-1238.20261005git9cbf78b",
+  "xrpld": "deb deb-develop 0.0.0~dev-1257.20261008gitede8af8",
   "mainnet": "wss://xrplcluster.com",
   "amendments": [
     {
