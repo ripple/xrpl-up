@@ -129,11 +129,20 @@ jobs:
         env:
           SLUG: ${{ needs.meta.outputs.slug }}
           GH_TOKEN: ${{ github.token }}
+          SOURCE_REPO: ${{ inputs.source-repo }}
         run: |
           BRANCH="xrpld-build/$SLUG"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
+          if [ -n "$SOURCE_REPO" ] && [ "$SOURCE_REPO" != "$GITHUB_REPOSITORY" ]; then
+            # The code comes from another repo. The calling repo does not have its
+            # history, so push a standalone commit, and leave out .github/workflows:
+            # GITHUB_TOKEN may not create workflow files.
+            git checkout --orphan "$BRANCH"
+            git rm -rq --cached .github/workflows
+          else
+            git checkout -b "$BRANCH"
+          fi
           # Commit the built dist/ too, so `npm install -g --install-links github:<repo>#<tag>` needs
           # no build on the user's machine (npm 10 skips the dev dependencies a build
           # needs). dist/ is gitignored, hence -f.
