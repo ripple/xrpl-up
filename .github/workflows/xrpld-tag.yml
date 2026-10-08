@@ -8,12 +8,13 @@ name: xrpld tag
 #      amendments (enabled on mainnet, supported, not Obsolete) into
 #      src/core/default-amendments.json
 #   3. run the e2e suites (no testnet) against that build
-#   4. if they pass, tag xrpld-<slug> and publish a release with the packed tarball
+#   4. install it the way a user does (Node 22 and 24) and start it
+#   5. if all of that passes, tag xrpld-<slug> and publish a release with the packed tarball
 # If any step fails, one xrpld-failed-<n>-<slug> tag is added (see the poller for
 # how failures are counted).
 #
 # No npm or Docker registry is involved. Install a build with
-#   npm install -g github:<repo>#xrpld-<slug>
+#   npm install -g --install-links github:<repo>#xrpld-<slug>
 
 on:
   workflow_call:
@@ -92,7 +93,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          # Commit the built dist/ too, so `npm install -g github:<repo>#<tag>` needs
+          # Commit the built dist/ too, so `npm install -g --install-links github:<repo>#<tag>` needs
           # no build on the user's machine (npm 10 skips the dev dependencies a build
           # needs). dist/ is gitignored, hence -f.
           npm run build
@@ -109,9 +110,73 @@ jobs:
       ref: xrpld-build/${{ needs.meta.outputs.slug }}
       upload-dist: false
 
+  # Install the build the way a user does, from the build branch (the tag does not
+  # exist yet), and start it, on every Node version the suites cover. A build that
+  # cannot be installed or started is never tagged.
+  verify-install:
+    name: Install and start (node-${{ matrix.node-version }})
+    needs: [meta, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SLUG: ${{ needs.meta.outputs.slug }}
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+      # No checkout: the point is to install from the git ref alone. The token lets
+      # the install clone a private repo; for a public one it changes nothing.
+      - name: Install from the build branch
+        working-directory: ${{ runner.temp }}
+        run: |
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global --add url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "git@github.com:"
+          # Without --install-links npm 10 and 11 link the global install to a temp
+          # clone that is deleted afterwards, leaving no `xrpl-up` on PATH.
+          npm --version
+          npm install -g --install-links "github:${GITHUB_REPOSITORY}#xrpld-build/${SLUG}"
+          xrpl-up --version
+      - name: Start the local network
+        working-directory: ${{ runner.temp }}
+        run: xrpl-up start --local-network --no-secrets
+      - name: Check the default amendments are enabled
+        run: |
+          PKG="$(npm root -g)/xrpl-up"
+          EXPECTED=$(node -e 'console.log(require(process.argv[1]).amendments.length)' "$PKG/dist/core/default-amendments.json")
+          INFO=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent server_info)
+          STATE=$(echo "$INFO" | jq -r '.result.info.server_state')
+          ENABLED=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature | jq '[.result.features[] | select(.enabled)] | length')
+          echo "server_state=$STATE enabled=$ENABLED expected=$EXPECTED"
+          [ "$STATE" = "proposing" ] && [ "$ENABLED" = "$EXPECTED" ]
+      - name: Enable one more amendment
+        working-directory: ${{ runner.temp }}
+        run: |
+          # Any amendment the build supports that is neither enabled nor retired.
+          NAME=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature \
+            | jq -r '[.result.features[] | select(.supported and (.enabled | not) and (.vetoed != "Obsolete")) | .name] | sort | first')
+          BEFORE=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature | jq '[.result.features[] | select(.enabled)] | length')
+          echo "enabling $NAME (enabled now: $BEFORE)"
+          xrpl-up amendment enable "$NAME" --auto-reset
+          xrpl-up start --local-network --no-secrets
+          AFTER=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature | jq '[.result.features[] | select(.enabled)] | length')
+          ON=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature | jq -r --arg n "$NAME" '[.result.features[] | select(.name == $n and .enabled)] | length')
+          echo "enabled after: $AFTER, $NAME enabled: $ON"
+          [ "$AFTER" = "$((BEFORE + 1))" ] && [ "$ON" = "1" ]
+      - name: Stop
+        if: always()
+        working-directory: ${{ runner.temp }}
+        run: xrpl-up stop || true
+
   publish:
     name: Publish ${{ needs.meta.outputs.slug }}
-    needs: [meta, test]
+    needs: [meta, verify-install]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -142,9 +207,15 @@ jobs:
           FILE: ${{ steps.pack.outputs.file }}
         run: |
           TAG="xrpld-$SLUG"
+          # Another run (a manual dispatch racing the poller) may have published
+          # this build already; that is a success, not a failure.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG is already published"
+            exit 0
+          fi
           gh release create "$TAG" "$FILE" --target "$(git rev-parse HEAD)" --prerelease \
             --title "xrpl-up for xrpld $VERSION" \
-            --notes "xrpl-up built against xrpld \`$VERSION\` (\`$CHANNEL\`), e2e tested. Install: \`npm install -g github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
+            --notes "xrpl-up built against xrpld \`$VERSION\` (\`$CHANNEL\`), e2e tested. Install: \`npm install -g --install-links github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
           # The tag keeps the commit; the build branch is no longer needed.
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
 
@@ -152,8 +223,8 @@ jobs:
   # cancelled run is not a failure), and drop the build branch.
   mark-failed:
     name: Mark failed ${{ needs.meta.outputs.slug }}
-    needs: [meta, prepare, test, publish]
-    if: ${{ always() && (needs.prepare.result == 'failure' || needs.test.result == 'failure' || needs.publish.result == 'failure') }}
+    needs: [meta, prepare, test, verify-install, publish]
+    if: ${{ always() && (needs.prepare.result == 'failure' || needs.test.result == 'failure' || needs.verify-install.result == 'failure' || needs.publish.result == 'failure') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -163,6 +234,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SLUG: ${{ needs.meta.outputs.slug }}
         run: |
+          # A build that got published by another run is not a failed attempt.
+          if gh release view "xrpld-$SLUG" >/dev/null 2>&1; then exit 0; fi
           N=$(( $(git ls-remote "https://github.com/$GITHUB_REPOSITORY" "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
           gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$N-$SLUG" -f "sha=$GITHUB_SHA" || true
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
