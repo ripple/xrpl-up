@@ -207,6 +207,12 @@ jobs:
           FILE: ${{ steps.pack.outputs.file }}
         run: |
           TAG="xrpld-$SLUG"
+          # Another run (a manual dispatch racing the poller) may have published
+          # this build already; that is a success, not a failure.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG is already published"
+            exit 0
+          fi
           gh release create "$TAG" "$FILE" --target "$(git rev-parse HEAD)" --prerelease \
             --title "xrpl-up for xrpld $VERSION" \
             --notes "xrpl-up built against xrpld \`$VERSION\` (\`$CHANNEL\`), e2e tested. Install: \`npm install -g --install-links github:${GITHUB_REPOSITORY}#$TAG\`. The default genesis amendments for this build are in \`src/core/default-amendments.json\`."
@@ -228,6 +234,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SLUG: ${{ needs.meta.outputs.slug }}
         run: |
+          # A build that got published by another run is not a failed attempt.
+          if gh release view "xrpld-$SLUG" >/dev/null 2>&1; then exit 0; fi
           N=$(( $(git ls-remote "https://github.com/$GITHUB_REPOSITORY" "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
           gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$N-$SLUG" -f "sha=$GITHUB_SHA" || true
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
