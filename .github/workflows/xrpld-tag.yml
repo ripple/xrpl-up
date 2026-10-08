@@ -8,7 +8,8 @@ name: xrpld tag
 #      amendments (enabled on mainnet, supported, not Obsolete) into
 #      src/core/default-amendments.json
 #   3. run the e2e suites (no testnet) against that build
-#   4. if they pass, tag xrpld-<slug> and publish a release with the packed tarball
+#   4. install it the way a user does (Node 22 and 24) and start it
+#   5. if all of that passes, tag xrpld-<slug> and publish a release with the packed tarball
 # If any step fails, one xrpld-failed-<n>-<slug> tag is added (see the poller for
 # how failures are counted).
 #
@@ -109,9 +110,71 @@ jobs:
       ref: xrpld-build/${{ needs.meta.outputs.slug }}
       upload-dist: false
 
+  # Install the build the way a user does, from the build branch (the tag does not
+  # exist yet), and start it, on every Node version the suites cover. A build that
+  # cannot be installed or started is never tagged.
+  verify-install:
+    name: Install and start (node-${{ matrix.node-version }})
+    needs: [meta, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SLUG: ${{ needs.meta.outputs.slug }}
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+      # No checkout: the point is to install from the git ref alone. The token lets
+      # the install clone a private repo; for a public one it changes nothing.
+      - name: Install from the build branch
+        working-directory: ${{ runner.temp }}
+        run: |
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global --add url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "git@github.com:"
+          npm --version
+          npm install -g "github:${GITHUB_REPOSITORY}#xrpld-build/${SLUG}"
+          xrpl-up --version
+      - name: Start the local network
+        working-directory: ${{ runner.temp }}
+        run: xrpl-up start --local-network --no-secrets
+      - name: Check the default amendments are enabled
+        run: |
+          PKG="$(npm root -g)/xrpl-up"
+          EXPECTED=$(node -e 'console.log(require(process.argv[1]).amendments.length)' "$PKG/dist/core/default-amendments.json")
+          INFO=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent server_info)
+          STATE=$(echo "$INFO" | jq -r '.result.info.server_state')
+          ENABLED=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature | jq '[.result.features[] | select(.enabled)] | length')
+          echo "server_state=$STATE enabled=$ENABLED expected=$EXPECTED"
+          [ "$STATE" = "proposing" ] && [ "$ENABLED" = "$EXPECTED" ]
+      - name: Enable one more amendment
+        working-directory: ${{ runner.temp }}
+        run: |
+          # Any amendment the build supports that is neither enabled nor retired.
+          NAME=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature \
+            | jq -r '[.result.features[] | select(.supported and (.enabled | not) and (.vetoed != "Obsolete")) | .name] | sort | first')
+          BEFORE=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature | jq '[.result.features[] | select(.enabled)] | length')
+          echo "enabling $NAME (enabled now: $BEFORE)"
+          xrpl-up amendment enable "$NAME" --auto-reset
+          xrpl-up start --local-network --no-secrets
+          AFTER=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature | jq '[.result.features[] | select(.enabled)] | length')
+          ON=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature | jq -r --arg n "$NAME" '[.result.features[] | select(.name == $n and .enabled)] | length')
+          echo "enabled after: $AFTER, $NAME enabled: $ON"
+          [ "$AFTER" = "$((BEFORE + 1))" ] && [ "$ON" = "1" ]
+      - name: Stop
+        if: always()
+        working-directory: ${{ runner.temp }}
+        run: xrpl-up stop || true
+
   publish:
     name: Publish ${{ needs.meta.outputs.slug }}
-    needs: [meta, test]
+    needs: [meta, verify-install]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -152,8 +215,8 @@ jobs:
   # cancelled run is not a failure), and drop the build branch.
   mark-failed:
     name: Mark failed ${{ needs.meta.outputs.slug }}
-    needs: [meta, prepare, test, publish]
-    if: ${{ always() && (needs.prepare.result == 'failure' || needs.test.result == 'failure' || needs.publish.result == 'failure') }}
+    needs: [meta, prepare, test, verify-install, publish]
+    if: ${{ always() && (needs.prepare.result == 'failure' || needs.test.result == 'failure' || needs.verify-install.result == 'failure' || needs.publish.result == 'failure') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
