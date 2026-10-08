@@ -90,6 +90,9 @@ jobs:
         with:
           repository: ${{ inputs.source-repo || github.repository }}
           ref: ${{ inputs.source-ref || github.ref }}
+          # Full history: the build branch is pushed to the calling repo, which may
+          # not have this repo's commits, and a shallow clone cannot be pushed there.
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
