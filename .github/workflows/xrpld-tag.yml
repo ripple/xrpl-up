@@ -28,6 +28,24 @@ on:
         required: false
         type: string
         default: deb-develop
+      image:
+        description: >-
+          Pin this prebuilt registry image (e.g. ghcr.io/<owner>/<repo>/xrpld:<tag>,
+          name ending in /xrpld) instead of building xrpld from the apt channel.
+          The caller builds and pushes it first.
+        required: false
+        type: string
+        default: ''
+      source-repo:
+        description: 'Repo holding the xrpl-up code to build (default: the calling repo)'
+        required: false
+        type: string
+        default: ''
+      source-ref:
+        description: 'Ref of source-repo to build (default: the calling ref)'
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       version:
@@ -64,14 +82,36 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
+      packages: read
     steps:
+      # The code to build can live in another repo (a repo that reuses this workflow builds
+      # xrpl-up from here); the build branch is pushed to the calling repo.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ inputs.source-repo || github.repository }}
+          ref: ${{ inputs.source-ref || github.ref }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
+      - name: Pin the prebuilt image
+        if: ${{ inputs.image != '' }}
+        env:
+          IMAGE: ${{ inputs.image }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The amendment step below pulls this image, which may need a login.
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin || true
+          node -e '
+            const fs = require("fs");
+            fs.writeFileSync("src/core/xrpld-source.json", JSON.stringify({
+              image: process.env.IMAGE,
+              deb: null,
+            }, null, 2) + "\n");
+          '
       - name: Pin the xrpld deb
+        if: ${{ inputs.image == '' }}
         env:
           VERSION: ${{ inputs.version }}
           CHANNEL: ${{ inputs.channel }}
@@ -88,6 +128,7 @@ jobs:
       - name: Commit to a build branch
         env:
           SLUG: ${{ needs.meta.outputs.slug }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           BRANCH="xrpld-build/$SLUG"
           git config user.name "github-actions[bot]"
@@ -100,12 +141,17 @@ jobs:
           git add -f dist
           git add src/core/xrpld-source.json src/core/default-amendments.json
           git commit -m "chore: build against xrpld $SLUG"
-          git push --force origin "$BRANCH"
+          # origin is the source repo; the build branch belongs to the calling repo.
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BRANCH"
 
   test:
     name: Test ${{ needs.meta.outputs.slug }}
     needs: [meta, prepare]
-    uses: ./.github/workflows/test.yml
+    # Full path: when this workflow is called from another repo, ./ would not find it.
+    uses: ripple/xrpl-up/.github/workflows/test.yml@main
+    permissions:
+      contents: read
+      packages: read
     with:
       ref: xrpld-build/${{ needs.meta.outputs.slug }}
       upload-dist: false
@@ -120,6 +166,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -132,7 +179,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       # No checkout: the point is to install from the git ref alone. The token lets
-      # the install clone a private repo; for a public one it changes nothing.
+      # the install clone a repo that is not public; for a public one it changes nothing.
       - name: Install from the build branch
         working-directory: ${{ runner.temp }}
         run: |
@@ -143,6 +190,9 @@ jobs:
           npm --version
           npm install -g --install-links "github:${GITHUB_REPOSITORY}#xrpld-build/${SLUG}"
           xrpl-up --version
+      - name: Log in to the image registry
+        if: ${{ inputs.image != '' }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       - name: Start the local network
         working-directory: ${{ runner.temp }}
         run: xrpl-up start --local-network --no-secrets

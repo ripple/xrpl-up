@@ -94,6 +94,9 @@ jobs:
     permissions:
       contents: write
       actions: read
+      # The tag workflow's jobs ask for this (to pull a pinned image); a called
+      # workflow cannot have more permission than its caller grants.
+      packages: read
     uses: ./.github/workflows/xrpld-tag.yml
     with:
       version: ${{ matrix.version }}
