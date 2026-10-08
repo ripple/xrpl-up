@@ -286,6 +286,6 @@ jobs:
         run: |
           # A build that got published by another run is not a failed attempt.
           if gh release view "xrpld-$SLUG" >/dev/null 2>&1; then exit 0; fi
-          N=$(( $(git ls-remote "https://github.com/$GITHUB_REPOSITORY" "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
+          N=$(( $(git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
           gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$N-$SLUG" -f "sha=$GITHUB_SHA" || true
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
