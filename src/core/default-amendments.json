@@ -1,5 +1,5 @@
 {
-  "xrpld": "deb deb-develop 0.0.0~dev-1238.20261005git9cbf78b",
+  "xrpld": "deb deb-develop 0.0.0~dev-1259.20261009git88c1f1e",
   "mainnet": "wss://xrplcluster.com",
   "amendments": [
     {
@@ -129,6 +129,10 @@
     {
       "hash": "EE3CF852F0506782D05E65D49E5DCC3D16D50898CD1B646BAE274863401CC3CE",
       "name": "NFTokenMintOffer"
+    },
+    {
+      "hash": "0F48FF561C709540328F31F1C97FD512ACC8B4E42138A161CB0E21ECA292540B",
+      "name": "PermissionDelegationV1_1"
     },
     {
       "hash": "677E401A423E3708363A36BA8B3A7D019D21AC5ABD00387BDBEA6BDE4C91247E",
