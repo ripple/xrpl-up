@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
+import os from "node:os";
 
 export default defineConfig({
   resolve: {
@@ -27,7 +28,11 @@ export default defineConfig({
     poolOptions: {
       forks: {
         minForks: 1,
-        maxForks: 4,
+        // One worker per core, up to 4. Each worker spawns CLI processes next to the
+        // node's Docker containers, and the tests are timing-sensitive (a transaction
+        // expires a few ledgers after it is built). 4 workers on a 2-core runner
+        // starved them and failed different tests on every run.
+        maxForks: Math.min(4, os.availableParallelism()),
       },
     },
     include: ["tests/e2e/**/*.test.ts"],
