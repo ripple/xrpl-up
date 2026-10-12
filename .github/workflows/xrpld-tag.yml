@@ -198,13 +198,26 @@ jobs:
         run: xrpl-up start --local-network --no-secrets
       - name: Check the default amendments are enabled
         run: |
+          # Every amendment in default-amendments.json must be enabled (what the e2e
+          # amendment test asserts). A node may enable more than the list, so extras
+          # are printed, not failed.
           PKG="$(npm root -g)/xrpl-up"
-          EXPECTED=$(node -e 'console.log(require(process.argv[1]).amendments.length)' "$PKG/dist/core/default-amendments.json")
-          INFO=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent server_info)
-          STATE=$(echo "$INFO" | jq -r '.result.info.server_state')
-          ENABLED=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature | jq '[.result.features[] | select(.enabled)] | length')
-          echo "server_state=$STATE enabled=$ENABLED expected=$EXPECTED"
-          [ "$STATE" = "proposing" ] && [ "$ENABLED" = "$EXPECTED" ]
+          STATE=$(docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent server_info | jq -r '.result.info.server_state')
+          docker exec xrpl-up-local-rippled-1 /usr/bin/xrpld --conf /etc/xrpld/xrpld.cfg --silent feature \
+            | jq -r '.result.features | to_entries[] | select(.value.enabled) | "\(.key) \(.value.name)"' > enabled.txt
+          LIST="$PKG/dist/core/default-amendments.json" node -e '
+            const fs = require("fs");
+            const want = require(process.env.LIST).amendments;
+            const have = new Map(fs.readFileSync("enabled.txt", "utf8").trim().split("\n").map((l) => { const [h, ...n] = l.split(" "); return [h.toUpperCase(), n.join(" ")]; }));
+            const missing = want.filter((a) => !have.has(a.hash.toUpperCase())).map((a) => a.name);
+            const wanted = new Set(want.map((a) => a.hash.toUpperCase()));
+            const extra = [...have].filter(([h]) => !wanted.has(h)).map(([, n]) => n);
+            console.log(`enabled=${have.size} default list=${want.length}`);
+            if (extra.length) console.log(`enabled but not in the default list: ${extra.join(", ")}`);
+            if (missing.length) { console.log(`::error::default amendments not enabled: ${missing.join(", ")}`); process.exit(1); }
+          '
+          echo "server_state=$STATE"
+          [ "$STATE" = "proposing" ]
       - name: Enable one more amendment
         working-directory: ${{ runner.temp }}
         run: |
