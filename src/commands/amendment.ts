@@ -128,8 +128,10 @@ export async function amendmentListCommand(options: AmendmentListOptions): Promi
 
     spinner.stop();
 
+    // "Disabled" means an amendment that could still be enabled. A retired (Obsolete)
+    // one is always on in the binary and reported as not enabled, so leave it out.
     const filtered = options.disabled
-      ? amendments.filter(a => !a.enabled)
+      ? amendments.filter(a => !a.enabled && a.vetoed !== 'Obsolete')
       : amendments;
 
     const sorted = filtered.sort((a, b) => a.name.localeCompare(b.name));
