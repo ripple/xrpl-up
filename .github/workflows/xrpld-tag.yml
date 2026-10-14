@@ -10,7 +10,7 @@ name: xrpld tag
 #   3. run the e2e suites (no testnet) against that build
 #   4. install it the way a user does (Node 22 and 24) and start it
 #   5. if all of that passes, tag xrpld-<slug> and publish a release with the packed tarball
-# If any step fails, one xrpld-failed-<n>-<slug> tag is added (see the poller for
+# If any step fails, one refs/xrpld/failed/<n>/<slug> ref is added (see the poller for
 # how failures are counted).
 #
 # No npm or Docker registry is involved. Install a build with
@@ -286,6 +286,6 @@ jobs:
         run: |
           # A build that got published by another run is not a failed attempt.
           if gh release view "xrpld-$SLUG" >/dev/null 2>&1; then exit 0; fi
-          N=$(( $(git ls-remote "https://github.com/$GITHUB_REPOSITORY" "refs/tags/xrpld-failed-*-$SLUG" | wc -l) + 1 ))
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/xrpld-failed-$N-$SLUG" -f "sha=$GITHUB_SHA" || true
+          N=$(( $(git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" 'refs/xrpld/failed/*' | grep -c "/$SLUG$" || true) + 1 ))
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/xrpld/failed/$N/$SLUG" -f "sha=$GITHUB_SHA" || true
           gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/xrpld-build/$SLUG" || true
