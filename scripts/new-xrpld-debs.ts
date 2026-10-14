@@ -41,7 +41,9 @@ function sortKey(version: string): { run: number; key: (string | number)[] } {
     const [, x, y, z, pre, preN, rev] = rel;
     return { run: 0, key: [Number(x), Number(y), Number(z), pre ? 0 : 1, pre ?? '', Number(preN ?? 0), Number(rev)] };
   }
-  return { run: NaN, key: [NaN] };
+  // Any other version (e.g. a custom tag such as 3.4.1~smart-escrow-1): still build it,
+  // and treat it as newer than the known ones, ordered among themselves by name.
+  return { run: 0, key: [Infinity, version] };
 }
 
 function compare(a: Build, b: Build): number {
@@ -69,7 +71,7 @@ async function main(): Promise<void> {
     const version = /^Version: (.+)$/m.exec(stanza)?.[1];
     if (pkg !== 'xrpld' || !version) continue; // not xrpld-assert / -dbgsym
     const { run, key } = sortKey(version);
-    if (key.some((k) => typeof k === 'number' && !Number.isFinite(k))) continue;
+    if (key.some((k) => typeof k === 'number' && Number.isNaN(k))) continue;
     byVersion.set(version, { version, slug: version.replace(/[^A-Za-z0-9_.-]/g, '-'), run });
   }
   if (byVersion.size === 0) throw new Error(`no xrpld packages found in ${channel}`);
