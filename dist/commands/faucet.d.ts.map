@@ -1,0 +1,1 @@
+{"version":3,"file":"faucet.d.ts","sourceRoot":"","sources":["../../src/commands/faucet.ts"],"names":[],"mappings":"AASA,MAAM,WAAW,aAAa;IAC5B,OAAO,CAAC,EAAE,MAAM,CAAC;IACjB,IAAI,CAAC,EAAE,MAAM,CAAC;IACd,IAAI,CAAC,EAAE,OAAO,CAAC;CAChB;AAED,wBAAsB,aAAa,CAAC,OAAO,GAAE,aAAkB,GAAG,OAAO,CAAC,IAAI,CAAC,CAkH9E"}
