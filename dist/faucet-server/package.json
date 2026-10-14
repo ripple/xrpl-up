@@ -1,0 +1,13 @@
+{
+  "name": "xrpl-up-faucet",
+  "version": "0.1.0",
+  "description": "Internal faucet HTTP server for xrpl-up local mode",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "xrpl": "^2.14.0"
+  }
+}
