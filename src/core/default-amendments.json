@@ -1,5 +1,5 @@
 {
-  "xrpld": "deb deb-develop 0.0.0~dev-1238.20261005git9cbf78b",
+  "xrpld": "deb deb-develop 0.0.0~dev-1294.20261015git88fd122",
   "mainnet": "wss://xrplcluster.com",
   "amendments": [
     {
@@ -9,6 +9,10 @@
     {
       "hash": "726F944886BCDF7433203787E93DD9AA87FAB74DFE3AF4785BA03BEFC97ADA1F",
       "name": "AMMClawback"
+    },
+    {
+      "hash": "9F287AED3CDB50A7BD1ACEC24296A30C9B5230CCD136219317AC790E3B884377",
+      "name": "BatchV1_1"
     },
     {
       "hash": "1CB67D082CF7D9102412D34258CEDB400E659352D3B207348889297A6D90F5EF",
@@ -31,16 +35,16 @@
       "name": "fixAMMClawbackRounding"
     },
     {
-      "hash": "35291ADD2D79EB6991343BDA0912269C817D0F094B02226C1C14AD2858962ED4",
-      "name": "fixAMMv1_1"
-    },
-    {
       "hash": "1E7ED950F2F13C4F8E2A54103B74D57D5D298FFDBD005936164EE9E6484C438C",
       "name": "fixAMMv1_2"
     },
     {
       "hash": "7CA70A7674A26FA517412858659EBC7EDEEF7D2D608824464E6FDEFD06854E14",
       "name": "fixAMMv1_3"
+    },
+    {
+      "hash": "14A2B45E48A4A124D1BBA657AC7B0DC3D5EA8C256C89E8F0D8142D32960A7944",
+      "name": "fixBatchV1_2"
     },
     {
       "hash": "303ACB16CF8DBD3B5C34F131A9D19A7DE01AE05F480A8A682B869D1B4AAC8CFC",
@@ -129,6 +133,10 @@
     {
       "hash": "EE3CF852F0506782D05E65D49E5DCC3D16D50898CD1B646BAE274863401CC3CE",
       "name": "NFTokenMintOffer"
+    },
+    {
+      "hash": "0F48FF561C709540328F31F1C97FD512ACC8B4E42138A161CB0E21ECA292540B",
+      "name": "PermissionDelegationV1_1"
     },
     {
       "hash": "677E401A423E3708363A36BA8B3A7D019D21AC5ABD00387BDBEA6BDE4C91247E",
