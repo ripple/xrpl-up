@@ -22,6 +22,7 @@ import { initCommand } from './commands/init';
 import { logsCommand } from './commands/logs';
 import { statusCommand } from './commands/status';
 import { composeDown, startCommandHint, DEFAULT_IMAGE } from './core/compose';
+import { XRPLD_DEB } from './core/xrpld-image';
 import { snapshotSave, snapshotRestore, snapshotList } from './commands/snapshot';
 import { configExport, configValidate } from './commands/config';
 import { resetCommand } from './commands/reset';
@@ -60,7 +61,8 @@ const program = new Command();
 program
   .name('xrpl-up')
   .description('XRPL sandbox for local development')
-  .version(pkg.version, '-v, --version')
+  // Show which xrpld this build runs: the pinned deb version, or the tag of a pinned image.
+  .version(`${pkg.version} (xrpld ${XRPLD_DEB ? XRPLD_DEB.version : DEFAULT_IMAGE.split(':').pop()})`, '-v, --version')
   .option(
     '-n, --network <url>',
     'XRPL network name or node URL (local|testnet|devnet|wss://...)',
