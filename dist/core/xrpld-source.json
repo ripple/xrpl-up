@@ -1,0 +1,7 @@
+{
+    "image": null,
+    "deb": {
+        "channel": "deb-develop",
+        "version": "0.0.0~dev-1309.20261016gitdc64a8d"
+    }
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"reset.d.ts","sourceRoot":"","sources":["../../src/commands/reset.ts"],"names":[],"mappings":"AAYA,MAAM,WAAW,YAAY;IAC3B,SAAS,CAAC,EAAE,OAAO,CAAC;IACpB,cAAc,CAAC,EAAE,OAAO,CAAC;CAC1B;AAED;;;;;;;GAOG;AACH,wBAAgB,YAAY,CAAC,OAAO,GAAE,YAAiB,GAAG,IAAI,CAgE7D"}
