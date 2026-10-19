@@ -128,7 +128,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   if (options.local) {
     isLocal = true;
     networkName = 'local';
-    networkDisplayName = 'Local rippled (Docker)';
+    networkDisplayName = 'Local xrpld (Docker)';
     networkUrl = LOCAL_WS_URL;
 
     // Check Docker before doing anything else
@@ -275,7 +275,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
           clearInterval(pollInterval);
           const code = parseInt(data.toString().trim(), 10);
           const note = code === 134 ? ' (SIGABRT — process crashed)' : '';
-          logger.log(chalk.red(`\n✗ rippled exited — code ${code}${note}`));
+          logger.log(chalk.red(`\n✗ xrpld exited — code ${code}${note}`));
         });
       }
     } catch (err: unknown) {
@@ -334,10 +334,10 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
       logger.log(`${chalk.dim('Ledger:')}     ${chalk.dim('consensus close ~4s (persistent)')}`);
     }
     if (options.debug) {
-      logger.log(`${chalk.dim('Logs:')}       ${chalk.dim('debug level — run: xrpl-up logs rippled')}`);
+      logger.log(`${chalk.dim('Logs:')}       ${chalk.dim('debug level — run: xrpl-up logs node1')}`);
     }
     if (options.noRestart) {
-      logger.log(`${chalk.dim('Restart:')}    ${chalk.dim('disabled — container will exit with rippled\'s code')}`);
+      logger.log(`${chalk.dim('Restart:')}    ${chalk.dim('disabled — container will exit with xrpld\'s code')}`);
     }
   }
   logger.blank();
@@ -492,8 +492,8 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     const advanceMsg = options.noAutoAdvance
       ? 'auto-advance disabled'
       : `auto-advancing ledger every ${ledgerInterval}ms`;
-    logger.dim(`Local rippled  ·  ${advanceMsg}  ·  Press Ctrl+C to stop`);
-    logger.dim(`Logs: xrpl-up logs | xrpl-up logs rippled | xrpl-up logs faucet`);
+    logger.dim(`Local xrpld  ·  ${advanceMsg}  ·  Press Ctrl+C to stop`);
+    logger.dim(`Logs: xrpl-up logs | xrpl-up logs node1 | xrpl-up logs faucet`);
   } else {
     logger.dim('Subscribed to ledger stream  ·  Press Ctrl+C to stop');
   }

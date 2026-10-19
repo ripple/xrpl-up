@@ -315,7 +315,7 @@ export async function snapshotSave(name: string): Promise<void> {
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d`,
       { stdio: ['ignore', 'pipe', 'pipe'] },
     );
-    await waitForPort(LOCAL_WS_PORT, 60_000, 'rippled WebSocket');
+    await waitForPort(LOCAL_WS_PORT, 60_000, 'xrpld WebSocket');
     await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
     const resumeElapsed = ((Date.now() - resumeStartMs) / 1000).toFixed(1);
     startSpinner.succeed(chalk.dim(`Sandbox resumed (${resumeElapsed}s)`));
@@ -455,7 +455,7 @@ export async function snapshotRestore(name: string): Promise<void> {
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d`,
       { stdio: ['ignore', 'pipe', 'pipe'] },
     );
-    await waitForPort(LOCAL_WS_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'rippled WebSocket');
+    await waitForPort(LOCAL_WS_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'xrpld WebSocket');
     await waitForPort(FAUCET_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'faucet HTTP');
     const restoreResumeElapsed = ((Date.now() - restoreResumeMs) / 1000).toFixed(1);
     startSpinner.succeed(chalk.dim(`Sandbox resumed (${restoreResumeElapsed}s)`));
@@ -468,7 +468,7 @@ export async function snapshotRestore(name: string): Promise<void> {
     throw new Error(
       `${(err as Error).message}\n\n` +
       (stderr ? `Docker error: ${stderr}\n\n` : '') +
-      `rippled logs (last 30 lines):\n${rippledLogs}`
+      `xrpld logs (last 30 lines):\n${rippledLogs}`
     );
   }
 

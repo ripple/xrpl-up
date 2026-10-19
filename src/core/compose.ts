@@ -35,7 +35,7 @@ export const MAX_CONSENSUS_NODES = VALIDATORS.length;
 export const DEFAULT_CONSENSUS_NODES = 3;
 
 /** Docker service name for consensus node i (1-based). */
-function nodeServiceName(i: number): string {
+export function nodeServiceName(i: number): string {
   if (i === 1) return 'rippled';
   if (i === 2) return 'rippled-peer';
   return `rippled-node${i}`;
