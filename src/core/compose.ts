@@ -19,7 +19,7 @@ const COMPOSE_FILE = path.join(XRPL_UP_DIR, 'docker-compose.yml');
 
 export { COMPOSE_FILE };
 
-// ── Hardcoded validator keys for local consensus (dev-only, max 4 nodes) ─────
+// ── Hardcoded validator keys for local consensus (dev-only, max 5 nodes) ─────
 // NOT secret — for local sandbox use only, like genesis seed snoPBrXtMeMyMHUVTgbuqAfg1SUTb.
 // Seeds verified: ripple-keypairs.deriveKeypair(seed, { validator: true }) → pubkey.
 const VALIDATORS = [
@@ -27,6 +27,7 @@ const VALIDATORS = [
   { seed: 'ss5xTzsXe9gFPjYFnvkko4EUqzHs1',  pubkey: 'n94BNfvffQG4Q1VWbRVGmjsgQoKrPqmDZSUFBJyqQ6ieZcco2yeX' },
   { seed: 'spjjbwMsTH4r4gEAxKR79HGMooipq',  pubkey: 'n9LchcrkX56cM37hfoadFwErJ4LysfD6eESguwYFM3waBt19mQjd' },
   { seed: 'spkYehRS9eWxNhnFDX43tvvpKwLY2',  pubkey: 'n9M468eoFf2zVX5mVgb1bZxpG8Y1MoJ7ZtciYiD9n9ECzifLsb48' },
+  { seed: 'spmMgxVFirCunRug7jJoe2Zb6S3dM',  pubkey: 'n9MAfxu4ECeNUm72DDHMjw2daDLUhBy6YSFudPVmFfG1QjvRfzG1' },
 ] as const;
 
 /** Maximum number of consensus nodes supported (limited by hardcoded validator keys). */
