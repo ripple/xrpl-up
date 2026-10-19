@@ -23,10 +23,10 @@ export { COMPOSE_FILE };
 // NOT secret — for local sandbox use only, like genesis seed snoPBrXtMeMyMHUVTgbuqAfg1SUTb.
 // Seeds verified: ripple-keypairs.deriveKeypair(seed, { validator: true }) → pubkey.
 const VALIDATORS = [
-  { seed: 'ssUi9ifdKYGKs16Auvjv8UKcqDwMz',  pubkey: 'n9K1v5WwXvBCDL2CKFFGUkMEFuHcjzgwCm19hQ5sMkTKMkLqbnVP' },
-  { seed: 'ss5xTzsXe9gFPjYFnvkko4EUqzHs1',   pubkey: 'n94BNfvffQG4Q1VWbRVGmjsgQoKrPqmDZSUFBJyqQ6ieZcco2yeX' },
-  { seed: 'sEdSL5bnsspjTJ55rw1766no8kWvfV4', pubkey: 'nHUFYkEkXqgKXte49TPuUDXyyJP8UMkAWszeYph7EtgMvVR5GshW' },
-  { seed: 'sEdSMXdyfRjacE2nqs3geMqTSPkwE57', pubkey: 'nHUH1zZUqU2WbYNmUg6q3TtJ36Y8ZMNUx9S7zcGcMmPGSAwWBU1i' },
+  { seed: 'ssUi9ifdKYGKs16Auvjv8UKcqDwMz', pubkey: 'n9K1v5WwXvBCDL2CKFFGUkMEFuHcjzgwCm19hQ5sMkTKMkLqbnVP' },
+  { seed: 'ss5xTzsXe9gFPjYFnvkko4EUqzHs1',  pubkey: 'n94BNfvffQG4Q1VWbRVGmjsgQoKrPqmDZSUFBJyqQ6ieZcco2yeX' },
+  { seed: 'spjjbwMsTH4r4gEAxKR79HGMooipq',  pubkey: 'n9LchcrkX56cM37hfoadFwErJ4LysfD6eESguwYFM3waBt19mQjd' },
+  { seed: 'spkYehRS9eWxNhnFDX43tvvpKwLY2',  pubkey: 'n9M468eoFf2zVX5mVgb1bZxpG8Y1MoJ7ZtciYiD9n9ECzifLsb48' },
 ] as const;
 
 /** Maximum number of consensus nodes supported (limited by hardcoded validator keys). */
