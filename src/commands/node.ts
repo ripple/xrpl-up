@@ -20,6 +20,9 @@ import {
   volumeHasData,
   VOLUME_NAME,
   PEER_VOLUME_NAME,
+  DEFAULT_CONSENSUS_NODES,
+  MAX_CONSENSUS_NODES,
+  consensusVolumeNames,
 } from '../core/compose';
 import { validateConfig, printValidationResult } from './config';
 import { GENESIS_ADDRESS } from '../core/standalone';
@@ -30,6 +33,7 @@ export interface NodeOptions {
   accountCount?: number;
   local?: boolean;
   localNetwork?: boolean;
+  nodes?: number;  // number of consensus nodes for --local-network (default: DEFAULT_CONSENSUS_NODES)
   image?: string;
   ledgerInterval?: number;
   noAutoAdvance?: boolean;
@@ -43,7 +47,7 @@ export interface NodeOptions {
 
 /**
  * `--config` (writeComposeFile in compose.ts) always forces standalone mode —
- * a custom rippled.cfg replaces the generated 2-node consensus setup entirely.
+ * a custom rippled.cfg replaces the generated consensus setup entirely.
  * Reject the combination up front instead of silently downgrading a mode the
  * user explicitly asked for.
  */
@@ -149,6 +153,10 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   const localNetwork = isLocal && (options.localNetwork ?? false);
   const noConsensus = isLocal && !localNetwork;
   const persist = isLocal && localNetwork; // --local-network always persists
+  const nodeCount = Math.min(
+    Math.max(options.nodes ?? DEFAULT_CONSENSUS_NODES, 2),
+    MAX_CONSENSUS_NODES,
+  );
 
   // Starting standalone always clears the wallet store (below, `if (!persist)
   // store.clear()`), but it never touches the --local-network ledger volumes —
@@ -156,7 +164,8 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   // ledger data, warn before silently discarding the account records that are
   // the only way to reach them, since `xrpl-up accounts` won't list them
   // afterward and the seeds aren't recoverable without a snapshot.
-  if (noConsensus && (volumeHasData(VOLUME_NAME) || volumeHasData(PEER_VOLUME_NAME))) {
+  const allVols = localNetwork ? consensusVolumeNames(nodeCount) : [VOLUME_NAME, PEER_VOLUME_NAME];
+  if (noConsensus && allVols.some(v => volumeHasData(v))) {
     logger.warning(
       'Starting standalone mode will replace your current wallet records.\n' +
       '    Run with --local-network instead to keep using this data,\n' +
@@ -181,7 +190,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
     const image = options.image ?? DEFAULT_IMAGE;
     const dockerSpinner = ora({
       text: localNetwork
-        ? `Starting 2-node consensus network${chalk.dim(' (first run may take a minute…)')}`
+        ? `Starting ${nodeCount}-node consensus network${chalk.dim(' (first run may take a minute…)')}`
         : `Starting standalone node${chalk.dim(' (first run may take a minute…)')}`,
       color: 'cyan',
       indent: 2,
@@ -205,7 +214,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
       const ledgerIntervalMs = noConsensus
         ? (options.detach ? (options.ledgerInterval ?? 1000) : 0)
         : 0;
-      await composeUp(image, noConsensus, options.debug ?? false, ledgerIntervalMs, options.config, options.noRestart ?? false, options.bindAddress);
+      await composeUp(image, noConsensus, options.debug ?? false, ledgerIntervalMs, options.config, options.noRestart ?? false, options.bindAddress, nodeCount);
       const dockerElapsed = ((Date.now() - dockerStartMs) / 1000).toFixed(1);
       const modeLabel = localNetwork ? 'Consensus network' : 'Standalone node';
       dockerSpinner.succeed(

@@ -19,14 +19,45 @@ const COMPOSE_FILE = path.join(XRPL_UP_DIR, 'docker-compose.yml');
 
 export { COMPOSE_FILE };
 
-// ── Hardcoded validator keys for local 2-node consensus (dev-only) ───────────
-// These are NOT secret — they're for local sandbox use only, just like the
-// genesis account seed snoPBrXtMeMyMHUVTgbuqAfg1SUTb.
-const VALIDATOR_1_SEED   = 'ssUi9ifdKYGKs16Auvjv8UKcqDwMz';
-const VALIDATOR_1_PUBKEY = 'n9K1v5WwXvBCDL2CKFFGUkMEFuHcjzgwCm19hQ5sMkTKMkLqbnVP';
-const VALIDATOR_2_SEED   = 'ss5xTzsXe9gFPjYFnvkko4EUqzHs1';
-const VALIDATOR_2_PUBKEY = 'n94BNfvffQG4Q1VWbRVGmjsgQoKrPqmDZSUFBJyqQ6ieZcco2yeX';
+// ── Hardcoded validator keys for local consensus (dev-only, max 4 nodes) ─────
+// NOT secret — for local sandbox use only, like genesis seed snoPBrXtMeMyMHUVTgbuqAfg1SUTb.
+// Seeds verified: ripple-keypairs.deriveKeypair(seed, { validator: true }) → pubkey.
+const VALIDATORS = [
+  { seed: 'ssUi9ifdKYGKs16Auvjv8UKcqDwMz',  pubkey: 'n9K1v5WwXvBCDL2CKFFGUkMEFuHcjzgwCm19hQ5sMkTKMkLqbnVP' },
+  { seed: 'ss5xTzsXe9gFPjYFnvkko4EUqzHs1',   pubkey: 'n94BNfvffQG4Q1VWbRVGmjsgQoKrPqmDZSUFBJyqQ6ieZcco2yeX' },
+  { seed: 'sEdSL5bnsspjTJ55rw1766no8kWvfV4', pubkey: 'nHUFYkEkXqgKXte49TPuUDXyyJP8UMkAWszeYph7EtgMvVR5GshW' },
+  { seed: 'sEdSMXdyfRjacE2nqs3geMqTSPkwE57', pubkey: 'nHUH1zZUqU2WbYNmUg6q3TtJ36Y8ZMNUx9S7zcGcMmPGSAwWBU1i' },
+] as const;
 
+/** Maximum number of consensus nodes supported (limited by hardcoded validator keys). */
+export const MAX_CONSENSUS_NODES = VALIDATORS.length;
+export const DEFAULT_CONSENSUS_NODES = 3;
+
+/** Docker service name for consensus node i (1-based). */
+function nodeServiceName(i: number): string {
+  if (i === 1) return 'rippled';
+  if (i === 2) return 'rippled-peer';
+  return `rippled-node${i}`;
+}
+
+/** Docker named volume name for consensus node i (1-based). */
+function nodeVolumeName(i: number): string {
+  if (i === 1) return 'xrpl-up-local-db';
+  if (i === 2) return 'xrpl-up-local-peer-db';
+  return `xrpl-up-local-node${i}-db`;
+}
+
+/** Path to the rippled.cfg for consensus node i (1-based). */
+function nodeCfgFile(i: number): string {
+  return path.join(XRPL_UP_DIR, `rippled-node${i}.cfg`);
+}
+
+/** All Docker volume names for an N-node consensus network. */
+export function consensusVolumeNames(nodeCount: number): string[] {
+  return Array.from({ length: nodeCount }, (_, i) => nodeVolumeName(i + 1));
+}
+
+// Legacy single-name exports kept for callers that still reference them directly.
 export const VOLUME_NAME      = 'xrpl-up-local-db';
 export const PEER_VOLUME_NAME = 'xrpl-up-local-peer-db';
 
@@ -61,10 +92,9 @@ function getFaucetBuildContext(): string {
   return fromDist;
 }
 
-const RIPPLED_CFG_FILE       = path.join(XRPL_UP_DIR, 'rippled.cfg');
-const RIPPLED_CFG_FILE_NODE1 = path.join(XRPL_UP_DIR, 'rippled-node1.cfg');
-const RIPPLED_CFG_FILE_NODE2 = path.join(XRPL_UP_DIR, 'rippled-node2.cfg');
-const VALIDATORS_CFG_FILE    = path.join(XRPL_UP_DIR, 'validators.txt');
+const RIPPLED_CFG_FILE    = path.join(XRPL_UP_DIR, 'rippled.cfg');
+const VALIDATORS_CFG_FILE = path.join(XRPL_UP_DIR, 'validators.txt');
+const LOCAL_NETWORK_NODES_FILE = path.join(XRPL_UP_DIR, 'local-network-nodes.txt');
 /** Extra amendments written by `amendment enable`; merged at genesis. */
 export const EXTRA_AMENDMENTS_FILE = path.join(XRPL_UP_DIR, 'genesis-amendments.txt');
 /** Records which image last started the persistent --local-network volumes. */
@@ -161,20 +191,23 @@ ${amendmentLines}
 }
 
 /**
- * Generate a consensus-mode config for one of the two private-network nodes.
- * Takes the base config and appends [validation_seed] + [ips_fixed].
+ * Generate a consensus-mode config for node i (1-based) in an N-node network.
+ * Appends [validation_seed] + [ips_fixed] listing all other nodes as peers.
  */
-function generateConsensusNodeConfig(nodeIndex: 1 | 2, debug = false): string {
+function generateConsensusNodeConfig(nodeIndex: number, nodeCount: number, debug = false): string {
   const base = generateRippledConfig(debug);
-  const seed      = nodeIndex === 1 ? VALIDATOR_1_SEED   : VALIDATOR_2_SEED;
-  const peerName  = nodeIndex === 1 ? 'rippled-peer'     : 'rippled';
+  const seed = VALIDATORS[nodeIndex - 1].seed;
+  const peers = Array.from({ length: nodeCount }, (_, j) => j + 1)
+    .filter(j => j !== nodeIndex)
+    .map(j => `${nodeServiceName(j)} 51235`)
+    .join('\n');
   return base + `
 
 [validation_seed]
 ${seed}
 
 [ips_fixed]
-${peerName} 51235`;
+${peers}`;
 }
 
 /**
@@ -195,14 +228,35 @@ function mergeExtraAmendments(cfg: string): string {
 }
 
 /**
+ * Returns the stored consensus node count (written when the network was last
+ * started), or the default if no record exists.
+ */
+export function readConsensusNodeCount(): number {
+  try {
+    const n = parseInt(fs.readFileSync(LOCAL_NETWORK_NODES_FILE, 'utf-8').trim(), 10);
+    return Number.isFinite(n) && n >= 2 && n <= MAX_CONSENSUS_NODES ? n : DEFAULT_CONSENSUS_NODES;
+  } catch {
+    return DEFAULT_CONSENSUS_NODES;
+  }
+}
+
+function writeConsensusNodeCount(n: number): void {
+  fs.writeFileSync(LOCAL_NETWORK_NODES_FILE, String(n));
+}
+
+export function clearConsensusNodeCount(): void {
+  try { fs.unlinkSync(LOCAL_NETWORK_NODES_FILE); } catch { /* not present — ok */ }
+}
+
+/**
  * Write rippled config(s) and validators.txt to ~/.xrpl-up/.
  *
- * In consensus mode (default): writes rippled-node1.cfg + rippled-node2.cfg
+ * In consensus mode: writes rippled-node{1..n}.cfg for each node,
  * with validator seeds and mutual [ips_fixed] references.
  *
- * In standalone mode (default): writes a single rippled.cfg.
+ * In standalone mode: writes a single rippled.cfg.
  */
-export function writeRippledConfig(debug = false, noConsensus = false): void {
+export function writeRippledConfig(debug = false, noConsensus = false, nodeCount = DEFAULT_CONSENSUS_NODES): void {
   if (!fs.existsSync(XRPL_UP_DIR)) {
     fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
   }
@@ -211,23 +265,17 @@ export function writeRippledConfig(debug = false, noConsensus = false): void {
     // Standalone mode: single config, no validator keys
     const cfg = mergeExtraAmendments(generateRippledConfig(debug));
     fs.writeFileSync(RIPPLED_CFG_FILE, cfg, 'utf-8');
-    // Standalone mode needs a validators.txt for the [amendments] section
     if (!fs.existsSync(VALIDATORS_CFG_FILE)) {
       fs.writeFileSync(VALIDATORS_CFG_FILE, '[validators]\n', 'utf-8');
     }
   } else {
-    // Consensus mode: two configs with validator keys + ips_fixed
-    for (const idx of [1, 2] as const) {
-      const cfg = mergeExtraAmendments(generateConsensusNodeConfig(idx, debug));
-      const target = idx === 1 ? RIPPLED_CFG_FILE_NODE1 : RIPPLED_CFG_FILE_NODE2;
-      fs.writeFileSync(target, cfg, 'utf-8');
+    // Consensus mode: one config per node with validator keys + ips_fixed
+    for (let i = 1; i <= nodeCount; i++) {
+      const cfg = mergeExtraAmendments(generateConsensusNodeConfig(i, nodeCount, debug));
+      fs.writeFileSync(nodeCfgFile(i), cfg, 'utf-8');
     }
-    // Validators.txt with both public keys (shared by both nodes)
-    fs.writeFileSync(
-      VALIDATORS_CFG_FILE,
-      `[validators]\n    ${VALIDATOR_1_PUBKEY}\n    ${VALIDATOR_2_PUBKEY}\n`,
-      'utf-8',
-    );
+    const pubkeyLines = VALIDATORS.slice(0, nodeCount).map(v => `    ${v.pubkey}`).join('\n');
+    fs.writeFileSync(VALIDATORS_CFG_FILE, `[validators]\n${pubkeyLines}\n`, 'utf-8');
   }
 }
 
@@ -237,13 +285,14 @@ export function writeRippledConfig(debug = false, noConsensus = false): void {
  * Default (noConsensus=true): single rippled with -a --start, no
  * persistence, instant ledger_accept.
  *
- * With --local-network (noConsensus=false): 2-node private consensus network
+ * With --local-network (noConsensus=false): N-node private consensus network
  * with persistent volumes, SQLite index, and automatic ledger close (~4s).
  *
  * @param configPath - optional path to a custom rippled.cfg; implies
  *   standalone mode (custom configs can't carry validator seeds).
+ * @param nodeCount - number of consensus nodes (2–4, default 3).
  */
-export function writeComposeFile(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1'): string {
+export function writeComposeFile(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1', nodeCount = DEFAULT_CONSENSUS_NODES): string {
   if (!fs.existsSync(XRPL_UP_DIR)) {
     fs.mkdirSync(XRPL_UP_DIR, { recursive: true });
   }
@@ -258,7 +307,7 @@ export function writeComposeFile(image = DEFAULT_IMAGE, noConsensus = false, deb
 
   const yaml = noConsensus
     ? generateStandaloneYaml(image, debug, ledgerIntervalMs, configPath, noRestart, platformLine, faucetContext, bindAddress)
-    : generateConsensusYaml(image, debug, ledgerIntervalMs, platformLine, faucetContext, bindAddress);
+    : generateConsensusYaml(image, debug, ledgerIntervalMs, platformLine, faucetContext, bindAddress, nodeCount);
 
   fs.writeFileSync(COMPOSE_FILE, yaml, 'utf-8');
   return COMPOSE_FILE;
@@ -353,13 +402,14 @@ networks:
 `;
 }
 
-// ── Consensus YAML (default 2-node network) ──────────────────────────────────
+// ── Consensus YAML (N-node network, default 3 nodes) ─────────────────────────
 
 function generateConsensusYaml(
   image: string, debug: boolean, ledgerIntervalMs: number,
   platformLine: string, faucetContext: string, bindAddress: string,
+  nodeCount: number,
 ): string {
-  writeRippledConfig(debug, false);
+  writeRippledConfig(debug, false, nodeCount);
 
   // Same two independent properties as standalone mode (see generateStandaloneYaml
   // above) — binary path and whether the entrypoint auto-injects --conf. Only
@@ -372,66 +422,57 @@ function generateConsensusYaml(
   const confFlag = hasConfInjectingEntrypoint ? '' : ' --conf /config/rippled.cfg';
   const startCmd = hasConfInjectingEntrypoint ? '/entrypoint.sh' : `${RIPPLED_BIN}${confFlag}`;
 
-  // Node1 (primary): creates genesis with --start on first boot, --load on resume.
-  // Both nodes build the genesis ledger themselves on first boot (--start), from
-  // the same [amendments] config, so they produce the identical ledger 1 and
-  // there is nothing to race on; --load on resume.
-  //
-  // Do NOT use --net on the peer. It fetches the initial ledger from the network,
-  // but a lone node1 never closes a ledger until a peer connects, so node2 has
-  // nothing to fetch, times out, and builds its own default genesis with none of
-  // the forced amendments. The nodes then compete, and when node2's chain wins
-  // the network comes up with no amendments (about 1 boot in 10).
-  // Do NOT combine --start with --net: xrpld handles --net last and it wins.
-  const entrypointPrimary =
-    `["/bin/bash", "-c", "if [ -f /var/lib/xrpld/db/ledger.db ]; then exec ${startCmd} --load; else exec ${startCmd} --start; fi"]`;
-  const entrypointPeer =
+  // All nodes build genesis from the same [amendments] config on first boot
+  // (--start), producing the identical ledger 1 with no race. --load on resume.
+  // Do NOT use --net: a lone node1 never closes a ledger until a peer connects,
+  // so peers have nothing to fetch and build their own default genesis instead.
+  const entrypointCmd =
     `["/bin/bash", "-c", "if [ -f /var/lib/xrpld/db/ledger.db ]; then exec ${startCmd} --load; else exec ${startCmd} --start; fi"]`;
 
+  let services = '';
+  for (let i = 1; i <= nodeCount; i++) {
+    const svc = nodeServiceName(i);
+    const shortVol = `${svc}-db`;
+    const isPrimary = i === 1;
+    const portsSection = isPrimary
+      ? `    ports:\n      - "${bindAddress}:${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"\n`
+      : '';
+    const dependsSection = !isPrimary
+      ? `    depends_on:\n      rippled:\n        condition: service_healthy\n`
+      : '';
+    services += `
+  ${svc}:
+    image: ${image}${platformLine}
+    entrypoint: ${entrypointCmd}
+${portsSection}    volumes:
+      - "${nodeCfgFile(i)}:/config/rippled.cfg:ro"
+      - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
+      - ${shortVol}:/var/lib/xrpld/db
+    networks:
+      - xrpl-net
+${dependsSection}    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/${LOCAL_WS_PORT}"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 10s
+`;
+  }
+
+  let volumeEntries = '';
+  for (let i = 1; i <= nodeCount; i++) {
+    const svc = nodeServiceName(i);
+    volumeEntries += `  ${svc}-db:\n    name: ${nodeVolumeName(i)}\n`;
+  }
+
   return `# Generated by xrpl-up — do not edit manually
-# 2-node private consensus network (default mode)
+# ${nodeCount}-node private consensus network
 # Ledger state persists across restarts. Snapshots are supported.
 
 name: ${COMPOSE_PROJECT}
 
 services:
-  rippled:
-    image: ${image}${platformLine}
-    entrypoint: ${entrypointPrimary}
-    ports:
-      - "${bindAddress}:${LOCAL_WS_PORT}:${LOCAL_WS_PORT}"
-    volumes:
-      - "${RIPPLED_CFG_FILE_NODE1}:/config/rippled.cfg:ro"
-      - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
-      - rippled-db:/var/lib/xrpld/db
-    networks:
-      - xrpl-net
-    healthcheck:
-      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/${LOCAL_WS_PORT}"]
-      interval: 2s
-      timeout: 2s
-      retries: 30
-      start_period: 10s
-
-  rippled-peer:
-    image: ${image}${platformLine}
-    entrypoint: ${entrypointPeer}
-    volumes:
-      - "${RIPPLED_CFG_FILE_NODE2}:/config/rippled.cfg:ro"
-      - "${VALIDATORS_CFG_FILE}:/config/validators.txt:ro"
-      - rippled-peer-db:/var/lib/xrpld/db
-    networks:
-      - xrpl-net
-    depends_on:
-      rippled:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/${LOCAL_WS_PORT}"]
-      interval: 2s
-      timeout: 2s
-      retries: 30
-      start_period: 10s
-
+${services}
   faucet:
     build:
       context: ${faucetContext}
@@ -454,11 +495,7 @@ networks:
     driver: bridge
 
 volumes:
-  rippled-db:
-    name: ${VOLUME_NAME}
-  rippled-peer-db:
-    name: ${PEER_VOLUME_NAME}
-`;
+${volumeEntries}`;
 }
 
 /** Read the rippled image from the current compose file (for use in restore). */
@@ -596,7 +633,7 @@ export function adoptGenesisLineage(lineage: string, amendments: string): void {
   } else {
     try { fs.unlinkSync(EXTRA_AMENDMENTS_FILE); } catch { /* already absent */ }
   }
-  writeRippledConfig(false, !isConsensusMode());
+  writeRippledConfig(false, !isConsensusMode(), readConsensusNodeCount());
   writeGenesisLineage(lineage);
 }
 
@@ -669,9 +706,10 @@ function getImageUidGid(image: string): string {
  * start, so a fresh --local-network genesis always matches this build's
  * amendment list.
  */
-function prepareConsensusVolumes(image: string): boolean {
+function prepareConsensusVolumes(image: string, nodeCount: number): boolean {
   const lineage = pendingGenesisLineage();
-  const empty = [VOLUME_NAME, PEER_VOLUME_NAME].filter((vol) => !volumeHasData(vol));
+  const allVols = consensusVolumeNames(nodeCount);
+  const empty = allVols.filter((vol) => !volumeHasData(vol));
   if (empty.length === 0) return false;
 
   const uidGid = getImageUidGid(image);
@@ -708,17 +746,20 @@ async function missingDefaultAmendments(): Promise<string[]> {
  * wait for ports and (in consensus mode) for the first validated ledger.
  *
  * Default (noConsensus=true): standalone rippled, torn down clean each start.
- * With --local-network (noConsensus=false): 2-node consensus network. Volumes preserved.
+ * With --local-network (noConsensus=false): N-node consensus network. Volumes preserved.
+ *
+ * @param nodeCount - number of consensus nodes (2–4, default 3); ignored in standalone mode.
  */
-export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1'): Promise<string> {
+export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1', nodeCount = DEFAULT_CONSENSUS_NODES): Promise<string> {
   if (!noConsensus) checkLocalNetworkImageCompatibility(image);
 
-  writeComposeFile(image, noConsensus, debug, ledgerIntervalMs, configPath, noRestart, bindAddress);
+  writeComposeFile(image, noConsensus, debug, ledgerIntervalMs, configPath, noRestart, bindAddress, nodeCount);
   if (noConsensus) composeDown(); // clean slate only in standalone mode
 
   // Make sure the consensus volumes exist and are writable. `fresh` means rippled
   // is about to build a new genesis (as opposed to resuming existing ledger data).
-  const fresh = !noConsensus && prepareConsensusVolumes(image);
+  const fresh = !noConsensus && prepareConsensusVolumes(image, nodeCount);
+  if (!noConsensus) writeConsensusNodeCount(nodeCount);
 
   // Build (deb pin) or pull (registry image) xrpld if it isn't cached yet —
   // gives clear feedback on first run instead of hanging inside compose up.
@@ -762,10 +803,10 @@ export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debu
     if (missing.length > 0) {
       console.log(`  Genesis came up without ${missing.length} default amendment(s); rebuilding it once…`);
       composeDown();
-      for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
+      for (const vol of consensusVolumeNames(nodeCount)) {
         try { execSync(`docker volume rm -f ${vol}`, { stdio: 'ignore' }); } catch { /* absent */ }
       }
-      prepareConsensusVolumes(image);
+      prepareConsensusVolumes(image, nodeCount);
       await bringUp();
       missing = await missingDefaultAmendments();
       if (missing.length > 0) {

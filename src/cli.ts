@@ -87,7 +87,12 @@ program
   )
   .option(
     '--local-network',
-    'Start a 2-node consensus network (persistent state, snapshot support)'
+    'Start a consensus network (persistent state, snapshot support)'
+  )
+  .option(
+    '--nodes <n>',
+    'Number of validator nodes in the consensus network (2–4, default 3; requires --local-network)',
+    (v: string) => parseInt(v, 10),
   )
   .option(
     '--no-auto-advance',
@@ -121,6 +126,7 @@ program
   .action((opts: {
     accounts?: string;
     localNetwork?: boolean;
+    nodes?: number;
     image?: string;
     ledgerInterval: string;
     autoAdvance?: boolean;
@@ -145,6 +151,7 @@ program
       accountCount: opts.accounts !== undefined ? parseInt(opts.accounts, 10) : undefined,
       local: isLocal,
       localNetwork: opts.localNetwork ?? false,
+      nodes: opts.nodes,
       image: opts.image,
       ledgerInterval: parseInt(opts.ledgerInterval, 10),
       noAutoAdvance: opts.autoAdvance === false,

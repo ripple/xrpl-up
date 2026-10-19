@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import chalk from 'chalk';
 import ora from 'ora';
-import { composeDown, VOLUME_NAME, PEER_VOLUME_NAME, clearLocalNetworkImageRecord, clearGenesisLineage, EXTRA_AMENDMENTS_FILE, writeRippledConfig, startCommandHint } from '../core/compose';
+import { composeDown, consensusVolumeNames, MAX_CONSENSUS_NODES, clearLocalNetworkImageRecord, clearGenesisLineage, clearConsensusNodeCount, EXTRA_AMENDMENTS_FILE, writeRippledConfig, startCommandHint } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
 import { logger } from '../utils/logger';
 
@@ -37,15 +37,10 @@ export function resetCommand(options: ResetOptions = {}): void {
     // already gone or never started — try removing volumes individually
     composeDown();
   }
-  // Also remove any orphaned volumes not attached to compose
-  let removedAny = false;
-  for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
-    try {
-      execSync(`docker volume rm -f ${vol}`, { stdio: 'ignore' });
-      removedAny = true;
-    } catch {
-      // volume not found — ok
-    }
+  // Also remove any orphaned volumes for all possible node counts (in case the
+  // node count changed between the last start and this reset).
+  for (const vol of consensusVolumeNames(MAX_CONSENSUS_NODES)) {
+    try { execSync(`docker volume rm -f ${vol}`, { stdio: 'ignore' }); } catch { /* not found — ok */ }
   }
   stopSpinner.succeed(chalk.dim('Sandbox stopped and volumes removed'));
 
@@ -53,6 +48,8 @@ export function resetCommand(options: ResetOptions = {}): void {
   clearLocalNetworkImageRecord();
   // Volumes are gone, so the recorded genesis lineage no longer describes anything.
   clearGenesisLineage();
+  // Node count record is stale too.
+  clearConsensusNodeCount();
 
   // Clear WalletStore
   new WalletStore('local').clear();
