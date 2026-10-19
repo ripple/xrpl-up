@@ -20,6 +20,7 @@ import { faucetCommand } from './commands/faucet';
 import { runCommand } from './commands/run';
 import { initCommand } from './commands/init';
 import { logsCommand } from './commands/logs';
+import { nodesCommand } from './commands/nodes';
 import { statusCommand } from './commands/status';
 import { composeDown, startCommandHint, DEFAULT_IMAGE } from './core/compose';
 import { snapshotSave, snapshotRestore, snapshotList } from './commands/snapshot';
@@ -219,6 +220,14 @@ program
   .description('Stream logs for the local stack (node1, node2, node3… or faucet; omit for all)')
   .action((service: string | undefined) => {
     logsCommand({ service }).catch(handleError);
+  });
+
+// ── nodes ──────────────────────────────────────────────────────────────────────
+program
+  .command('nodes')
+  .description('Show status of all validators in the local consensus network')
+  .action(() => {
+    nodesCommand().catch(handleError);
   });
 
 // ── stop ───────────────────────────────────────────────────────────────────────
