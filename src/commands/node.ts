@@ -153,10 +153,11 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   const localNetwork = isLocal && (options.localNetwork ?? false);
   const noConsensus = isLocal && !localNetwork;
   const persist = isLocal && localNetwork; // --local-network always persists
-  const nodeCount = Math.min(
-    Math.max(options.nodes ?? DEFAULT_CONSENSUS_NODES, 2),
-    MAX_CONSENSUS_NODES,
-  );
+  const requestedNodes = options.nodes ?? DEFAULT_CONSENSUS_NODES;
+  const nodeCount = Math.min(Math.max(requestedNodes, 2), MAX_CONSENSUS_NODES);
+  if (options.nodes !== undefined && options.nodes !== nodeCount) {
+    logger.warning(`--nodes ${options.nodes} is out of range; clamped to ${nodeCount} (valid: 2–${MAX_CONSENSUS_NODES})`);
+  }
 
   // Starting standalone always clears the wallet store (below, `if (!persist)
   // store.clear()`), but it never touches the --local-network ledger volumes —

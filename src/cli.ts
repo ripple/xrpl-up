@@ -109,7 +109,7 @@ program
   )
   .option(
     '--debug',
-    'Enable debug-level rippled logging (view with: xrpl-up logs node1)'
+    'Enable debug-level xrpld logging (view with: xrpl-up logs node1)'
   )
   .option(
     '--config <path>',
