@@ -114,6 +114,11 @@ jobs:
     name: Build and test ${{ needs.get_version.outputs.package_version }}
     needs: [get_version]
     uses: ./.github/workflows/test.yml
+    # A called workflow cannot have more permission than its caller grants, and
+    # test.yml's job needs packages: read (to pull a pinned ghcr image).
+    permissions:
+      contents: read
+      packages: read
     with:
       ref: ${{ needs.get_version.outputs.release_branch }}
       upload-dist: true
