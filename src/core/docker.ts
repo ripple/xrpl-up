@@ -88,7 +88,7 @@ function waitForPort(port: number, timeoutMs: number): Promise<void> {
         if (Date.now() > deadline) {
           reject(
             new Error(
-              `rippled did not become reachable on port ${port} within ${timeoutMs / 1000}s`
+              `xrpld did not become reachable on port ${port} within ${timeoutMs / 1000}s`
             )
           );
         } else {

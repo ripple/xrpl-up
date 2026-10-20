@@ -515,7 +515,7 @@ export async function snapshotRestore(name: string): Promise<void> {
       throw new Error(
         `Account ${probe} from the snapshot sidecar was not found on the restored ledger.\n` +
         `  The restore may not have applied correctly. Check:\n` +
-        `  - docker compose -p ${COMPOSE_PROJECT} logs rippled\n` +
+        `  - xrpl-up logs node1\n` +
         `  - xrpl-up accounts\n` +
         `  - Re-save the snapshot from a running sandbox and try again.`
       );

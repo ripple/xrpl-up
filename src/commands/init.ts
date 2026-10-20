@@ -14,7 +14,7 @@ export default {
   networks: {
     local: {
       url: 'ws://localhost:6006',
-      name: 'Local rippled (Docker)',
+      name: 'Local xrpld (Docker)',
     },
     testnet: {
       url: 'wss://s.altnet.rippletest.net:51233',
@@ -515,7 +515,7 @@ async function fundAccount(): Promise<Wallet> {
 async function main() {
   const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
-  console.log('Connected to local rippled');
+  console.log('Connected to local xrpld');
 
   console.log('\\nFunding sender wallet…');
   const sender = await fundAccount();
@@ -592,7 +592,7 @@ async function fundAccount(): Promise<Wallet> {
 async function main() {
   const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
-  console.log('Connected to local rippled\\n');
+  console.log('Connected to local xrpld\\n');
 
   // ── 1. Fund accounts ──────────────────────────────────────────────────────
   console.log('── Funding accounts ─────────────────────────────────────────');
@@ -674,7 +674,7 @@ async function fundAccount(): Promise<Wallet> {
 async function main() {
   const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
-  console.log('Connected to local rippled\\n');
+  console.log('Connected to local xrpld\\n');
 
   // ── 1. Set up accounts and issue a token ─────────────────────────────────
   console.log('── Setting up accounts and USD token ────────────────────────');
@@ -780,7 +780,7 @@ async function fundAccount(): Promise<Wallet> {
 async function main() {
   const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
-  console.log('Connected to local rippled\\n');
+  console.log('Connected to local xrpld\\n');
 
   // ── 1. Fund minter and buyer ──────────────────────────────────────────────
   console.log('── Funding accounts ─────────────────────────────────────────');
@@ -884,7 +884,7 @@ async function fundAccount(): Promise<Wallet> {
 async function main() {
   const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
-  console.log('Connected to local rippled\\n');
+  console.log('Connected to local xrpld\\n');
 
   // ── 1. Fund accounts ──────────────────────────────────────────────────────
   console.log('── Funding accounts ─────────────────────────────────────────');
@@ -971,7 +971,7 @@ async function fundAccount(): Promise<Wallet> {
 async function main() {
   const client = new Client(NETWORK_URL, { timeout: 60_000 });
   await client.connect();
-  console.log('Connected to local rippled\\n');
+  console.log('Connected to local xrpld\\n');
 
   /** Advance the ledger (required in standalone mode). */
   const accept = () => (client as any).request({ command: 'ledger_accept' });

@@ -588,7 +588,7 @@ function checkLocalNetworkImageCompatibility(image: string): void {
 
   throw new Error(
     `This --local-network sandbox was last started with ${previousImage}, ` +
-    `but you're starting it with ${image}. Different rippled images can lay ` +
+    `but you're starting it with ${image}. Different xrpld images can lay ` +
     `out their data directory differently, so booting the new image against ` +
     `the old volume can fail unpredictably instead of cleanly.\n\n` +
     `Run "xrpl-up reset" first, then start again with the new image.`
@@ -786,7 +786,7 @@ export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debu
     }
 
     // Wait for rippled WebSocket port
-    await waitForPort(LOCAL_WS_PORT, 30_000, 'rippled WebSocket');
+    await waitForPort(LOCAL_WS_PORT, 30_000, 'xrpld WebSocket');
 
     // In consensus mode, wait for the network to reach validated state.
     // First boot: ~30-70s (real 2-node peer discovery + consensus).
@@ -943,7 +943,7 @@ async function waitForConsensus(timeoutMs: number): Promise<void> {
 
   throw new Error(
     `Consensus network did not reach proposing state within ${timeoutMs / 1000}s.\n` +
-    `  Check: docker compose -p ${COMPOSE_PROJECT} logs rippled`
+    `  Check: xrpl-up logs node1`
   );
 }
 

@@ -42,7 +42,7 @@ export async function statusCommand(options: StatusOptions = {}): Promise<void> 
 
   if (isLocal) {
     networkName = 'local';
-    networkConfig = { url: LOCAL_WS_URL, name: 'Local rippled (Docker)' };
+    networkConfig = { url: LOCAL_WS_URL, name: 'Local xrpld (Docker)' };
   } else {
     const config = loadConfig();
     const resolved = resolveNetwork(config, options.network);

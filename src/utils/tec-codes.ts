@@ -18,7 +18,7 @@ export const TEC_MESSAGES: Record<string, string> = {
   tecINSUFFICIENT_FUNDS:      'Insufficient funds for this operation',
   tecINSUFFICIENT_PAYMENT:    'Payment amount insufficient',
   tecINSUFFICIENT_RESERVE:    'Insufficient XRP reserve for this operation',
-  tecINTERNAL:                'Internal rippled error',
+  tecINTERNAL:                'Internal xrpld error',
   tecINVARIANT_FAILED:        'Invariant check failed',
   tecKILLED:                  'Offer killed — fill-or-kill could not fill completely',
   tecNEED_MASTER_KEY:         'Master key required for this operation',
