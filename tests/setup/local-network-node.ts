@@ -83,7 +83,7 @@ async function startNode(): Promise<void> {
     timeout: 30_000,
     env: { ...process.env },
   });
-  const result = spawnSync(TSX, [CLI, "start", "--local-network"], {
+  const result = spawnSync(TSX, [CLI, "start", "--local-network", "--nodes", "2"], {
     encoding: "utf-8",
     timeout: 180_000,   // consensus bootstrap: ~60s for consensus + faucet
     env: { ...process.env },
@@ -154,9 +154,8 @@ async function prefundWorkerMasters(): Promise<void> {
       await client.submit(tx_blob);
     }
 
-    // Wait for all accounts to appear in the validated ledger.
-    // 3-node consensus closes ledgers at ~4-6s each; 60 retries × 500ms = 30s headroom.
-    await Promise.all(wallets.map((w) => waitForWorkerAccount(client, w.address, 60)));
+    // Wait for all accounts to appear in the validated ledger
+    await Promise.all(wallets.map((w) => waitForWorkerAccount(client, w.address)));
 
     // Publish seeds — workers are forked after globalSetup, so they inherit these
     wallets.forEach((w, i) => {
