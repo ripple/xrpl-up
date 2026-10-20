@@ -83,7 +83,7 @@ async function startNode(): Promise<void> {
     timeout: 30_000,
     env: { ...process.env },
   });
-  const result = spawnSync(TSX, [CLI, "start", "--local-network"], {
+  const result = spawnSync(TSX, [CLI, "start", "--local-network", "--nodes", "2"], {
     encoding: "utf-8",
     timeout: 180_000,   // consensus bootstrap: ~60s for consensus + faucet
     env: { ...process.env },

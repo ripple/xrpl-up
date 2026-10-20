@@ -20,6 +20,7 @@ import { faucetCommand } from './commands/faucet';
 import { runCommand } from './commands/run';
 import { initCommand } from './commands/init';
 import { logsCommand } from './commands/logs';
+import { nodesCommand } from './commands/nodes';
 import { statusCommand } from './commands/status';
 import { composeDown, startCommandHint, DEFAULT_IMAGE } from './core/compose';
 import { snapshotSave, snapshotRestore, snapshotList } from './commands/snapshot';
@@ -77,7 +78,7 @@ program
   )
   .option(
     '--image <image>',
-    'Docker image to use for local rippled',
+    'Docker image to use for xrpld',
     DEFAULT_IMAGE
   )
   .option(
@@ -87,7 +88,12 @@ program
   )
   .option(
     '--local-network',
-    'Start a 2-node consensus network (persistent state, snapshot support)'
+    'Start a consensus network (persistent state, snapshot support)'
+  )
+  .option(
+    '--nodes <n>',
+    'Number of validator nodes in the consensus network (2–4, default 3; requires --local-network)',
+    (v: string) => parseInt(v, 10),
   )
   .option(
     '--no-auto-advance',
@@ -103,7 +109,7 @@ program
   )
   .option(
     '--debug',
-    'Enable debug-level rippled logging (view with: xrpl-up logs rippled)'
+    'Enable debug-level xrpld logging (view with: xrpl-up logs node1)'
   )
   .option(
     '--config <path>',
@@ -111,7 +117,7 @@ program
   )
   .option(
     '--exit-on-crash',
-    'Bypass the wrapper entrypoint so the container exits with rippled\'s code when it crashes (useful for observing exit code 134 on SIGABRT)'
+    'Bypass the wrapper entrypoint so the container exits with xrpld\'s code when it crashes (useful for observing exit code 134 on SIGABRT)'
   )
   .option(
     '--bind-address <ip>',
@@ -121,6 +127,7 @@ program
   .action((opts: {
     accounts?: string;
     localNetwork?: boolean;
+    nodes?: number;
     image?: string;
     ledgerInterval: string;
     autoAdvance?: boolean;
@@ -145,6 +152,7 @@ program
       accountCount: opts.accounts !== undefined ? parseInt(opts.accounts, 10) : undefined,
       local: isLocal,
       localNetwork: opts.localNetwork ?? false,
+      nodes: opts.nodes,
       image: opts.image,
       ledgerInterval: parseInt(opts.ledgerInterval, 10),
       noAutoAdvance: opts.autoAdvance === false,
@@ -200,7 +208,7 @@ program
 // ── status ────────────────────────────────────────────────────────────────────
 program
   .command('status')
-  .description('Show rippled server info and faucet health (defaults to local sandbox)')
+  .description('Show xrpld server info and faucet health (defaults to local sandbox)')
   .action((_opts: Record<string, never>, cmd: Command) => {
     const network = cmd.optsWithGlobals().network as string;
     statusCommand({ network, local: network === 'local' }).catch(handleError);
@@ -209,9 +217,17 @@ program
 // ── logs ──────────────────────────────────────────────────────────────────────
 program
   .command('logs [service]')
-  .description('Stream Docker Compose logs for the local stack (rippled | faucet)')
+  .description('Stream logs for the local stack (node1, node2, node3… or faucet; omit for all)')
   .action((service: string | undefined) => {
     logsCommand({ service }).catch(handleError);
+  });
+
+// ── nodes ──────────────────────────────────────────────────────────────────────
+program
+  .command('nodes')
+  .description('Show status of all validators in the local consensus network')
+  .action(() => {
+    nodesCommand().catch(handleError);
   });
 
 // ── stop ───────────────────────────────────────────────────────────────────────
@@ -262,7 +278,7 @@ snapshot
 // ── config ────────────────────────────────────────────────────────────────────
 const configCmd = program
   .command('config')
-  .description('Manage rippled configuration');
+  .description('Manage xrpld configuration');
 
 configCmd
   .command('export')
