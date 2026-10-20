@@ -154,8 +154,9 @@ async function prefundWorkerMasters(): Promise<void> {
       await client.submit(tx_blob);
     }
 
-    // Wait for all accounts to appear in the validated ledger
-    await Promise.all(wallets.map((w) => waitForWorkerAccount(client, w.address)));
+    // Wait for all accounts to appear in the validated ledger.
+    // 3-node consensus closes ledgers at ~4-6s each; 60 retries × 500ms = 30s headroom.
+    await Promise.all(wallets.map((w) => waitForWorkerAccount(client, w.address, 60)));
 
     // Publish seeds — workers are forked after globalSetup, so they inherit these
     wallets.forEach((w, i) => {
