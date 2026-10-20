@@ -8,7 +8,8 @@ import { Client } from 'xrpl';
 import {
   waitForPort, isConsensusMode,
   LOCAL_WS_PORT, LOCAL_WS_URL, FAUCET_PORT, COMPOSE_FILE, COMPOSE_PROJECT,
-  VOLUME_NAME, PEER_VOLUME_NAME, readGenesisLineage, adoptGenesisLineage,
+  VOLUME_NAME, PEER_VOLUME_NAME, consensusVolumeNames, readConsensusNodeCount,
+  readGenesisLineage, adoptGenesisLineage,
   EXTRA_AMENDMENTS_FILE,
 } from '../core/compose';
 import { WalletStore } from '../core/wallet-store';
@@ -314,7 +315,7 @@ export async function snapshotSave(name: string): Promise<void> {
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d`,
       { stdio: ['ignore', 'pipe', 'pipe'] },
     );
-    await waitForPort(LOCAL_WS_PORT, 60_000, 'rippled WebSocket');
+    await waitForPort(LOCAL_WS_PORT, 60_000, 'xrpld WebSocket');
     await waitForPort(FAUCET_PORT, 30_000, 'faucet HTTP');
     const resumeElapsed = ((Date.now() - resumeStartMs) / 1000).toFixed(1);
     startSpinner.succeed(chalk.dim(`Sandbox resumed (${resumeElapsed}s)`));
@@ -397,14 +398,15 @@ export async function snapshotRestore(name: string): Promise<void> {
   const restoreExtractMs = Date.now();
   const restoreSpinner = ora({ text: chalk.dim(`Restoring snapshot "${name}"…`), prefixText: ' ' }).start();
   try {
-    for (const vol of [VOLUME_NAME, PEER_VOLUME_NAME]) {
-      // Extract the primary node's snapshot into both volumes. For the peer
-      // volume, delete wallet.db afterwards so rippled regenerates a fresh
-      // node identity key on startup. Without this, both nodes share the
-      // same peer-to-peer identity (cloned from the primary's wallet.db)
-      // and reject each other's connections — causing 0 peers / no consensus.
+    const allVols = consensusVolumeNames(readConsensusNodeCount());
+    for (const vol of allVols) {
+      // Extract the primary node's snapshot into every node volume. For non-primary
+      // volumes, delete wallet.db afterwards so rippled regenerates a fresh node
+      // identity key on startup. Without this, all nodes share the same peer-to-peer
+      // identity (cloned from the primary's wallet.db) and reject each other's
+      // connections — causing 0 peers / no consensus.
       // Validator identity is unaffected — it comes from rippled.cfg.
-      const rmWalletDb = vol === PEER_VOLUME_NAME ? ' && rm -f /data/wallet.db' : '';
+      const rmWalletDb = vol !== VOLUME_NAME ? ' && rm -f /data/wallet.db' : '';
       execSync(
         `docker run --rm ` +
         `-v ${vol}:/data ` +
@@ -414,7 +416,7 @@ export async function snapshotRestore(name: string): Promise<void> {
       );
     }
     const restoreExtractElapsed = ((Date.now() - restoreExtractMs) / 1000).toFixed(1);
-    restoreSpinner.succeed(chalk.green(`Snapshot "${name}" restored to both nodes`) + chalk.dim(` (${restoreExtractElapsed}s)`));
+    restoreSpinner.succeed(chalk.green(`Snapshot "${name}" restored to all ${allVols.length} nodes`) + chalk.dim(` (${restoreExtractElapsed}s)`));
   } catch (err) {
     const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim();
     restoreSpinner.fail(`Failed to restore snapshot "${name}"${stderr ? `: ${stderr}` : ''}`);
@@ -453,7 +455,7 @@ export async function snapshotRestore(name: string): Promise<void> {
       `docker compose -p ${COMPOSE_PROJECT} -f "${COMPOSE_FILE}" up -d`,
       { stdio: ['ignore', 'pipe', 'pipe'] },
     );
-    await waitForPort(LOCAL_WS_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'rippled WebSocket');
+    await waitForPort(LOCAL_WS_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'xrpld WebSocket');
     await waitForPort(FAUCET_PORT, SNAPSHOT_RESTORE_START_TIMEOUT_MS, 'faucet HTTP');
     const restoreResumeElapsed = ((Date.now() - restoreResumeMs) / 1000).toFixed(1);
     startSpinner.succeed(chalk.dim(`Sandbox resumed (${restoreResumeElapsed}s)`));
@@ -466,7 +468,7 @@ export async function snapshotRestore(name: string): Promise<void> {
     throw new Error(
       `${(err as Error).message}\n\n` +
       (stderr ? `Docker error: ${stderr}\n\n` : '') +
-      `rippled logs (last 30 lines):\n${rippledLogs}`
+      `xrpld logs (last 30 lines):\n${rippledLogs}`
     );
   }
 
