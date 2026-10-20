@@ -291,7 +291,7 @@ export function writeRippledConfig(debug = false, noConsensus = false, nodeCount
  *
  * @param configPath - optional path to a custom rippled.cfg; implies
  *   standalone mode (custom configs can't carry validator seeds).
- * @param nodeCount - number of consensus nodes (2–4, default 3).
+ * @param nodeCount - number of consensus nodes (2–5, default 3).
  */
 export function writeComposeFile(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1', nodeCount = DEFAULT_CONSENSUS_NODES): string {
   if (!fs.existsSync(XRPL_UP_DIR)) {
@@ -749,7 +749,7 @@ async function missingDefaultAmendments(): Promise<string[]> {
  * Default (noConsensus=true): standalone rippled, torn down clean each start.
  * With --local-network (noConsensus=false): N-node consensus network. Volumes preserved.
  *
- * @param nodeCount - number of consensus nodes (2–4, default 3); ignored in standalone mode.
+ * @param nodeCount - number of consensus nodes (2–5, default 3); ignored in standalone mode.
  */
 export async function composeUp(image = DEFAULT_IMAGE, noConsensus = false, debug = false, ledgerIntervalMs = 0, configPath?: string, noRestart = false, bindAddress = '127.0.0.1', nodeCount = DEFAULT_CONSENSUS_NODES): Promise<string> {
   if (!noConsensus) checkLocalNetworkImageCompatibility(image);

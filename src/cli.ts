@@ -94,7 +94,7 @@ program
   )
   .option(
     '--nodes <n>',
-    'Number of validator nodes in the consensus network (2–4, default 3; requires --local-network)',
+    'Number of validator nodes in the consensus network (2–5, default 3; requires --local-network)',
     (v: string) => parseInt(v, 10),
   )
   .option(
