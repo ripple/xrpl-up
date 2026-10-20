@@ -80,10 +80,10 @@ export function validateConfig(filePath: string): ValidationResult {
 
   // ── Required sections ────────────────────────────────────────────────────
   if (!sections.has('node_db')) {
-    result.errors.push('Missing [node_db] section — rippled will not start');
+    result.errors.push('Missing [node_db] section — xrpld will not start');
   }
   if (!sections.has('database_path')) {
-    result.errors.push('Missing [database_path] section — rippled will not start');
+    result.errors.push('Missing [database_path] section — xrpld will not start');
   }
 
   // ── WebSocket port detection ─────────────────────────────────────────────
@@ -166,7 +166,7 @@ export function validateConfig(filePath: string): ValidationResult {
   // ── validators_file ──────────────────────────────────────────────────────
   if (!sections.has('validators_file')) {
     result.warnings.push(
-      'Missing [validators_file] section — rippled may emit warnings at startup in standalone mode'
+      'Missing [validators_file] section — xrpld may emit warnings at startup in standalone mode'
     );
   }
 
@@ -189,7 +189,7 @@ export function validateConfig(filePath: string): ValidationResult {
   // ── debug_logfile ────────────────────────────────────────────────────────
   if (!sections.has('debug_logfile')) {
     result.recommendations.push(
-      'Add [debug_logfile] section (e.g. /var/log/rippled/debug.log) for easier rippled debugging'
+      'Add [debug_logfile] section (e.g. /var/log/rippled/debug.log) for easier xrpld debugging'
     );
   }
 

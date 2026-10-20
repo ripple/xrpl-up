@@ -1133,7 +1133,7 @@ export async function initCommand(options: InitOptions = {}): Promise<void> {
       name: 'defaultNetwork',
       message: 'Default network:',
       choices: [
-        { name: 'local    — local rippled via Docker (xrpl-up start)', value: 'local'   },
+        { name: 'local    — local xrpld via Docker (xrpl-up start)', value: 'local'   },
         { name: 'testnet  — XRPL Testnet',                                    value: 'testnet' },
         { name: 'devnet   — XRPL Devnet',                                     value: 'devnet'  },
       ],

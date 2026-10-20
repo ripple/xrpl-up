@@ -236,9 +236,9 @@ export async function amendmentInfoCommand(nameOrHash: string, options: Amendmen
     row('Name',      chalk.white(found.name));
     row('Hash',      chalk.dim(found.hash));
     row('Enabled',   found.enabled   ? chalk.green('✔ yes') : chalk.dim('✗ no'));
-    row('Supported', found.supported ? chalk.green('✔ yes') : chalk.red('✗ no (rippled image too old)'));
+    row('Supported', found.supported ? chalk.green('✔ yes') : chalk.red('✗ no (xrpld image too old)'));
     row('Vetoed',    found.vetoed === 'Obsolete'
-      ? chalk.yellow('retired (Obsolete) — always on in this rippled, cannot be enabled')
+      ? chalk.yellow('retired (Obsolete) — always on in this xrpld, cannot be enabled')
       : found.vetoed ? chalk.red('✔ yes') : chalk.dim('no'));
     logger.blank();
 
@@ -247,7 +247,7 @@ export async function amendmentInfoCommand(nameOrHash: string, options: Amendmen
       logger.blank();
     }
     if (!found.supported) {
-      logger.dim('  Upgrade the local rippled image to support this amendment:');
+      logger.dim('  Upgrade the local xrpld image to support this amendment:');
       logger.dim('    xrpl-up reset && xrpl-up start --image <newer-image>');
       logger.blank();
     }
@@ -303,14 +303,14 @@ export async function amendmentEnableCommand(namesOrHashes: string[], options: A
       }
 
       if (!found.supported) {
-        spinner.fail(`Amendment not supported by local rippled build: ${found.name}`);
-        logger.dim('  Upgrade the local rippled image to include this amendment.');
+        spinner.fail(`Amendment not supported by local xrpld build: ${found.name}`);
+        logger.dim('  Upgrade the local xrpld image to include this amendment.');
         await client.disconnect();
         process.exit(1);
       }
 
       if (found.vetoed === 'Obsolete') {
-        spinner.fail(`${found.name} is retired (Obsolete) in this rippled and cannot be enabled`);
+        spinner.fail(`${found.name} is retired (Obsolete) in this xrpld and cannot be enabled`);
         logger.dim('  Its behaviour is already always on; queueing it would do nothing.');
         await client.disconnect();
         process.exit(1);

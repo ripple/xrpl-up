@@ -219,7 +219,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
       const dockerElapsed = ((Date.now() - dockerStartMs) / 1000).toFixed(1);
       const modeLabel = localNetwork ? 'Consensus network' : 'Standalone node';
       dockerSpinner.succeed(
-        `${modeLabel} started ${chalk.dim(`(${dockerElapsed}s)`)}  ${chalk.dim('rippled ws://localhost:6006')}  ${chalk.dim('faucet http://localhost:3001')}`
+        `${modeLabel} started ${chalk.dim(`(${dockerElapsed}s)`)}  ${chalk.dim('xrpld ws://localhost:6006')}  ${chalk.dim('faucet http://localhost:3001')}`
       );
 
       // When --exit-on-crash is set, attach two background watchers:

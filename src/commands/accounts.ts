@@ -19,7 +19,7 @@ export async function accountsCommand(options: AccountsOptions = {}): Promise<vo
 
   if (options.local) {
     networkName = 'local';
-    networkConfig = { url: LOCAL_WS_URL, name: 'Local rippled (Docker)' };
+    networkConfig = { url: LOCAL_WS_URL, name: 'Local xrpld (Docker)' };
   } else {
     const config = loadConfig();
     const resolved = resolveNetwork(config, options.network);
