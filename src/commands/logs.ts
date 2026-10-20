@@ -7,7 +7,7 @@ export interface LogsOptions {
   service?: string;
 }
 
-function resolveService(input: string): string | null {
+export function resolveService(input: string): string | null {
   const m = input.match(/^node(\d+)$/i);
   if (m) {
     const n = parseInt(m[1], 10);
