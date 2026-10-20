@@ -20,7 +20,7 @@ import {
   volumeHasData,
   VOLUME_NAME,
   PEER_VOLUME_NAME,
-  DEFAULT_CONSENSUS_NODES,
+  readConsensusNodeCount,
   MAX_CONSENSUS_NODES,
   consensusVolumeNames,
 } from '../core/compose';
@@ -33,7 +33,7 @@ export interface NodeOptions {
   accountCount?: number;
   local?: boolean;
   localNetwork?: boolean;
-  nodes?: number;  // number of consensus nodes for --local-network (default: DEFAULT_CONSENSUS_NODES)
+  nodes?: number;  // number of consensus nodes for --local-network (default: existing sandbox count, else 3)
   image?: string;
   ledgerInterval?: number;
   noAutoAdvance?: boolean;
@@ -153,7 +153,7 @@ export async function nodeCommand(options: NodeOptions = {}): Promise<void> {
   const localNetwork = isLocal && (options.localNetwork ?? false);
   const noConsensus = isLocal && !localNetwork;
   const persist = isLocal && localNetwork; // --local-network always persists
-  const requestedNodes = options.nodes ?? DEFAULT_CONSENSUS_NODES;
+  const requestedNodes = options.nodes ?? readConsensusNodeCount();
   const nodeCount = Math.min(Math.max(requestedNodes, 2), MAX_CONSENSUS_NODES);
   if (options.nodes !== undefined && options.nodes !== nodeCount) {
     logger.warning(`--nodes ${options.nodes} is out of range; clamped to ${nodeCount} (valid: 2–${MAX_CONSENSUS_NODES})`);

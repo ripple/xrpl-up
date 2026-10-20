@@ -229,16 +229,22 @@ function mergeExtraAmendments(cfg: string): string {
 }
 
 /**
- * Returns the stored consensus node count (written when the network was last
- * started), or the default if no record exists.
+ * Returns the consensus node count of the current --local-network sandbox:
+ * the recorded count (written on start), else the number of node services in the
+ * existing compose file (sandboxes created before the record existed), else the default.
  */
 export function readConsensusNodeCount(): number {
+  const valid = (n: number) => Number.isFinite(n) && n >= 2 && n <= MAX_CONSENSUS_NODES;
   try {
     const n = parseInt(fs.readFileSync(LOCAL_NETWORK_NODES_FILE, 'utf-8').trim(), 10);
-    return Number.isFinite(n) && n >= 2 && n <= MAX_CONSENSUS_NODES ? n : DEFAULT_CONSENSUS_NODES;
-  } catch {
-    return DEFAULT_CONSENSUS_NODES;
-  }
+    if (valid(n)) return n;
+  } catch { /* no record — fall through */ }
+  try {
+    const compose = fs.readFileSync(COMPOSE_FILE, 'utf-8');
+    const n = (compose.match(/^ {2}rippled(-peer|-node\d+)?:$/gm) ?? []).length;
+    if (valid(n)) return n;
+  } catch { /* no compose file — fall through */ }
+  return DEFAULT_CONSENSUS_NODES;
 }
 
 function writeConsensusNodeCount(n: number): void {
