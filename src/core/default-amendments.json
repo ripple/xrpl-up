@@ -1,5 +1,5 @@
 {
-  "xrpld": "deb deb-stable 3.4.1-2",
+  "xrpld": "deb deb-develop 0.0.0~dev-1318.20261020git15fac62",
   "mainnet": "wss://xrplcluster.com",
   "amendments": [
     {
@@ -33,10 +33,6 @@
     {
       "hash": "5E9586DB3D765B4C5794658FB6BB385071E9838DF4016027E6E26820C8526724",
       "name": "fixAMMClawbackRounding"
-    },
-    {
-      "hash": "35291ADD2D79EB6991343BDA0912269C817D0F094B02226C1C14AD2858962ED4",
-      "name": "fixAMMv1_1"
     },
     {
       "hash": "1E7ED950F2F13C4F8E2A54103B74D57D5D298FFDBD005936164EE9E6484C438C",
